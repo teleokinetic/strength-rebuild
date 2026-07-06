@@ -18,7 +18,7 @@ function slug(name) {
 function defaultState() {
   const s = {
     version: 1,
-    settings: { unit: 'lb', sound: true, wake: true, theme: 'auto', week: 1, block: 1, lastExport: null },
+    settings: { unit: 'lb', sound: true, wake: true, theme: 'auto', week: 1, block: 1, weekSessionCount: 0, lastExport: null },
     exercises: {},
     program: JSON.parse(JSON.stringify(SEED_PROGRAM)),
     sessions: [],
@@ -33,10 +33,27 @@ function defaultState() {
   return s;
 }
 
+// Shape-check a state object before trusting it (boot load or import). Guards
+// against a parseable-but-wrong blob bricking the app on the next render.
+function validState(obj) {
+  if (!obj || typeof obj !== 'object') return false;
+  if (obj.version !== 1) return false;
+  const s = obj.settings;
+  if (!s || typeof s !== 'object') return false;
+  if (s.unit == null || s.theme == null || s.week == null || s.block == null) return false;
+  if (!obj.exercises || typeof obj.exercises !== 'object') return false;
+  if (!obj.program || !Array.isArray(obj.program.days)) return false;
+  if (!Array.isArray(obj.sessions)) return false;
+  return true;
+}
+
 function load() {
   try {
     const raw = localStorage.getItem(STORE_KEY);
-    if (raw) { state = JSON.parse(raw); return; }
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (validState(parsed)) { state = parsed; return; }
+    }
   } catch (e) { /* corrupted → reseed */ }
   state = defaultState();
   save();
@@ -51,6 +68,11 @@ function saveSoon() {          // debounced save for keystroke-level updates
   clearTimeout(saveTimer);
   saveTimer = setTimeout(save, 400);
 }
+// Flush a pending debounced write immediately so the last keystrokes survive the
+// PWA being backgrounded or killed inside the 400ms debounce window.
+function flushSave() { clearTimeout(saveTimer); save(); }
+window.addEventListener('pagehide', flushSave);
+document.addEventListener('visibilitychange', () => { if (document.hidden) flushSave(); });
 
 /* ============================== helpers ============================== */
 
@@ -76,7 +98,7 @@ function fmtClock(sec) {
 
 function fmtRest(sec) {
   if (!sec) return '';
-  return sec % 60 === 0 ? (sec / 60) + ' min' : fmtClock(sec);
+  return fmtClock(sec);   // always m:ss (1:00, 1:45, 0:40, 2:50)
 }
 
 function metricUnit(slot) {
@@ -144,7 +166,9 @@ function nudgeFor(slot) {
   const sets = last.entry.sets;
   if (sets.length < 2) return null;
   const top = slot.reps[1];
-  const allTop = sets.every((s) => Number(s.r) >= top && (!slot.trackRIR || s.rir === '' || Number(s.rir) >= 2));
+  // A tracked-but-blank RIR can't confirm the set was left in the tank — treat
+  // it as a fail so we don't nudge on unconfirmed effort.
+  const allTop = sets.every((s) => Number(s.r) >= top && (!slot.trackRIR || (s.rir !== '' && s.rir != null && Number(s.rir) >= 2)));
   if (!allTop) return null;
   if (slot.progression === 'variation') {
     return { type: 'variation', text: `All sets hit ${top} — ready to progress the variation: ${slot.progressionNote}` };
@@ -252,7 +276,9 @@ function renderTimer() {
         ? `<b>${esc(timer.next.name)}</b>${esc(timer.next.detail)}`
         : `<b>Session done</b>Finish when ready`}</div>
       <div class="clock-btns">
+        <button data-act="timer-sub">−30s</button>
         <button data-act="timer-add">+30s</button>
+        <button data-act="timer-stop">Skip</button>
         <button data-act="clock-close">Back to sets</button>
       </div>`;
   }
@@ -292,8 +318,8 @@ function startSession(dayId) {
   const entries = {};
   for (const slot of day.slots) {
     const last = lastEntryFor(slot.exerciseId);
-    const nudge = nudgeFor(slot);
     const deload = state.settings.week === 4;
+    const nudge = deload ? null : nudgeFor(slot);
     const nSets = Math.max(1, slot.sets - (deload ? 1 : 0));
     const sets = [];
     for (let i = 0; i < nSets; i++) {
@@ -379,13 +405,16 @@ function logSet(slotId, setIdx) {
 function finishSession(note) {
   const day = findDay(state.active.dayId);
   const entries = [];
+  // Non-numeric entries must never reach storage — NaN becomes null after a
+  // JSON round-trip and silently rewrites the displayed history.
+  const num = (v) => { const n = parseFloat(v); return Number.isFinite(n) ? n : ''; };
   for (const slot of day.slots) {
     const entry = state.active.entries[slot.id];
     if (!entry) continue;
     const done = entry.sets.filter((s) => s.done).map((s) => ({
-      w: slot.load === 'none' ? '' : (s.w === '' ? '' : Number(s.w)),
-      r: s.r === '' ? '' : Number(s.r),
-      rir: slot.trackRIR && s.rir !== '' ? Number(s.rir) : '',
+      w: slot.load === 'none' ? '' : num(s.w),
+      r: num(s.r),
+      rir: slot.trackRIR ? num(s.rir) : '',
     }));
     if (done.length) {
       entries.push({
@@ -408,13 +437,18 @@ function finishSession(note) {
   stopTimer();
   releaseWakeLock();
 
-  // Auto-advance the block calendar after the 2nd session of the week.
+  // Auto-advance the block calendar after the 2nd session of the week. A
+  // dedicated counter (not an all-time session filter) so import / re-enter /
+  // delete can't desync advancement from the visible calendar.
   const { week, block } = state.settings;
-  const inWeek = state.sessions.filter((s) => s.week === week && s.block === block).length;
+  const count = (state.settings.weekSessionCount || 0) + 1;
   let advanced = '';
-  if (inWeek >= 2) {
+  if (count >= 2) {
+    state.settings.weekSessionCount = 0;
     if (week >= 4) { state.settings.week = 1; state.settings.block = block + 1; advanced = `Block ${block + 1}, Week 1`; }
     else { state.settings.week = week + 1; advanced = `Week ${week + 1}${week + 1 === 4 ? ' — deload' : ''}`; }
+  } else {
+    state.settings.weekSessionCount = count;
   }
   save();
   location.hash = '#/';
@@ -456,7 +490,7 @@ function chartSVG(pts, yLabel) {
      <text x="${L - 6}" y="${(y(v) + 3.5).toFixed(1)}" text-anchor="end" font-size="10" fill="var(--dim)">${v}</text>`).join('');
   const path = pts.map((p, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(p.v).toFixed(1)}`).join('');
   const dots = pts.map((p, i) =>
-    `<circle cx="${x(i).toFixed(1)}" cy="${y(p.v).toFixed(1)}" r="4.5" fill="var(--brass-chart)" stroke="var(--card)" stroke-width="2" data-pt="${i}"/>
+    `<circle class="chart-dot" cx="${x(i).toFixed(1)}" cy="${y(p.v).toFixed(1)}" r="4.5" fill="var(--brass-chart)" stroke="var(--card)" stroke-width="2" data-pt="${i}"/>
      <circle cx="${x(i).toFixed(1)}" cy="${y(p.v).toFixed(1)}" r="13" fill="transparent" data-pt="${i}"/>`).join('');
   const x0 = fmtDate(pts[0].t), x1 = fmtDate(pts[pts.length - 1].t);
   return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Trend, ${esc(yLabel)}">
@@ -489,7 +523,9 @@ function sparkSVG(pts) {
 function weekPill() {
   const { week, block } = state.settings;
   const deload = week === 4;
-  return `<button class="pill ${deload ? 'brass' : ''}" data-act="nav" data-to="#/settings">Wk ${week} · Blk ${block}${deload ? ' · deload' : ''}</button>`;
+  // No brass on the pill in deload — the banner and slot cards already carry it;
+  // three stacked brass elements read as busy. The "· deload" text still marks it.
+  return `<button class="pill" data-act="nav" data-to="#/settings">Wk ${week} · Blk ${block}${deload ? ' · deload' : ''}</button>`;
 }
 
 function viewHome() {
@@ -509,11 +545,13 @@ function viewHome() {
     const suggested = day.id === suggestId;
     const preview = day.slots.map((s) => s.name).join(' · ');
     return `
-      <button class="card day-start ${suggested ? 'suggested' : ''}" data-act="start-day" data-day="${day.id}">
+      <button class="card day-start tappable ${suggested ? 'suggested' : ''}" data-act="start-day" data-day="${day.id}">
         <div class="eyebrow">${suggested ? (lastSess ? 'Up next' : 'Start here') : 'Or'}</div>
         <div class="day-name">${esc(day.name)}</div>
         <div class="day-sub">${esc(day.subtitle)}</div>
-        ${suggested ? `<div class="day-preview">${esc(preview)}</div><span class="go">Start session →</span>` : ''}
+        ${suggested
+          ? `<div class="day-preview">${esc(preview)}</div><span class="go">Start session →</span>`
+          : `<span class="go quiet">Start →</span>`}
       </button>`;
   }).join('');
 
@@ -541,6 +579,7 @@ function setRowsHTML(slot, entry, deload) {
   const noRIR = !slot.trackRIR;
   const cls = `${noLoad ? ' no-load' : ''}${noRIR ? ' no-rir' : ''}`;
   const unit = metricUnit(slot);
+  const repsPh = slot.reps[0] === slot.reps[1] ? slot.reps[0] + unit : `${slot.reps[0]}–${slot.reps[1]}${unit}`;
   const labels = `
     <div class="set-labels${cls}">
       <span>Set</span>
@@ -553,7 +592,7 @@ function setRowsHTML(slot, entry, deload) {
     <div class="set-row${cls}${set.done ? ' done' : ''}">
       <span class="set-idx">${i + 1}</span>
       ${noLoad ? '' : `<input type="text" inputmode="decimal" value="${esc(set.w)}" placeholder="—" data-in="set" data-slot="${slot.id}" data-set="${i}" data-f="w" ${set.done ? 'readonly' : ''}>`}
-      <input type="text" inputmode="numeric" value="${esc(set.r)}" placeholder="${slot.reps[0]}–${slot.reps[1]}${unit}" data-in="set" data-slot="${slot.id}" data-set="${i}" data-f="r" ${set.done ? 'readonly' : ''}>
+      <input type="text" inputmode="numeric" value="${esc(set.r)}" placeholder="${repsPh}" data-in="set" data-slot="${slot.id}" data-set="${i}" data-f="r" ${set.done ? 'readonly' : ''}>
       ${noRIR ? '' : `<input type="text" inputmode="numeric" value="${esc(set.rir)}" placeholder="${deload ? '4–5' : esc(slot.rir) || '—'}" data-in="set" data-slot="${slot.id}" data-set="${i}" data-f="rir" ${set.done ? 'readonly' : ''}>`}
       <button class="log" data-act="${set.done ? 'unlog-set' : 'log-set'}" data-slot="${slot.id}" data-set="${i}" aria-label="${set.done ? 'Undo set' : 'Log set'}">✓</button>
     </div>`).join('');
@@ -564,7 +603,7 @@ function slotCardHTML(day, slot, deload) {
   const entry = state.active.entries[slot.id];
   if (!entry) return '';
   const last = lastEntryFor(slot.exerciseId);
-  const nudge = nudgeFor(slot);
+  const nudge = deload ? null : nudgeFor(slot);
   const setsShown = entry.sets.length;
   const unit = metricUnit(slot);
   const repsTxt = slot.reps[0] === slot.reps[1] ? slot.reps[0] + unit : `${slot.reps[0]}–${slot.reps[1]}${unit}`;
@@ -745,7 +784,7 @@ function viewProgram() {
       return `
       <div class="prog-slot">
         <button class="ps-main" data-act="nav" data-to="#/slot/${day.id}/${slot.id}">
-          <div class="ps-name">${slot.group ? slot.group + '·' : ''} ${esc(slot.name)}</div>
+          <div class="ps-name">${esc(slot.name)}</div>
           <div class="ps-rx">${esc(slot.pattern)} · ${slot.sets} × ${repsTxt}${slot.perSide ? ' /side' : ''}${slot.restSec ? ' · rest ' + fmtRest(slot.restSec) : ''}</div>
         </button>
         <button class="mv" data-act="move-slot" data-day="${day.id}" data-slot="${slot.id}" data-dir="-1" aria-label="Move up" ${i === 0 ? 'disabled style="opacity:.3"' : ''}>↑</button>
@@ -827,7 +866,7 @@ function viewSlotEdit(dayId, slotId) {
       <div class="field-row">
         <div class="field">
           <label for="f-prog">Progression</label>
-          <select id="f-prog">${opt('load', slot.progression, 'Load (double progression)')}${opt('variation', slot.progression, 'Variation runway')}${opt('output', slot.progression, 'Output/quality')}${opt('none', slot.progression, 'None')}</select>
+          <select id="f-prog">${opt('load', slot.progression, 'Double progression')}${opt('variation', slot.progression, 'Variation runway')}${opt('output', slot.progression, 'Output/quality')}${opt('none', slot.progression, 'None')}</select>
         </div>
         <div class="field">
           <label for="f-group">Superset group</label>
@@ -862,7 +901,7 @@ function viewSettings() {
         </div>
       </div>
       <div class="setting-row">
-        <div><div class="s-label">Block</div><div class="s-sub">§5 mesocycle counter</div></div>
+        <div><div class="s-label">Block</div><div class="s-sub">Resets to week 1 each new block</div></div>
         <div class="stepper">
           <button data-act="block-step" data-dir="-1" aria-label="Block down">–</button>
           <span class="val">${s.block}</span>
@@ -930,6 +969,8 @@ function viewImport() {
 
 /* ============================== router ============================== */
 
+let lastHash = null;
+
 function render() {
   const hash = location.hash || '#/';
   const parts = hash.replace(/^#\//, '').split('/');
@@ -946,7 +987,8 @@ function render() {
   else if (parts[0] === 'import') html = viewImport();
   else html = viewHome();
   $('#app').innerHTML = html;
-  window.scrollTo(0, 0);
+  if (hash !== lastHash) window.scrollTo(0, 0);   // only reset on route change, not in-place updates
+  lastHash = hash;
 }
 
 window.addEventListener('hashchange', render);
@@ -964,6 +1006,13 @@ document.addEventListener('click', (ev) => {
     const { pts } = seriesFor(wrap.dataset.ex);
     const p = pts[i];
     if (p) {
+      // Enlarge + brass-ring the tapped dot so the caption's point is unmistakable.
+      wrap.querySelectorAll('.chart-dot').forEach((c) => {
+        const sel = Number(c.dataset.pt) === i;
+        c.setAttribute('r', sel ? '6.5' : '4.5');
+        c.setAttribute('stroke', sel ? 'var(--brass)' : 'var(--card)');
+        c.setAttribute('stroke-width', sel ? '3' : '2');
+      });
       const tip = $('#chart-tip');
       if (tip) tip.innerHTML = `<b>${fmtDate(p.t, true)}</b> — ${esc(fmtSets(p.entry.sets, p.entry.metric))}`;
     }
@@ -1053,6 +1102,16 @@ document.addEventListener('click', (ev) => {
       }
       break;
 
+    case 'timer-sub':
+      if (timer.endsAt) {
+        // Trim 30s, but never below ~5s from now.
+        timer.endsAt = Math.max(Date.now() + 5000, timer.endsAt - 30000);
+        timer.total = Math.max(5, timer.total - 30);
+        timer.zeroFired = false;
+        renderTimer();
+      }
+      break;
+
     case 'timer-stop':
       stopTimer();
       break;
@@ -1084,6 +1143,10 @@ document.addEventListener('click', (ev) => {
       const name = $('#f-name').value.trim();
       if (!name) { toast('Give the movement a name'); break; }
       const exId = slug(name);
+      const thisId = isNew ? el.dataset.newid : el.dataset.slot;
+      // Same name on a different slot means both write to one exerciseId — history pools.
+      const shares = state.program.days.some((d) => d.slots.some((sl) =>
+        sl.id !== thisId && (sl.exerciseId || slug(sl.name)) === exId));
       if (!state.exercises[exId]) state.exercises[exId] = { id: exId, name };
       const data = {
         id: isNew ? el.dataset.newid : el.dataset.slot,
@@ -1111,7 +1174,7 @@ document.addEventListener('click', (ev) => {
       }
       save();
       location.hash = '#/program';
-      toast('Program updated');
+      toast(shares ? 'Saved — this name shares history with another movement' : 'Program updated');
       break;
     }
 
@@ -1127,6 +1190,7 @@ document.addEventListener('click', (ev) => {
     case 'week-step': {
       const w = state.settings.week + Number(el.dataset.dir);
       state.settings.week = Math.min(4, Math.max(1, w));
+      state.settings.weekSessionCount = 0;   // manual calendar change resets the auto-advance counter
       save(); render();
       break;
     }
@@ -1134,6 +1198,7 @@ document.addEventListener('click', (ev) => {
     case 'block-step': {
       const b = state.settings.block + Number(el.dataset.dir);
       state.settings.block = Math.max(1, b);
+      state.settings.weekSessionCount = 0;
       save(); render();
       break;
     }
@@ -1164,19 +1229,29 @@ document.addEventListener('click', (ev) => {
       break;
 
     case 'import-confirm': {
+      let parsed;
       try {
-        const parsed = JSON.parse($('#import-json').value);
-        if (!parsed || parsed.version !== 1 || !Array.isArray(parsed.sessions) || !parsed.program) {
-          toast('That does not look like a Strength Rebuild backup'); break;
-        }
+        parsed = JSON.parse($('#import-json').value);
+      } catch (e) {
+        toast('Could not parse that JSON'); break;
+      }
+      if (!validState(parsed)) {
+        toast('That does not look like a Strength Rebuild backup'); break;
+      }
+      const prev = state;
+      try {
         state = parsed;
-        save();
         location.hash = '#/';
         render();
-        toast('Backup restored — ' + state.sessions.length + ' sessions');
       } catch (e) {
-        toast('Could not parse that JSON');
+        state = prev;
+        location.hash = '#/';
+        render();
+        toast('That backup could not be loaded — kept your current data');
+        break;
       }
+      save();
+      toast('Backup restored — ' + state.sessions.length + ' sessions');
       break;
     }
 

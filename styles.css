@@ -151,6 +151,7 @@ a { color: inherit; }
   font-family: var(--display); font-weight: 600; font-size: 17px;
   letter-spacing: 0.1em; text-transform: uppercase; color: var(--brass);
 }
+.day-start .go.quiet { margin-top: 10px; font-size: 15px; color: var(--dim); }
 
 .navrow { display: flex; gap: 8px; margin-top: 16px; }
 .navrow .navbtn {
@@ -173,7 +174,11 @@ a { color: inherit; }
 .btn:active { filter: brightness(1.15); }
 .btn.primary { background: var(--brass); color: var(--on-brass); border-color: var(--brass); }
 .btn.quiet { background: none; border: 1px solid var(--line); color: var(--dim); }
-.btn.danger { color: var(--danger); border-color: var(--line); background: none; }
+.btn.danger {
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+  border-color: color-mix(in srgb, var(--danger) 45%, var(--line));
+}
 .btn + .btn { margin-top: 10px; }
 
 .linklike { color: var(--dim); font-size: 14px; text-decoration: underline; text-underline-offset: 3px; padding: 8px 0; }
@@ -260,6 +265,9 @@ button.slot-name { text-align: left; padding: 0; }
 }
 .set-row .log:active { background: var(--brass); color: var(--on-brass); }
 
+/* Faint luminance wash (not hue) so a logged row reads as done even when it
+   logged nothing visible — e.g. a bodyweight hold with no reps typed. */
+.set-row.done { background: color-mix(in srgb, var(--ink) 6%, transparent); border-radius: 10px; }
 .set-row.done input[type=text] {
   background: none; border-color: transparent; color: var(--ink); font-weight: 600;
 }
@@ -331,7 +339,7 @@ textarea.note:focus { border-color: var(--brass); outline: none; }
 .timerbar .nextup b { color: var(--ink); font-weight: 500; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .timerbar .tb-btn {
   font-family: var(--display); font-weight: 600; font-size: 14px;
-  letter-spacing: 0.06em; color: var(--dim);
+  letter-spacing: 0.06em; text-transform: uppercase; color: var(--dim);
   border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px;
   min-height: 42px;
 }
@@ -362,7 +370,7 @@ textarea.note:focus { border-color: var(--brass); outline: none; }
 .clock .drain .fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--brass); border-radius: 2px; }
 .clock .ondeck { color: var(--dim); font-size: 15px; max-width: 340px; }
 .clock .ondeck b { color: var(--ink); display: block; font-size: 18px; margin-bottom: 2px; }
-.clock .clock-btns { display: flex; gap: 10px; margin-top: 40px; }
+.clock .clock-btns { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 40px; }
 .clock .clock-btns button {
   border: 1px solid var(--line); border-radius: 12px; padding: 13px 22px;
   font-family: var(--display); font-weight: 600; font-size: 16px;
@@ -411,6 +419,22 @@ textarea.note:focus { border-color: var(--brass); outline: none; }
   font-size: 16px; -webkit-appearance: none; appearance: none;
 }
 .field input:focus, .field select:focus { border-color: var(--brass); outline: none; }
+/* Read as a dropdown: chevron affordance + room so the widest option never clips.
+   Data-URI SVG can't reference CSS vars, so the chevron color is set per theme. */
+.field select {
+  padding-right: 34px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5' fill='none' stroke='%239AA1AC' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}
+:root[data-theme="light"] .field select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5' fill='none' stroke='%236C6555' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) .field select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5' fill='none' stroke='%236C6555' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  }
+}
 .field .hint { font-size: 12.5px; color: var(--dim); margin-top: 4px; }
 .field-row { display: flex; gap: 10px; }
 .field-row .field { flex: 1; }
@@ -426,6 +450,7 @@ textarea.note:focus { border-color: var(--brass); outline: none; }
 
 .setting-row {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  flex-wrap: wrap; row-gap: 8px;
   padding: 14px 0; border-bottom: 1px solid var(--line);
 }
 .setting-row:last-child { border-bottom: none; }
@@ -433,8 +458,8 @@ textarea.note:focus { border-color: var(--brass); outline: none; }
 .setting-row .s-sub { color: var(--dim); font-size: 13px; margin-top: 1px; }
 .seg { display: flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
 .seg button {
-  padding: 9px 16px; font-family: var(--display); font-weight: 600;
-  font-size: 14px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--dim);
+  padding: 9px 12px; font-family: var(--display); font-weight: 600;
+  font-size: 14px; letter-spacing: 0.03em; text-transform: uppercase; color: var(--dim);
   min-height: 42px;
 }
 .seg button.on { background: var(--brass); color: var(--on-brass); }
