@@ -18,7 +18,7 @@ function slug(name) {
 function defaultState() {
   const s = {
     version: 1,
-    settings: { unit: 'lb', sound: true, wake: true, week: 1, block: 1, lastExport: null },
+    settings: { unit: 'lb', sound: true, wake: true, theme: 'auto', week: 1, block: 1, lastExport: null },
     exercises: {},
     program: JSON.parse(JSON.stringify(SEED_PROGRAM)),
     sessions: [],
@@ -87,6 +87,18 @@ function findDay(dayId) { return state.program.days.find((d) => d.id === dayId);
 function findSlot(day, slotId) { return day ? day.slots.find((s) => s.id === slotId) : null; }
 
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+
+// 'auto' follows the OS; 'light'/'dark' pin it. Keep the status-bar color in sync.
+function applyTheme() {
+  const t = (state && state.settings && state.settings.theme) || 'auto';
+  const root = document.documentElement;
+  if (t === 'auto') root.removeAttribute('data-theme');
+  else root.setAttribute('data-theme', t);
+  const isLight = t === 'light' ||
+    (t === 'auto' && window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches);
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute('content', isLight ? '#F4EFE6' : '#131518');
+}
 
 let toastTimer = null;
 function toast(msg) {
@@ -323,11 +335,19 @@ function workOrder(day) {
   return items;
 }
 
-function nextPending(day) {
-  for (const item of workOrder(day)) {
-    const set = state.active.entries[item.slot.id].sets[item.setIdx];
-    if (!set.done) return item;
+// "Next up" scans the work order forward from the set just logged, so it points
+// to what you'd naturally do next (the next set of this lift, or its superset
+// partner) rather than the earliest unfinished set. Wraps to catch skipped work.
+function nextPending(day, after) {
+  const order = workOrder(day);
+  const notDone = (item) => !state.active.entries[item.slot.id].sets[item.setIdx].done;
+  let start = 0;
+  if (after) {
+    const i = order.findIndex((it) => it.slot.id === after.slotId && it.setIdx === after.setIdx);
+    if (i >= 0) start = i + 1;
   }
+  for (let j = start; j < order.length; j++) if (notDone(order[j])) return order[j];
+  for (let j = 0; j < start; j++) if (notDone(order[j])) return order[j];
   return null;
 }
 
@@ -340,7 +360,7 @@ function logSet(slotId, setIdx) {
   set.t = Date.now();
   save();
   render();
-  const next = nextPending(day);
+  const next = nextPending(day, { slotId, setIdx });
   if (slot.restSec > 0) {
     let nextInfo = null;
     if (next) {
@@ -850,6 +870,14 @@ function viewSettings() {
         </div>
       </div>
       <div class="setting-row">
+        <div><div class="s-label">Theme</div><div class="s-sub">Auto follows your phone's light/dark setting</div></div>
+        <div class="seg">
+          <button class="${s.theme === 'auto' ? 'on' : ''}" data-act="set-theme" data-v="auto">Auto</button>
+          <button class="${s.theme === 'light' ? 'on' : ''}" data-act="set-theme" data-v="light">Light</button>
+          <button class="${s.theme === 'dark' ? 'on' : ''}" data-act="set-theme" data-v="dark">Dark</button>
+        </div>
+      </div>
+      <div class="setting-row">
         <div><div class="s-label">Unit label</div><div class="s-sub">Label only — no conversion of logged numbers</div></div>
         <div class="seg">
           <button class="${s.unit === 'lb' ? 'on' : ''}" data-act="set-unit" data-v="lb">lb</button>
@@ -1110,6 +1138,11 @@ document.addEventListener('click', (ev) => {
       break;
     }
 
+    case 'set-theme':
+      state.settings.theme = el.dataset.v;
+      save(); applyTheme(); render();
+      break;
+
     case 'set-unit':
       state.settings.unit = el.dataset.v;
       save(); render();
@@ -1220,6 +1253,12 @@ async function exportData() {
 /* ============================== boot ============================== */
 
 load();
+applyTheme();
+if (window.matchMedia) {
+  window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => {
+    if (state.settings.theme === 'auto') applyTheme();
+  });
+}
 if (navigator.storage && navigator.storage.persist) {
   navigator.storage.persist().catch(() => {});
 }
