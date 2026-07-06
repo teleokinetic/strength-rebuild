@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Strength Rebuild</title>
+<meta name="description" content="Gym companion for the Strength Rebuild program">
+<meta name="theme-color" content="#131518">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Rebuild">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main id="app"></main>
+
+  <!-- Rest timer: bar + fullscreen clock live outside the view container -->
+  <div id="timerbar" class="timerbar hidden" role="timer"></div>
+  <div id="clock" class="clock hidden"></div>
+
+  <script src="seed.js"></script>
+  <script src="app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => navigator.serviceWorker.register('sw.js'));
+    }
+  </script>
+</body>
+</html>
