@@ -7,7 +7,7 @@
 /* ============================== state ============================== */
 
 const STORE_KEY = 'sr-state-v1';
-const APP_VERSION = '1.0.0';
+const APP_VERSION = '1.1.0';
 
 let state = null;
 
@@ -203,17 +203,39 @@ function fmtSets(sets, metric) {
 const timer = { endsAt: 0, total: 0, next: null, zeroFired: true };
 
 let audioCtx = null;
-function unlockAudio() {
+let audioReady = false;
+// iOS/Safari won't let the AudioContext reach "running" from resume() alone —
+// a sound has to actually START inside a user gesture. So on every early tap we
+// create the context, kick a silent 1-sample buffer, and resume; we keep the
+// listeners attached (retrying) until the context is confirmed running.
+function ensureAudio() {
+  if (!audioCtx) {
+    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return; }
+  }
+  try {
+    const buf = audioCtx.createBuffer(1, 1, 22050);
+    const src = audioCtx.createBufferSource();
+    src.buffer = buf;
+    src.connect(audioCtx.destination);
+    src.start(0);
+  } catch (e) { /* already running / not needed */ }
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  if (audioCtx.state === 'running') { audioReady = true; detachUnlock(); }
+}
+function detachUnlock() {
+  ['pointerdown', 'touchend', 'click'].forEach((ev) => document.removeEventListener(ev, ensureAudio));
+}
+['pointerdown', 'touchend', 'click'].forEach((ev) => document.addEventListener(ev, ensureAudio, { passive: true }));
+
+function chime() {
+  if (!state.settings.sound) return;
+  // Vibration (Android) is independent of audio unlock — fire it regardless.
+  if (navigator.vibrate) { try { navigator.vibrate([180, 90, 180]); } catch (e) {} }
   if (!audioCtx) {
     try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return; }
   }
   if (audioCtx.state === 'suspended') audioCtx.resume();
-}
-document.addEventListener('touchend', unlockAudio, { once: true, passive: true });
-document.addEventListener('click', unlockAudio, { once: true });
-
-function chime() {
-  if (!state.settings.sound || !audioCtx || audioCtx.state !== 'running') return;
+  if (audioCtx.state !== 'running') return;   // still locked — nothing to play
   const now = audioCtx.currentTime;
   [[880, 0], [880, 0.22], [1174.7, 0.44]].forEach(([freq, dt]) => {
     const osc = audioCtx.createOscillator();
@@ -227,7 +249,6 @@ function chime() {
     osc.start(now + dt);
     osc.stop(now + dt + 0.3);
   });
-  if (navigator.vibrate) { try { navigator.vibrate([180, 90, 180]); } catch (e) {} }
 }
 
 function startTimer(sec, next) {
@@ -291,7 +312,11 @@ setInterval(() => {
 }, 500);
 
 document.addEventListener('visibilitychange', () => {
-  if (!document.hidden) { if (timer.endsAt) renderTimer(); acquireWakeLock(); }
+  if (!document.hidden) {
+    if (timer.endsAt) renderTimer();
+    acquireWakeLock();
+    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  }
 });
 
 function elapsedText() {
@@ -931,6 +956,10 @@ function viewSettings() {
         </div>
       </div>
       <div class="setting-row">
+        <div><div class="s-label">Test chime</div><div class="s-sub">Play it now — also primes sound for the session</div></div>
+        <div class="seg"><button data-act="test-chime">Play</button></div>
+      </div>
+      <div class="setting-row">
         <div><div class="s-label">Keep screen awake</div><div class="s-sub">During a session, so the timer stays visible</div></div>
         <div class="seg">
           <button class="${s.wake ? 'on' : ''}" data-act="set-wake" data-v="1">On</button>
@@ -1217,6 +1246,18 @@ document.addEventListener('click', (ev) => {
       state.settings.sound = el.dataset.v === '1';
       save(); render();
       break;
+
+    case 'test-chime': {
+      // This runs inside a real tap, so it unlocks iOS audio and confirms it works.
+      const wasOn = state.settings.sound;
+      state.settings.sound = true;   // let the test play even if the setting is Off
+      ensureAudio();
+      chime();
+      state.settings.sound = wasOn;
+      if (!wasOn) toast('Chime is currently Off for rests — turn it On above');
+      else toast('If you heard it, sound is primed for this session');
+      break;
+    }
 
     case 'set-wake':
       state.settings.wake = el.dataset.v === '1';
