@@ -11,12 +11,12 @@ const SEED_PROGRAM = {
       subtitle: 'Squat + Horizontal',
       slots: [
         {
-          id: 'a1', name: 'Box jump, step down', pattern: 'Power',
+          id: 'a1', name: 'Broad jump', pattern: 'Power',
           sets: 4, reps: [3, 3], rir: '', trackRIR: false,
           load: 'none', metric: 'reps', perSide: false, restSec: 105,
           progression: 'output', increment: 0,
-          progressionNote: 'Output/height when crisp — never to fatigue',
-          cue: 'Step down every rep',
+          progressionNote: 'Output/distance when crisp — never to fatigue',
+          cue: 'Land soft, absorb — don\'t chase distance',
         },
         {
           id: 'a2', name: 'Front squat', pattern: 'Squat main',
@@ -90,12 +90,12 @@ const SEED_PROGRAM = {
       subtitle: 'Hinge + Vertical',
       slots: [
         {
-          id: 'b1', name: 'Med-ball rotational throw', pattern: 'Power · rotation',
-          sets: 4, reps: [3, 3], rir: '', trackRIR: false,
-          load: 'none', metric: 'reps', perSide: true, restSec: 105,
+          id: 'b1', name: 'Kettlebell swing', pattern: 'Power · hinge',
+          sets: 4, reps: [6, 6], rir: '', trackRIR: false,
+          load: 'external', metric: 'reps', perSide: false, restSec: 105,
           progression: 'output', increment: 0,
-          progressionNote: 'Output when crisp',
-          cue: "Whip, don't muscle",
+          progressionNote: 'Output/power when crisp — heavier bell or more snap, never to fatigue',
+          cue: 'Snap the hips, float the bell — power from the hinge',
         },
         {
           id: 'b2', name: 'Trap-bar deadlift', pattern: 'Hinge main',
