@@ -7,7 +7,7 @@
 /* ============================== state ============================== */
 
 const STORE_KEY = 'sr-state-v1';
-const APP_VERSION = '1.2.0';
+const APP_VERSION = '1.4.0';
 
 let state = null;
 
@@ -155,6 +155,32 @@ function allEntriesFor(exerciseId) {
     if (entry) out.push({ entry, session: sess });
   }
   return out;
+}
+
+// Most recent *non-deload* entry — the working-weight baseline. Prefill reads
+// from this so a deload week's eased loads never become the new normal (a
+// deload is a dip, not a reset).
+function lastNonDeloadEntryFor(exerciseId) {
+  for (let i = state.sessions.length - 1; i >= 0; i--) {
+    const sess = state.sessions[i];
+    if (sess.week === 4) continue;
+    const entry = sess.entries.find((e) => e.exerciseId === exerciseId && e.sets.length);
+    if (entry) return { entry, session: sess };
+  }
+  return null;
+}
+
+// Deload week: suggest ~15% under the last working top set, rounded to the
+// movement's smallest jump. Null for bodyweight movements or when there's no
+// prior working load to ease from.
+function deloadLoadFor(slot) {
+  if (slot.load === 'none') return null;
+  const base = lastNonDeloadEntryFor(slot.exerciseId);
+  if (!base) return null;
+  const topW = Math.max(...base.entry.sets.map((s) => Number(s.w) || 0));
+  if (!topW) return null;
+  const inc = slot.increment || 5;
+  return Math.max(inc, Math.round((topW * 0.85) / inc) * inc);
 }
 
 // §5 double progression: every work set at the top of the rep range at
@@ -336,18 +362,24 @@ function startSession(dayId) {
   if (!day) return;
   const entries = {};
   for (const slot of day.slots) {
-    const last = lastEntryFor(slot.exerciseId);
     const deload = state.settings.week === 4;
     const nudge = deload ? null : nudgeFor(slot);
+    // Baseline weight/reps come from the last NON-deload session (snap-back).
+    const base = lastNonDeloadEntryFor(slot.exerciseId);
+    const deloadW = deload ? deloadLoadFor(slot) : null;
+    const easeLoad = deload && deloadW != null;
     const nSets = Math.max(1, slot.sets - (deload ? 1 : 0));
     const sets = [];
     for (let i = 0; i < nSets; i++) {
-      const prev = last ? (last.entry.sets[i] || last.entry.sets[last.entry.sets.length - 1]) : null;
+      const prev = base ? (base.entry.sets[i] || base.entry.sets[base.entry.sets.length - 1]) : null;
       sets.push({
-        w: nudge && nudge.type === 'load' ? String(nudge.weight) : (prev && prev.w != null ? String(prev.w) : ''),
+        w: easeLoad ? String(deloadW)
+           : (nudge && nudge.type === 'load' ? String(nudge.weight)
+           : (prev && prev.w != null ? String(prev.w) : '')),
         r: nudge && nudge.type === 'load' ? String(slot.reps[0]) : (prev && prev.r != null ? String(prev.r) : ''),
         rir: '',
         done: false, t: 0,
+        deload: easeLoad,
       });
     }
     entries[slot.id] = { exerciseId: slot.exerciseId, sets, note: '' };
@@ -610,7 +642,7 @@ function setRowsHTML(slot, entry, deload) {
   const rows = entry.sets.map((set, i) => `
     <div class="set-row${cls}${set.done ? ' done' : ''}">
       <span class="set-idx">${i + 1}</span>
-      ${noLoad ? '' : `<input type="text" inputmode="decimal" value="${esc(set.w)}" placeholder="—" data-in="set" data-slot="${slot.id}" data-set="${i}" data-f="w" ${set.done ? 'readonly' : ''}>`}
+      ${noLoad ? '' : `<input type="text"${set.deload ? ' class="deload-w"' : ''} inputmode="decimal" value="${esc(set.w)}" placeholder="—" data-in="set" data-slot="${slot.id}" data-set="${i}" data-f="w" ${set.done ? 'readonly' : ''}>`}
       <input type="text" inputmode="numeric" value="${esc(set.r)}" placeholder="${repsPh}" data-in="set" data-slot="${slot.id}" data-set="${i}" data-f="r" ${set.done ? 'readonly' : ''}>
       ${noRIR ? '' : `<input type="text" inputmode="numeric" value="${esc(set.rir)}" placeholder="${deload ? '4–5' : esc(slot.rir) || '—'}" data-in="set" data-slot="${slot.id}" data-set="${i}" data-f="rir" ${set.done ? 'readonly' : ''}>`}
       <button class="log" data-act="${set.done ? 'unlog-set' : 'log-set'}" data-slot="${slot.id}" data-set="${i}" aria-label="${set.done ? 'Undo set' : 'Log set'}">✓</button>
@@ -618,7 +650,7 @@ function setRowsHTML(slot, entry, deload) {
   return labels + rows;
 }
 
-function slotCardHTML(day, slot, deload) {
+function slotCardHTML(day, slot, deload, showDeloadNote) {
   const entry = state.active.entries[slot.id];
   if (!entry) return '';
   const last = lastEntryFor(slot.exerciseId);
@@ -643,6 +675,7 @@ function slotCardHTML(day, slot, deload) {
       ${nudgeHTML}
       ${lastLine}
       <div class="sets">${setRowsHTML(slot, entry, deload)}</div>
+      ${showDeloadNote ? `<div class="deload-note">✱ Deload loads — eased ~15%, shown in green. Ease into 4–5 RIR.</div>` : ''}
       <div class="slot-foot">
         <button class="linklike" data-act="toggle-note" data-slot="${slot.id}">${noteOpen ? 'note ↓' : '+ note'}</button>
         <span>
@@ -663,15 +696,23 @@ function viewSession() {
   const deload = state.active.week === 4;
   const handled = new Set();
   const cards = [];
+  // Explain the green eased loads once, on the first movement that shows them.
+  let deloadNoteDone = false;
+  const noteFor = (slot) => {
+    if (deloadNoteDone || !deload) return false;
+    const e = state.active.entries[slot.id];
+    if (e && e.sets.some((s) => s.deload)) { deloadNoteDone = true; return true; }
+    return false;
+  };
   for (const slot of day.slots) {
     if (handled.has(slot.id)) continue;
     if (slot.group) {
       const group = day.slots.filter((s) => s.group === slot.group);
       group.forEach((s) => handled.add(s.id));
-      cards.push(group.map((s) => slotCardHTML(day, s, deload)).join(`<div class="superset-tie">superset — alternate sets</div>`));
+      cards.push(group.map((s) => slotCardHTML(day, s, deload, noteFor(s))).join(`<div class="superset-tie">superset — alternate sets</div>`));
     } else {
       handled.add(slot.id);
-      cards.push(slotCardHTML(day, slot, deload));
+      cards.push(slotCardHTML(day, slot, deload, noteFor(slot)));
     }
   }
   return `
