@@ -488,3 +488,10 @@ textarea.note:focus { border-color: var(--brass); outline: none; }
 .section-head { margin: 22px 0 10px; display: flex; justify-content: space-between; align-items: baseline; }
 
 .footer-note { color: var(--dim); font-size: 12.5px; text-align: center; margin-top: 26px; line-height: 1.6; }
+
+/* Deload: eased loads shown as green numbers, explained once per session. */
+:root, :root[data-theme="dark"] { --deload-num: rgba(122, 196, 132, 0.82); }
+:root[data-theme="light"] { --deload-num: #3C7A46; }
+@media (prefers-color-scheme: light) { :root:not([data-theme]) { --deload-num: #3C7A46; } }
+.set-row input.deload-w, .set-row.done input.deload-w { color: var(--deload-num); font-weight: 600; }
+.deload-note { color: var(--deload-num); font-size: 12px; font-style: italic; margin-top: 8px; line-height: 1.4; }
