@@ -8,7 +8,7 @@
 
 const STORE_KEY = 'sr-state-v1';
 const REPAIR_BACKUP_KEY = STORE_KEY + '.backup.prefill-repair';
-const APP_VERSION = '1.5.0';
+const APP_VERSION = '1.6.0';
 
 let state = null;
 
@@ -349,6 +349,7 @@ function stopTimer() {
   timer.zeroFired = true;
   $('#timerbar').classList.add('hidden');
   $('#clock').classList.add('hidden');
+  renderClockTick();
 }
 
 function renderTimer() {
@@ -388,6 +389,7 @@ function renderTimer() {
         <button data-act="clock-close">Back to sets</button>
       </div>`;
   }
+  renderClockTick();
 }
 
 setInterval(() => {
@@ -445,9 +447,10 @@ function startSession(dayId) {
     entries[slot.id] = { exerciseId: slot.exerciseId, sets, note: '' };
   }
   state.active = { dayId, startedAt: Date.now(), week: state.settings.week, block: state.settings.block, entries };
+  clockPanel = null;
   save();
   acquireWakeLock();
-  location.hash = '#/session';
+  location.hash = '#/outline';
 }
 
 // Flattened work order: supersets interleave (A1, B1, A2, B2…), everything
@@ -656,7 +659,7 @@ function viewHome() {
   const days = [...state.program.days].sort((a, b) => (a.id === suggestId ? -1 : b.id === suggestId ? 1 : 0));
 
   const resume = state.active ? `
-    <button class="card day-start suggested" data-act="nav" data-to="#/session">
+    <button class="card day-start suggested" data-act="nav" data-to="#/clock">
       <div class="eyebrow">In progress · started ${fmtDate(state.active.startedAt)}</div>
       <div class="day-name">Resume session</div>
       <div class="day-sub">${esc((findDay(state.active.dayId) || {}).name || '')} — pick up where you left off</div>
@@ -788,9 +791,12 @@ function viewSession() {
   }
   return `
     <div class="session-top">
-      <div>
-        <div class="title">${esc(day.name)}</div>
-        <div class="meta">${esc(day.subtitle)} · Wk ${state.active.week}</div>
+      <div class="titlewrap">
+        <button class="s-back" data-act="nav" data-to="#/outline" aria-label="Back to session outline">‹</button>
+        <div>
+          <div class="title">${esc(day.name)}</div>
+          <div class="meta">${esc(day.subtitle)} · Wk ${state.active.week}</div>
+        </div>
       </div>
       <button class="finish" data-act="nav" data-to="#/finish">Finish</button>
     </div>
@@ -822,6 +828,308 @@ function viewFinish() {
     <button class="btn primary" data-act="finish-session">Save session</button>
     <button class="btn quiet" data-act="nav" data-to="#/session">Keep training</button>
     <button class="btn danger" data-act="discard-session">Discard session</button>`;
+}
+
+/* ==================== outline & clock (in-session front end) ==================== */
+
+// Expanded log panel on the #/clock route: {slotId, setIdx} or null (calm state).
+// Route-local — render() clears it whenever the hash leaves #/clock.
+let clockPanel = null;
+
+// Rough session length: every remaining set costs its rest plus ~45s of work,
+// rounded to the nearest 5 minutes.
+function estMinutes(sec) {
+  return Math.max(5, Math.round(sec / 300) * 5);
+}
+
+// One-line pre-fill summary for the on-deck card ("148 lb × 5 /side" or why it's blank).
+function clockPrefillLine(slot, set) {
+  if (set.r === '' || set.r == null) {
+    return lastEntryFor(slot.exerciseId) ? 'left blank last time — nothing to pre-fill' : 'first time — no history yet';
+  }
+  const parts = [];
+  if (slot.load !== 'none' && set.w !== '' && set.w != null) parts.push(set.w + ' ' + state.settings.unit);
+  parts.push('× ' + set.r + metricUnit(slot));
+  return parts.join(' ') + (slot.perSide ? ' /side' : '');
+}
+
+function prevSetStr(slot, prev) {
+  const parts = [];
+  if (slot.load !== 'none' && prev.w !== '' && prev.w != null) parts.push(prev.w + ' ' + state.settings.unit);
+  parts.push('× ' + prev.r + metricUnit(slot));
+  let s = parts.join(' ');
+  if (slot.trackRIR && prev.rir !== '' && prev.rir != null) s += ' @ ' + prev.rir + ' RIR';
+  return s + (slot.perSide ? ' /side' : '');
+}
+
+function viewOutline() {
+  if (!state.active) { location.hash = '#/'; return ''; }
+  const day = findDay(state.active.dayId);
+  const deload = state.active.week === 4;
+  const unit = state.settings.unit;
+  const running = timer.endsAt > Date.now();
+  const remain = running ? (timer.endsAt - Date.now()) / 1000 : 0;
+
+  // Stops in work order: a superset group is ONE stop with A/B rows.
+  const handled = new Set();
+  const stops = [];
+  for (const slot of day.slots) {
+    if (handled.has(slot.id)) continue;
+    const group = slot.group ? day.slots.filter((s) => s.group === slot.group) : [slot];
+    group.forEach((s) => handled.add(s.id));
+    const withEntries = group.filter((s) => state.active.entries[s.id]);
+    if (withEntries.length) stops.push(withEntries);
+  }
+
+  let totalSets = 0, doneSets = 0, totalSec = 0, remainSec = 0, movements = 0;
+  for (const slot of day.slots) {
+    const e = state.active.entries[slot.id];
+    if (!e) continue;
+    movements++;
+    for (const s of e.sets) {
+      totalSets++;
+      totalSec += slot.restSec + 45;
+      if (s.done) doneSets++;
+      else remainSec += slot.restSec + 45;
+    }
+  }
+  const started = doneSets > 0;
+  const current = nextPending(day);
+
+  const rxLine = (slot, entry) => {
+    const u = metricUnit(slot);
+    const repsTxt = slot.reps[0] === slot.reps[1] ? slot.reps[0] + u : `${slot.reps[0]}–${slot.reps[1]}${u}`;
+    let t = `${entry.sets.length} × ${repsTxt}`;
+    if (slot.perSide) t += ' /side';
+    if (slot.trackRIR) t += ` @ ${deload ? '4–5' : esc(slot.rir)}`;
+    if (slot.restSec) t += ` · rest ${fmtRest(slot.restSec)}`;
+    return t;
+  };
+  const tagFor = (slot) => {
+    if (deload) return slot.load !== 'none' ? `&nbsp;<span class="rtag dl">▼ deload</span>` : '';
+    const n = nudgeFor(slot);
+    if (n && n.type === 'load') return `&nbsp;<span class="rtag">▲ +${slot.increment || 5} ${esc(unit)}</span>`;
+    if (n && n.type === 'variation') return `&nbsp;<span class="rtag">▲ variation</span>`;
+    return '';
+  };
+  const dotsFor = (slot, entry) => {
+    const dots = entry.sets.map((s) => `<i${s.done ? ' class="f"' : ''}></i>`).join('');
+    const pill = running && current && current.slot.id === slot.id
+      ? `<span class="restpill" id="ol-restpill">Resting ${fmtClock(remain)}</span>` : '';
+    return `<div class="dots">${dots}${pill}</div>`;
+  };
+
+  let doneStops = 0;
+  const stopHTML = stops.map((group, idx) => {
+    const allDone = group.every((s) => state.active.entries[s.id].sets.every((x) => x.done));
+    if (allDone) doneStops++;
+    const isCur = !allDone && current && group.some((s) => s.id === current.slot.id);
+    const node = allDone ? '✓' : String(idx + 1);
+    let body;
+    if (group.length > 1) {
+      body = `<div class="st-tie">Superset · alternate</div>` + group.map((s, gi) => `
+        <div class="st-sub">
+          <div class="st-name"><span class="ab">${String.fromCharCode(65 + gi)}</span>${esc(s.name)}</div>
+          <div class="st-rx">${rxLine(s, state.active.entries[s.id])}${tagFor(s)}</div>
+          ${dotsFor(s, state.active.entries[s.id])}
+        </div>`).join('');
+    } else {
+      const s = group[0];
+      body = `
+        <div class="st-name">${esc(s.name)}</div>
+        <div class="st-rx">${rxLine(s, state.active.entries[s.id])}${tagFor(s)}</div>
+        ${dotsFor(s, state.active.entries[s.id])}`;
+    }
+    return `<div class="stop${allDone ? ' done' : isCur ? ' cur' : ''}"><div class="node">${node}</div>${body}</div>`;
+  }).join('');
+
+  const elapsedMin = Math.max(1, Math.round((Date.now() - state.active.startedAt) / 60000));
+  const chips = started
+    ? `<span class="pill">${elapsedMin} min in</span><span class="pill brass">~${estMinutes(remainSec)} min left</span>`
+    : `<span class="pill brass">Est ~${estMinutes(totalSec)} min</span><span class="pill">${stops.length} stops · ${movements} movements</span>`;
+  const primary = current
+    ? (started
+      ? `<button class="btn primary" data-act="nav" data-to="#/clock">Return to clock</button>`
+      : `<button class="btn primary" data-act="nav" data-to="#/clock">Start ▸ ${esc(current.slot.name)}</button>`)
+    : `<button class="btn primary" data-act="nav" data-to="#/finish">Finish session</button>`;
+
+  return `
+    <button class="back" data-act="nav" data-to="#/">← Home</button>
+    <div class="outline-head">
+      <div class="eyebrow">Week ${state.active.week} · Block ${state.active.block}${deload ? ' · deload' : ''}</div>
+      <div class="ol-title">${esc(day.name)}</div>
+      <div class="ol-sub">${esc(day.subtitle)}${started ? ` · ${doneStops} of ${stops.length} stops done` : ''}</div>
+      <div class="ol-chips">${chips}</div>
+    </div>
+    <div class="route">${stopHTML}</div>
+    ${primary}
+    <button class="btn quiet" data-act="nav" data-to="#/session">Set sheet</button>`;
+}
+
+// RIR chips: 4+/2–3/0–1 storing '4'/'2'/'1'. The slot's target gets a dashed
+// brass ring until any chip is chosen (then only the selection reads brass).
+function rirRowHTML(slot, set, setIdx, deload) {
+  const opts = [
+    { v: '4', lab: '4+', hint: 'easy' },
+    { v: '2', lab: '2–3', hint: 'on target' },
+    { v: '1', lab: '0–1', hint: 'near max' },
+  ];
+  const m = String(deload ? '4–5' : slot.rir || '').match(/\d+/);
+  const n = m ? Number(m[0]) : 2;
+  const targetV = n <= 1 ? '1' : n >= 4 ? '4' : '2';
+  const cur = set.rir === '' || set.rir == null ? NaN : Number(set.rir);
+  const onV = Number.isFinite(cur) ? (cur >= 4 ? '4' : cur <= 1 ? '1' : '2') : null;
+  return `<div class="rir-row${onV ? ' has-on' : ''}">` + opts.map((o) => `
+    <button data-act="cl-rir" data-slot="${slot.id}" data-set="${setIdx}" data-v="${o.v}"
+      class="${o.v === targetV ? 'target' : ''}${o.v === onV ? ' on' : ''}"
+      aria-pressed="${o.v === onV ? 'true' : 'false'}">${o.lab}<span class="hint">${o.hint}</span></button>`).join('') + `</div>`;
+}
+
+// Provenance for the expanded panel — where this set's pre-fill came from.
+// app.js sets carry no src field, so derive it from the engine.
+function clockProvHTML(slot, set, setIdx, deload) {
+  if (deload) {
+    return `<div class="prov"><span class="cl-deloadtag">▼ Deload</span>${slot.load !== 'none' && set.deload ? 'Load eased ~15%. ' : ''}Leave 4–5 in the tank — re-groove, don't push.</div>`;
+  }
+  const nudge = nudgeFor(slot);
+  if (nudge && nudge.type === 'load') return `<div class="prov nudge"><b>Progression earned.</b> ${esc(nudge.text)}</div>`;
+  if (nudge && nudge.type === 'variation') return `<div class="prov nudge"><b>Variation ready.</b> ${esc(nudge.text)}</div>`;
+  const last = lastEntryFor(slot.exerciseId);
+  if (set.r === '' || set.r == null) {
+    if (!last) return `<div class="prov">No history yet for this movement.</div>`;
+    return `<div class="prov blank"><span class="pbadge">—</span><b>Was left blank last time.</b> Nothing to carry forward — this set starts from empty.</div>`;
+  }
+  const prev = lastLoggedSetValue(slot.exerciseId, setIdx);
+  if (prev) return `<div class="prov"><b>Last time:</b> ${esc(prevSetStr(slot, prev))} — carried forward.</div>`;
+  if (!last) return `<div class="prov">No history yet for this movement.</div>`;
+  return '';
+}
+
+function clockPanelHTML(day) {
+  const { slotId, setIdx } = clockPanel;
+  const slot = findSlot(day, slotId);
+  const entry = state.active.entries[slotId];
+  const set = entry.sets[setIdx];
+  const deload = state.active.week === 4;
+  const unit = state.settings.unit;
+  const running = timer.endsAt > Date.now();
+  const remain = running ? (timer.endsAt - Date.now()) / 1000 : 0;
+  const noteOpen = entry.note !== '';
+  const repLabel = slot.metric === 'seconds' ? 'Seconds' : slot.metric === 'meters' ? 'Meters' : 'Reps';
+  return `
+    <div class="clockview">
+      <div class="cl-log">
+        <div class="cl-pill${running ? '' : ' idle'}" id="cl-pill">${running ? `Resting <span id="cl-pilltime">${fmtClock(remain)}</span>` : 'Logging'}</div>
+        <div class="mv">${esc(slot.name)}</div>
+        <div class="setof">Set ${setIdx + 1} of ${entry.sets.length}</div>
+        ${slot.cue ? `<div class="cue">${esc(slot.cue)}</div>` : ''}
+        ${clockProvHTML(slot, set, setIdx, deload)}
+        <div class="cl-fields">
+          ${slot.load === 'none' ? '' : `
+          <div class="cl-field">
+            <div class="flabel">Load</div>
+            <div class="cl-stepper">
+              <button data-act="cl-load" data-slot="${slot.id}" data-set="${setIdx}" data-dir="-1" aria-label="Less load">−</button>
+              <span class="v${set.w === '' ? ' empty' : ''}"><span id="cl-loadval">${set.w === '' ? '—' : esc(set.w)}</span><small>${slot.load === 'added' ? '+' : ''}${esc(unit)}</small></span>
+              <button data-act="cl-load" data-slot="${slot.id}" data-set="${setIdx}" data-dir="1" aria-label="More load">+</button>
+            </div>
+          </div>`}
+          <div class="cl-field">
+            <div class="flabel">${repLabel}${slot.perSide ? ' /side' : ''}</div>
+            <div class="cl-stepper">
+              <button data-act="cl-rep" data-slot="${slot.id}" data-set="${setIdx}" data-dir="-1" aria-label="Fewer">−</button>
+              <span class="v${set.r === '' ? ' empty' : ''}"><span id="cl-repval">${set.r === '' ? '—' : esc(set.r)}</span></span>
+              <button data-act="cl-rep" data-slot="${slot.id}" data-set="${setIdx}" data-dir="1" aria-label="More">+</button>
+            </div>
+          </div>
+          ${slot.trackRIR ? `
+          <div class="cl-field cl-rir">
+            <div class="flabel">Left in the tank · RIR <span class="target-hint">(target ${deload ? '4–5' : esc(slot.rir) || '2–3'})</span></div>
+            <div id="cl-rirwrap">${rirRowHTML(slot, set, setIdx, deload)}</div>
+          </div>` : ''}
+        </div>
+        <button class="btn primary" id="cl-logbtn" data-act="cl-log" data-slot="${slot.id}" data-set="${setIdx}" style="margin-top:16px">Log &amp; rest</button>
+        <div class="cl-subrow">
+          <button class="linklike" data-act="toggle-note" data-slot="${slot.id}">${noteOpen ? 'note ↓' : '+ note'}</button>
+          <button class="linklike" data-act="cl-collapse">↩ back to clock</button>
+        </div>
+        <div class="note-box" style="${noteOpen ? '' : 'display:none'}" id="note-${slot.id}">
+          <textarea class="note cl-note" placeholder="How did it feel? Anything for next time…" data-in="note" data-slot="${slot.id}">${esc(entry.note)}</textarea>
+        </div>
+      </div>
+    </div>`;
+}
+
+function viewClock() {
+  if (!state.active) { location.hash = '#/'; return ''; }
+  const day = findDay(state.active.dayId);
+  const next = nextPending(day);
+  if (!next) { location.hash = '#/finish'; return ''; }
+
+  // Stale-panel guard: the referenced set must still exist and be un-logged.
+  if (clockPanel) {
+    const e = state.active.entries[clockPanel.slotId];
+    const s = e && e.sets[clockPanel.setIdx];
+    if (!s || s.done) clockPanel = null;
+  }
+  if (clockPanel) return clockPanelHTML(day);
+
+  const slot = next.slot;
+  const entry = state.active.entries[slot.id];
+  const set = entry.sets[next.setIdx];
+  const running = timer.endsAt > Date.now();
+  const atZero = timer.endsAt > 0 && !running;
+  const remain = running ? (timer.endsAt - Date.now()) / 1000 : 0;
+  const frac = running && timer.total ? Math.max(0, remain / timer.total) : 0;
+  const blank = set.r === '' || set.r == null;
+  return `
+    <div class="clockview">
+      <div class="eyebrow" id="cl-lbl">${running ? 'Rest' : atZero ? 'Rest done — next set ready' : 'Ready'}</div>
+      <div class="cl-big${running ? '' : ' zero'}" id="cl-big">${running ? fmtClock(remain) : 'GO'}</div>
+      <div class="cl-drain"><div class="fill" id="cl-drainfill" style="width:${(frac * 100).toFixed(1)}%"></div></div>
+      <button class="cl-ondeck${blank ? ' blankflag' : ''}" id="cl-ondeck" data-act="cl-expand" data-slot="${slot.id}" data-set="${next.setIdx}">
+        <span class="lbl">On deck · set ${next.setIdx + 1} of ${entry.sets.length}</span>
+        <span class="mv">${esc(slot.name)}</span>
+        <span class="det">${esc(clockPrefillLine(slot, set))}</span>
+        <span class="tap">tap to log ▸</span>
+      </button>
+      <div class="cl-btns">
+        <button data-act="timer-sub">−30s</button>
+        <button data-act="timer-add">+30s</button>
+        <button data-act="timer-stop">Skip rest</button>
+      </div>
+      <div class="cl-btns">
+        <button data-act="nav" data-to="#/outline">Route</button>
+        <button data-act="nav" data-to="#/session">Back to sets</button>
+      </div>
+    </div>`;
+}
+
+// Live updates for the #/clock route and the outline's resting pill. Cheap
+// no-op off those routes; called from renderTimer's tick and stopTimer.
+function renderClockTick() {
+  const running = timer.endsAt > Date.now();
+  const remain = running ? (timer.endsAt - Date.now()) / 1000 : 0;
+  const big = $('#cl-big');
+  if (big) {
+    const atZero = timer.endsAt > 0 && !running;
+    big.textContent = running ? fmtClock(remain) : 'GO';
+    big.classList.toggle('zero', !running);
+    const lbl = $('#cl-lbl');
+    if (lbl) lbl.textContent = running ? 'Rest' : atZero ? 'Rest done — next set ready' : 'Ready';
+    const fill = $('#cl-drainfill');
+    if (fill) fill.style.width = ((running && timer.total ? Math.max(0, remain / timer.total) : 0) * 100).toFixed(1) + '%';
+  }
+  const pill = $('#cl-pill');
+  if (pill) {
+    if (running) { pill.classList.remove('idle'); pill.innerHTML = `Resting <span id="cl-pilltime">${fmtClock(remain)}</span>`; }
+    else if (!pill.classList.contains('idle')) { pill.classList.add('idle'); pill.textContent = 'Logging'; }
+  }
+  const op = $('#ol-restpill');
+  if (op) {
+    if (running) op.textContent = 'Resting ' + fmtClock(remain);
+    else op.style.display = 'none';
+  }
 }
 
 function viewHistory() {
@@ -1109,8 +1417,12 @@ function render() {
   const hash = location.hash || '#/';
   const parts = hash.replace(/^#\//, '').split('/');
   let html = '';
+  if (parts[0] !== 'clock') clockPanel = null;   // panel state is local to the clock route
+  document.body.classList.toggle('route-clock', parts[0] === 'clock');
   if (hash === '#/' || hash === '') html = viewHome();
   else if (parts[0] === 'session') html = viewSession();
+  else if (parts[0] === 'outline') html = viewOutline();
+  else if (parts[0] === 'clock') html = viewClock();
   else if (parts[0] === 'finish') html = viewFinish();
   else if (parts[0] === 'history') html = viewHistory();
   else if (parts[0] === 'session-log') html = viewSessionLog(parts[1]);
@@ -1258,6 +1570,77 @@ document.addEventListener('click', (ev) => {
     case 'clock-close':
       $('#clock').classList.add('hidden');
       break;
+
+    case 'cl-expand': {
+      clockPanel = { slotId: el.dataset.slot, setIdx: Number(el.dataset.set) };
+      render();
+      const b = $('#cl-logbtn');
+      if (b) b.focus();
+      break;
+    }
+
+    case 'cl-collapse': {
+      clockPanel = null;
+      render();
+      const od = $('#cl-ondeck');
+      if (od) od.focus();
+      break;
+    }
+
+    case 'cl-load': {
+      const day = findDay(state.active.dayId);
+      const slot = findSlot(day, el.dataset.slot);
+      const setIdx = Number(el.dataset.set);
+      const set = state.active.entries[slot.id].sets[setIdx];
+      const prev = lastLoggedSetValue(slot.exerciseId, setIdx);
+      let base = set.w === '' ? (prev && prev.w !== '' && prev.w != null ? Number(prev.w) : 0) : Number(set.w);
+      if (!Number.isFinite(base)) base = 0;
+      const v = Math.max(0, base + Number(el.dataset.dir) * (slot.increment || 5));
+      set.w = String(v);
+      saveSoon();
+      const lv = $('#cl-loadval');
+      if (lv) { lv.textContent = v; lv.parentElement.classList.remove('empty'); }
+      break;
+    }
+
+    case 'cl-rep': {
+      const day = findDay(state.active.dayId);
+      const slot = findSlot(day, el.dataset.slot);
+      const set = state.active.entries[slot.id].sets[Number(el.dataset.set)];
+      const step = slot.metric === 'reps' ? 1 : 5;
+      let base = set.r === '' ? slot.reps[0] : Number(set.r);
+      if (!Number.isFinite(base)) base = slot.reps[0];
+      const v = Math.max(0, base + Number(el.dataset.dir) * step);
+      set.r = String(v);
+      saveSoon();
+      const rv = $('#cl-repval');
+      if (rv) { rv.textContent = v; rv.parentElement.classList.remove('empty'); }
+      break;
+    }
+
+    case 'cl-rir': {
+      const day = findDay(state.active.dayId);
+      const slot = findSlot(day, el.dataset.slot);
+      const setIdx = Number(el.dataset.set);
+      const set = state.active.entries[slot.id].sets[setIdx];
+      set.rir = el.dataset.v;   // '4' | '2' | '1' — string, like the sheet inputs
+      saveSoon();
+      const wrap = $('#cl-rirwrap');
+      if (wrap) {
+        wrap.innerHTML = rirRowHTML(slot, set, setIdx, state.active.week === 4);
+        const b = wrap.querySelector(`[data-v="${el.dataset.v}"]`);
+        if (b) b.focus();
+      }
+      break;
+    }
+
+    case 'cl-log': {
+      clockPanel = null;
+      logSet(el.dataset.slot, Number(el.dataset.set));   // marks done, saves, renders, starts the real timer
+      const od = $('#cl-ondeck');
+      if (od) od.classList.add('flash');
+      break;
+    }
 
     case 'move-slot': {
       const day = findDay(el.dataset.day);
