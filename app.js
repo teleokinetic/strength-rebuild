@@ -1593,9 +1593,13 @@ document.addEventListener('click', (ev) => {
       const setIdx = Number(el.dataset.set);
       const set = state.active.entries[slot.id].sets[setIdx];
       const prev = lastLoggedSetValue(slot.exerciseId, setIdx);
-      let base = set.w === '' ? (prev && prev.w !== '' && prev.w != null ? Number(prev.w) : 0) : Number(set.w);
+      const anchor = prev && prev.w !== '' && prev.w != null ? Number(prev.w) : null;
+      let base = set.w === '' ? (anchor != null ? anchor : 0) : Number(set.w);
       if (!Number.isFinite(base)) base = 0;
-      const v = Math.max(0, base + Number(el.dataset.dir) * (slot.increment || 5));
+      // First tap on an empty field recalls the anchor itself; deltas start on the next tap.
+      const v = set.w === '' && anchor != null
+        ? anchor
+        : Math.max(0, base + Number(el.dataset.dir) * (slot.increment || 5));
       set.w = String(v);
       saveSoon();
       const lv = $('#cl-loadval');
@@ -1610,7 +1614,10 @@ document.addEventListener('click', (ev) => {
       const step = slot.metric === 'reps' ? 1 : 5;
       let base = set.r === '' ? slot.reps[0] : Number(set.r);
       if (!Number.isFinite(base)) base = slot.reps[0];
-      const v = Math.max(0, base + Number(el.dataset.dir) * step);
+      // First tap on an empty field lands ON the prescription floor, not one past it.
+      const v = set.r === ''
+        ? slot.reps[0]
+        : Math.max(0, base + Number(el.dataset.dir) * step);
       set.r = String(v);
       saveSoon();
       const rv = $('#cl-repval');
