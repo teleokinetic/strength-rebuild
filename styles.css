@@ -183,17 +183,8 @@ a { color: inherit; }
 
 .linklike { color: var(--dim); font-size: 14px; text-decoration: underline; text-underline-offset: 3px; padding: 8px 0; }
 
-/* ---------- session: slot cards ---------- */
+/* ---------- in-place editor (expanded route stops) ---------- */
 
-.slot-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
-.slot-name {
-  font-family: var(--display); font-weight: 600; font-size: 24px;
-  text-transform: uppercase; letter-spacing: 0.02em; line-height: 1.1;
-  margin: 2px 0 1px;
-}
-button.slot-name { text-align: left; padding: 0; }
-.rx { font-size: 14px; color: var(--dim); font-variant-numeric: tabular-nums; }
-.rx b { color: var(--ink); font-weight: 600; }
 .cue { font-size: 13.5px; color: var(--dim); font-style: italic; margin-top: 3px; }
 .lastline {
   margin-top: 10px; font-size: 14px; color: var(--dim);
@@ -211,16 +202,6 @@ button.slot-name { text-align: left; padding: 0; }
   font-family: var(--display); font-weight: 600; font-size: 12.5px;
   letter-spacing: 0.12em; text-transform: uppercase; color: var(--brass);
   display: block; margin-bottom: 2px;
-}
-
-.superset-tie {
-  display: flex; align-items: center; gap: 10px;
-  color: var(--brass); font-family: var(--display); font-weight: 600;
-  font-size: 13px; letter-spacing: 0.14em; text-transform: uppercase;
-  margin: 10px 0 10px;
-}
-.superset-tie::before, .superset-tie::after {
-  content: ''; flex: 1; border-top: 1px solid var(--line);
 }
 
 /* set rows */
@@ -275,8 +256,6 @@ button.slot-name { text-align: left; padding: 0; }
   background: var(--ink); color: var(--bg); border-color: var(--ink);
 }
 
-.slot-foot { display: flex; justify-content: space-between; margin-top: 10px; }
-.slot-foot .linklike { font-size: 13.5px; }
 .note-box { margin-top: 10px; }
 textarea.note {
   width: 100%; min-height: 68px; padding: 10px 12px;
@@ -293,27 +272,6 @@ textarea.note:focus { border-color: var(--brass); outline: none; }
 .deload-banner .tag {
   font-family: var(--display); font-weight: 600; letter-spacing: 0.12em;
   text-transform: uppercase; color: var(--brass); display: block; font-size: 13px;
-}
-
-/* session sticky header */
-
-.session-top {
-  position: sticky; top: 0; z-index: 5;
-  margin: -14px -14px 14px; padding: calc(env(safe-area-inset-top) + 10px) 14px 10px;
-  background: color-mix(in srgb, var(--bg) 88%, transparent);
-  -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--line);
-  display: flex; align-items: center; justify-content: space-between; gap: 10px;
-}
-.session-top .title {
-  font-family: var(--display); font-weight: 600; font-size: 20px;
-  text-transform: uppercase; letter-spacing: 0.04em;
-}
-.session-top .meta { color: var(--dim); font-size: 13px; font-variant-numeric: tabular-nums; }
-.session-top .finish {
-  font-family: var(--display); font-weight: 600; font-size: 15px;
-  letter-spacing: 0.1em; text-transform: uppercase; color: var(--brass);
-  padding: 8px 0 8px 12px;
 }
 
 /* ---------- rest timer bar ---------- */
@@ -556,16 +514,40 @@ button.stop:active .st-go { color: var(--brass); opacity: 1; }
   font-family: var(--display); font-weight: 600; font-size: 10px;
   letter-spacing: 0.14em; text-transform: uppercase; color: var(--brass);
 }
+.stop.done .st-go { opacity: 0.35; }
+
+/* expanded stop: the sheet's editor in place on the rail */
+.stop.open {
+  background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+  padding: 12px 12px 12px 38px; margin: 4px 0;
+}
+.stop.open .node { left: 8px; top: 12px; }
+.x-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.x-collapse { flex: 1; min-width: 0; text-align: left; padding: 0; }
+.x-clock {
+  font-family: var(--display); font-weight: 600; font-size: 12px;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--brass);
+  white-space: nowrap; padding: 2px 0;
+}
+.x-sub {
+  margin-top: 14px;
+  font-family: var(--display); font-weight: 600; font-size: 15px;
+  text-transform: uppercase; letter-spacing: 0.02em;
+}
+.x-sub .x-subrx {
+  font-family: var(--body); font-weight: 400; font-size: 12px;
+  color: var(--dim); text-transform: none; letter-spacing: 0;
+  margin-left: 7px; font-variant-numeric: tabular-nums;
+}
+.stop.open .sets { margin-top: 10px; }
+.x-foot { display: flex; justify-content: space-between; margin-top: 10px; }
+.x-foot .linklike { font-size: 13.5px; }
 .st-sub { margin-top: 7px; }
 .st-sub .st-name { font-size: 15px; }
 .ab {
   display: inline-block; width: 16px;
   font-family: var(--display); font-weight: 600; font-size: 12px; color: var(--brass);
 }
-
-/* session sheet: back-to-outline chevron */
-.session-top .titlewrap { display: flex; align-items: center; gap: 4px; min-width: 0; }
-.session-top .s-back { font-size: 28px; line-height: 1; color: var(--dim); padding: 2px 10px 6px 0; }
 
 /* ---------- clock loop (#/clock route) ---------- */
 
