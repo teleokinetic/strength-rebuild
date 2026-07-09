@@ -8,7 +8,7 @@
 
 const STORE_KEY = 'sr-state-v1';
 const REPAIR_BACKUP_KEY = STORE_KEY + '.backup.prefill-repair';
-const APP_VERSION = '1.7.0';
+const APP_VERSION = '1.8.0';
 
 let state = null;
 
@@ -776,85 +776,11 @@ function setRowsHTML(slot, entry, deload) {
   return labels + rows;
 }
 
-function slotCardHTML(day, slot, deload, showDeloadNote) {
-  const entry = state.active.entries[slot.id];
-  if (!entry) return '';
-  const last = lastEntryFor(slot.exerciseId);
-  const nudge = deload ? null : nudgeFor(slot);
-  const setsShown = entry.sets.length;
-  const unit = metricUnit(slot);
-  const repsTxt = slot.reps[0] === slot.reps[1] ? slot.reps[0] + unit : `${slot.reps[0]}–${slot.reps[1]}${unit}`;
-  const rx = `<b>${setsShown} × ${repsTxt}</b>${slot.perSide ? ' /side' : ''}${slot.trackRIR ? ` @ ${deload ? '4–5' : esc(slot.rir)} RIR` : ''}${slot.restSec ? ` · rest ${fmtRest(slot.restSec)}` : ''}`;
-  const lastLine = last
-    ? `<div class="lastline">Last (${fmtDate(last.session.startedAt)}): <b>${esc(fmtSets(last.entry.sets, slot.metric))}</b>${last.entry.note ? ` — <i>${esc(last.entry.note)}</i>` : ''}</div>`
-    : '';
-  const nudgeHTML = nudge ? `<div class="nudge"><span class="tag">${nudge.type === 'load' ? 'Progression earned' : 'Variation ready'}</span>${esc(nudge.text)}</div>` : '';
-  const noteOpen = entry.note !== '';
-  return `
-    <div class="card" id="slot-${slot.id}">
-      <div class="slot-head">
-        <span class="eyebrow">${esc(slot.pattern)}</span>
-      </div>
-      <button class="slot-name" data-act="nav" data-to="#/exercise/${slot.exerciseId}">${esc(slot.name)}</button>
-      <div class="rx">${rx}</div>
-      ${slot.cue ? `<div class="cue">${esc(slot.cue)}</div>` : ''}
-      ${nudgeHTML}
-      ${lastLine}
-      <div class="sets">${setRowsHTML(slot, entry, deload)}</div>
-      ${showDeloadNote ? `<div class="deload-note">✱ Deload loads — eased ~15%, shown in green. Ease into 4–5 RIR.</div>` : ''}
-      <div class="slot-foot">
-        <button class="linklike" data-act="toggle-note" data-slot="${slot.id}">${noteOpen ? 'note ↓' : '+ note'}</button>
-        <span>
-          <button class="linklike" data-act="remove-set" data-slot="${slot.id}">– set</button>
-          &nbsp;&nbsp;
-          <button class="linklike" data-act="add-set" data-slot="${slot.id}">+ set</button>
-        </span>
-      </div>
-      <div class="note-box" style="${noteOpen ? '' : 'display:none'}" id="note-${slot.id}">
-        <textarea class="note" placeholder="How did it feel? Anything for next time…" data-in="note" data-slot="${slot.id}">${esc(entry.note)}</textarea>
-      </div>
-    </div>`;
-}
-
+// The sheet folded into the route — stops expand in place to the same editor
+// (see viewOutline). The old URL redirects so muscle memory keeps working.
 function viewSession() {
-  if (!state.active) { location.hash = '#/'; return ''; }
-  const day = findDay(state.active.dayId);
-  const deload = state.active.week === 4;
-  const handled = new Set();
-  const cards = [];
-  // Explain the green eased loads once, on the first movement that shows them.
-  let deloadNoteDone = false;
-  const noteFor = (slot) => {
-    if (deloadNoteDone || !deload) return false;
-    const e = state.active.entries[slot.id];
-    if (e && e.sets.some((s) => s.deload)) { deloadNoteDone = true; return true; }
-    return false;
-  };
-  for (const slot of day.slots) {
-    if (handled.has(slot.id)) continue;
-    if (slot.group) {
-      const group = day.slots.filter((s) => s.group === slot.group);
-      group.forEach((s) => handled.add(s.id));
-      cards.push(group.map((s) => slotCardHTML(day, s, deload, noteFor(s))).join(`<div class="superset-tie">superset — alternate sets</div>`));
-    } else {
-      handled.add(slot.id);
-      cards.push(slotCardHTML(day, slot, deload, noteFor(slot)));
-    }
-  }
-  return `
-    <div class="session-top">
-      <div class="titlewrap">
-        <button class="s-back" data-act="nav" data-to="#/outline" aria-label="Back to session outline">‹</button>
-        <div>
-          <div class="title">${esc(day.name)}</div>
-          <div class="meta">${esc(day.subtitle)} · Wk ${state.active.week}</div>
-        </div>
-      </div>
-      <button class="finish" data-act="nav" data-to="#/finish">Finish</button>
-    </div>
-    ${deload ? `<div class="deload-banner"><span class="tag">Deload week</span>One set fewer, 4–5 RIR, moderate load. Re-groove, don't push.</div>` : ''}
-    ${cards.join('')}
-    <button class="btn primary" data-act="nav" data-to="#/finish">Finish session</button>`;
+  location.hash = state.active ? '#/outline' : '#/';
+  return '';
 }
 
 function viewFinish() {
@@ -868,7 +794,7 @@ function viewFinish() {
     logged += e.sets.filter((s) => s.done).length;
   }
   return `
-    <button class="back" data-act="nav" data-to="#/session">← Back to session</button>
+    <button class="back" data-act="nav" data-to="#/outline">← Back to the route</button>
     <div class="card">
       <div class="eyebrow">Finish ${esc(day.name)}</div>
       <div class="day-name" style="font-size:28px">${logged} of ${total} sets logged</div>
@@ -878,7 +804,7 @@ function viewFinish() {
       </div>
     </div>
     <button class="btn primary" data-act="finish-session">Save session</button>
-    <button class="btn quiet" data-act="nav" data-to="#/session">Keep training</button>
+    <button class="btn quiet" data-act="nav" data-to="#/clock">Keep training</button>
     <button class="btn danger" data-act="discard-session">Discard session</button>`;
 }
 
@@ -892,6 +818,10 @@ let clockPanel = null;
 // Pins that set on the clock's deck; dissolves once it's logged or on leaving
 // the clock route, and the order continues from wherever was logged last.
 let clockJump = null;
+
+// Which route stop is expanded to its in-place editor (the old sheet's grid):
+// the stop's first slot id, or null. One at a time; local to the #/outline route.
+let outlineOpen = null;
 
 // Rough session length: every remaining set costs its rest plus ~45s of work,
 // rounded to the nearest 5 minutes.
@@ -978,11 +908,61 @@ function viewOutline() {
 
   const order = workOrder(day);
   let doneStops = 0;
+
+  // Expanded stop: the old sheet's editor, in place on the rail. Grid, ± set,
+  // note, and history live here; "On the clock ▸" hands the stop's earliest
+  // undone set to the clock (supersets interleave via the work order).
+  const openStopHTML = (group, node, isCur) => {
+    const target = order.find((it) =>
+      group.some((s) => s.id === it.slot.id) && !state.active.entries[it.slot.id].sets[it.setIdx].done);
+    const sections = group.map((s, gi) => {
+      const entry = state.active.entries[s.id];
+      const last = lastEntryFor(s.exerciseId);
+      const nudge = deload ? null : nudgeFor(s);
+      const noteOpen = entry.note !== '';
+      return `
+        ${group.length > 1 ? `<div class="x-sub"><span class="ab">${String.fromCharCode(65 + gi)}</span>${esc(s.name)}<span class="x-subrx">${rxLine(s, entry)}</span></div>` : ''}
+        <div class="sets">${setRowsHTML(s, entry, deload)}</div>
+        ${nudge ? `<div class="nudge"><span class="tag">${nudge.type === 'load' ? 'Progression earned' : 'Variation ready'}</span>${esc(nudge.text)}</div>` : ''}
+        ${last ? `<div class="lastline">Last (${fmtDate(last.session.startedAt)}): <b>${esc(fmtSets(last.entry.sets, s.metric))}</b>${last.entry.note ? ` — <i>${esc(last.entry.note)}</i>` : ''}</div>` : ''}
+        ${deload && entry.sets.some((x) => x.deload) ? `<div class="deload-note">✱ Deload loads — eased ~15%, shown in green. Ease into 4–5 RIR.</div>` : ''}
+        <div class="x-foot">
+          <span>
+            <button class="linklike" data-act="toggle-note" data-slot="${s.id}">${noteOpen ? 'note ↓' : '+ note'}</button>
+            &nbsp;&nbsp;
+            <button class="linklike" data-act="nav" data-to="#/exercise/${s.exerciseId}">history</button>
+          </span>
+          <span>
+            <button class="linklike" data-act="remove-set" data-slot="${s.id}">– set</button>
+            &nbsp;&nbsp;
+            <button class="linklike" data-act="add-set" data-slot="${s.id}">+ set</button>
+          </span>
+        </div>
+        <div class="note-box" style="${noteOpen ? '' : 'display:none'}" id="note-${s.id}">
+          <textarea class="note" placeholder="How did it feel? Anything for next time…" data-in="note" data-slot="${s.id}">${esc(entry.note)}</textarea>
+        </div>`;
+    }).join('');
+    const head = group.length > 1
+      ? `<div class="st-tie">Superset · alternate</div>`
+      : `<div class="st-name">${esc(group[0].name)}</div>
+         <div class="st-rx">${rxLine(group[0], state.active.entries[group[0].id])}${tagFor(group[0])}</div>`;
+    return `
+      <div class="stop open${isCur ? ' cur' : target ? '' : ' done'}">
+        <div class="node">${node}</div>
+        <div class="x-head">
+          <button class="x-collapse" data-act="ol-toggle" data-key="${group[0].id}" aria-expanded="true">${head}</button>
+          ${target ? `<button class="x-clock" data-act="ol-jump" data-slot="${target.slot.id}" data-set="${target.setIdx}">On the clock ▸</button>` : ''}
+        </div>
+        ${sections}
+      </div>`;
+  };
+
   const stopHTML = stops.map((group, idx) => {
     const allDone = group.every((s) => state.active.entries[s.id].sets.every((x) => x.done));
     if (allDone) doneStops++;
     const isCur = !allDone && current && group.some((s) => s.id === current.slot.id);
     const node = allDone ? '✓' : String(idx + 1);
+    if (outlineOpen === group[0].id) return openStopHTML(group, node, isCur);
     let body;
     if (group.length > 1) {
       body = `<div class="st-tie">Superset · alternate</div>` + group.map((s, gi) => `
@@ -998,12 +978,9 @@ function viewOutline() {
         <div class="st-rx">${rxLine(s, state.active.entries[s.id])}${tagFor(s)}</div>
         ${dotsFor(s, state.active.entries[s.id])}`;
     }
-    if (allDone) return `<div class="stop done"><div class="node">${node}</div>${body}</div>`;
-    // Undone stops are doors: tapping one puts its earliest undone set (in work
-    // order, so supersets interleave) on the clock's deck.
-    const target = order.find((it) =>
-      group.some((s) => s.id === it.slot.id) && !state.active.entries[it.slot.id].sets[it.setIdx].done);
-    return `<button class="stop${isCur ? ' cur' : ''}" data-act="ol-jump" data-slot="${target.slot.id}" data-set="${target.setIdx}">
+    // Every stop opens in place — done ones included (that's where a logged
+    // set gets fixed now that the sheet is gone).
+    return `<button class="stop${allDone ? ' done' : isCur ? ' cur' : ''}" data-act="ol-toggle" data-key="${group[0].id}" aria-expanded="false">
       <div class="node">${node}</div>${body}<span class="st-go">›</span></button>`;
   }).join('');
 
@@ -1031,7 +1008,7 @@ function viewOutline() {
     </div>
     <div class="route">${stopHTML}</div>
     ${primary}
-    <button class="btn quiet" data-act="nav" data-to="#/session">Set sheet</button>`;
+    ${current && started ? `<button class="btn quiet" data-act="nav" data-to="#/finish">Finish early</button>` : ''}`;
 }
 
 // RIR chips: 4+/2–3/0–1 storing '4'/'2'/'1'. The slot's target gets a dashed
@@ -1175,7 +1152,6 @@ function viewClock() {
       </div>
       <div class="cl-btns">
         <button data-act="nav" data-to="#/outline">Route</button>
-        <button data-act="nav" data-to="#/session">Back to sets</button>
       </div>
     </div>`;
 }
@@ -1493,6 +1469,7 @@ function render() {
   const parts = hash.replace(/^#\//, '').split('/');
   let html = '';
   if (parts[0] !== 'clock') { clockPanel = null; clockJump = null; }   // both are local to the clock route
+  if (parts[0] !== 'outline') outlineOpen = null;                      // stop expansion is local to the route
   document.body.classList.toggle('route-clock', parts[0] === 'clock');
   // Session routes pause on the stale interstitial until the resume decision is made.
   const stale = ['session', 'outline', 'clock'].includes(parts[0]) && sessionIsStale();
@@ -1652,6 +1629,12 @@ document.addEventListener('click', (ev) => {
     case 'ol-jump': {
       clockJump = { slotId: el.dataset.slot, setIdx: Number(el.dataset.set) };
       location.hash = '#/clock';
+      break;
+    }
+
+    case 'ol-toggle': {
+      outlineOpen = outlineOpen === el.dataset.key ? null : el.dataset.key;
+      render();
       break;
     }
 
