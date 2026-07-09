@@ -7,7 +7,8 @@
 /* ============================== state ============================== */
 
 const STORE_KEY = 'sr-state-v1';
-const APP_VERSION = '1.4.0';
+const REPAIR_BACKUP_KEY = STORE_KEY + '.backup.prefill-repair';
+const APP_VERSION = '1.5.0';
 
 let state = null;
 
@@ -18,7 +19,8 @@ function slug(name) {
 function defaultState() {
   const s = {
     version: 1,
-    settings: { unit: 'lb', sound: true, wake: true, theme: 'auto', week: 1, block: 1, weekSessionCount: 0, lastExport: null },
+    // prefillRepairV1: a fresh state has no history to repair — mark it done.
+    settings: { unit: 'lb', sound: true, wake: true, theme: 'auto', week: 1, block: 1, weekSessionCount: 0, lastExport: null, prefillRepairV1: true },
     exercises: {},
     program: JSON.parse(JSON.stringify(SEED_PROGRAM)),
     sessions: [],
@@ -47,12 +49,53 @@ function validState(obj) {
   return true;
 }
 
+// One-time repair for the checked-but-blank habit: historical blank reps/weight
+// are backfilled from the most recent PRIOR session's non-blank value for that
+// set index (an entry's last set stands in past its length), and blank RIR
+// inherits the set above within each entry — the same rules new sessions now
+// follow (see lastLoggedSetValue and finishSession). The full pre-migration
+// state is kept under REPAIR_BACKUP_KEY so this is reversible; the settings
+// flag keeps it one-time, and the walk never touches non-blank values, so a
+// re-run is a no-op anyway.
+function runPrefillRepair() {
+  if (state.settings.prefillRepairV1 === true) return;
+  try { localStorage.setItem(REPAIR_BACKUP_KEY, JSON.stringify(state)); }
+  catch (e) { return; }   // no backup written → leave history alone, retry next boot
+  const blank = (v) => v === '' || v == null;
+  state.sessions.forEach((sess, si) => {
+    if (sess.week === 4) return;   // deload records stay as logged — never invent working loads there
+    for (const entry of sess.entries) {
+      entry.sets.forEach((set, i) => {
+        if (!blank(set.r)) return;   // never touch a set that was really logged
+        for (let j = si - 1; j >= 0; j--) {
+          if (state.sessions[j].week === 4) continue;   // eased deload loads aren't a backfill source
+          const prev = state.sessions[j].entries.find((e) => e.exerciseId === entry.exerciseId && e.sets.length);
+          if (!prev) continue;
+          const src = prev.sets[i] || prev.sets[prev.sets.length - 1];
+          if (src && !blank(src.r)) {
+            set.r = src.r;
+            if (blank(set.w)) set.w = src.w;
+            break;
+          }
+        }
+      });
+      let carry = '';
+      for (const set of entry.sets) {
+        if (!blank(set.rir)) carry = set.rir;
+        else if (carry !== '') set.rir = carry;
+      }
+    }
+  });
+  state.settings.prefillRepairV1 = true;
+  save();
+}
+
 function load() {
   try {
     const raw = localStorage.getItem(STORE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (validState(parsed)) { state = parsed; return; }
+      if (validState(parsed)) { state = parsed; runPrefillRepair(); return; }
     }
   } catch (e) { /* corrupted → reseed */ }
   state = defaultState();
@@ -144,6 +187,22 @@ function lastEntryFor(exerciseId) {
     const sess = state.sessions[i];
     const entry = sess.entries.find((e) => e.exerciseId === exerciseId && e.sets.length);
     if (entry) return { entry, session: sess };
+  }
+  return null;
+}
+
+// Most recent NON-BLANK value for one set position of an exercise, scanned
+// newest→oldest across all sessions. A checked-but-blank set (r === '') is
+// skipped — keep looking further back. When setIndex is beyond an entry's
+// length, that entry's last set stands in. Returns {w, r, rir} or null.
+function lastLoggedSetValue(exerciseId, setIndex) {
+  for (let i = state.sessions.length - 1; i >= 0; i--) {
+    const sess = state.sessions[i];
+    if (sess.week === 4) continue;   // snap-back: eased deload loads never become the baseline
+    const entry = sess.entries.find((e) => e.exerciseId === exerciseId && e.sets.length);
+    if (!entry) continue;
+    const set = entry.sets[setIndex] || entry.sets[entry.sets.length - 1];
+    if (set && set.r !== '' && set.r != null) return { w: set.w, r: set.r, rir: set.rir };
   }
   return null;
 }
@@ -364,14 +423,15 @@ function startSession(dayId) {
   for (const slot of day.slots) {
     const deload = state.settings.week === 4;
     const nudge = deload ? null : nudgeFor(slot);
-    // Baseline weight/reps come from the last NON-deload session (snap-back).
-    const base = lastNonDeloadEntryFor(slot.exerciseId);
     const deloadW = deload ? deloadLoadFor(slot) : null;
     const easeLoad = deload && deloadW != null;
     const nSets = Math.max(1, slot.sets - (deload ? 1 : 0));
     const sets = [];
     for (let i = 0; i < nSets; i++) {
-      const prev = base ? (base.entry.sets[i] || base.entry.sets[base.entry.sets.length - 1]) : null;
+      // Per-set fallback: a set left blank last session pre-fills from the most
+      // recent session where it WAS logged — skipping deload sessions, so eased
+      // loads never become the baseline (snap-back lives in the helper).
+      const prev = lastLoggedSetValue(slot.exerciseId, i);
       sets.push({
         w: easeLoad ? String(deloadW)
            : (nudge && nudge.type === 'load' ? String(nudge.weight)
@@ -462,11 +522,22 @@ function finishSession(note) {
   for (const slot of day.slots) {
     const entry = state.active.entries[slot.id];
     if (!entry) continue;
-    const done = entry.sets.filter((s) => s.done).map((s) => ({
-      w: slot.load === 'none' ? '' : num(s.w),
-      r: num(s.r),
-      rir: slot.trackRIR ? num(s.rir) : '',
-    }));
+    // RIR inherits the set above: rating set 1 and leaving the rest blank is
+    // the common habit, and an unrated tail would block nudgeFor (it needs
+    // every set at RIR ≥ 2). The first set has nothing above — stays as-is.
+    let carryRIR = '';
+    const done = entry.sets.filter((s) => s.done).map((s) => {
+      let rir = slot.trackRIR ? num(s.rir) : '';
+      if (slot.trackRIR) {
+        if (rir === '') rir = carryRIR;
+        else carryRIR = rir;
+      }
+      return {
+        w: slot.load === 'none' ? '' : num(s.w),
+        r: num(s.r),
+        rir,
+      };
+    });
     if (done.length) {
       entries.push({
         exerciseId: entry.exerciseId,
