@@ -7,7 +7,7 @@
 /* ============================== state ============================== */
 
 const STORE_KEY = 'sr-state-v1';
-const APP_VERSION = '1.3.0';
+const APP_VERSION = '1.4.0';
 
 let state = null;
 
@@ -333,8 +333,6 @@ function renderTimer() {
 
 setInterval(() => {
   if (timer.endsAt) renderTimer();
-  const el = $('#elapsed');
-  if (el && state.active) el.textContent = elapsedText();
 }, 500);
 
 document.addEventListener('visibilitychange', () => {
@@ -345,10 +343,6 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 
-function elapsedText() {
-  const min = Math.floor((Date.now() - state.active.startedAt) / 60000);
-  return min + ' min';
-}
 
 /* ============================ wake lock ============================ */
 
@@ -725,7 +719,7 @@ function viewSession() {
     <div class="session-top">
       <div>
         <div class="title">${esc(day.name)}</div>
-        <div class="meta">${esc(day.subtitle)} · Wk ${state.active.week} · <span id="elapsed">${elapsedText()}</span></div>
+        <div class="meta">${esc(day.subtitle)} · Wk ${state.active.week}</div>
       </div>
       <button class="finish" data-act="nav" data-to="#/finish">Finish</button>
     </div>
@@ -749,7 +743,7 @@ function viewFinish() {
     <div class="card">
       <div class="eyebrow">Finish ${esc(day.name)}</div>
       <div class="day-name" style="font-size:28px">${logged} of ${total} sets logged</div>
-      <div class="day-sub">${elapsedText()} · ${esc(day.subtitle)}</div>
+      <div class="day-sub">${esc(day.subtitle)}</div>
       <div class="note-box">
         <textarea class="note" id="session-note" placeholder="Session note — energy, sleep, what to change next time… (optional)"></textarea>
       </div>
@@ -804,12 +798,11 @@ function viewSessionLog(id) {
       <div class="h-sets">${esc(fmtSets(e.sets, e.metric))}${e.perSide ? ' /side' : ''}</div>
       ${e.note ? `<div class="h-enote">${esc(e.note)}</div>` : ''}
     </div>`).join('');
-  const dur = s.endedAt ? Math.round((s.endedAt - s.startedAt) / 60000) + ' min' : '';
   return `
     <button class="back" data-act="nav" data-to="#/history">← History</button>
     <div class="card">
       <div class="h-date" style="font-family:var(--display);font-weight:600;font-size:22px;text-transform:uppercase">${fmtDate(s.startedAt, true)}</div>
-      <div class="h-meta" style="color:var(--dim);font-size:13.5px">${esc(s.dayName)} · ${dur} · Wk ${s.week}, Blk ${s.block}</div>
+      <div class="h-meta" style="color:var(--dim);font-size:13.5px">${esc(s.dayName)} · Wk ${s.week}, Blk ${s.block}</div>
       ${s.note ? `<div class="h-note" style="color:var(--dim);font-style:italic;margin-top:8px">${esc(s.note)}</div>` : ''}
     </div>
     <div class="card">${entries || '<div class="empty">Nothing logged.</div>'}</div>
