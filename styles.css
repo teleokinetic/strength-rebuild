@@ -508,7 +508,16 @@ textarea.note:focus { border-color: var(--brass); outline: none; }
 .ol-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
 
 .route { padding: 10px 2px 16px; }
-.stop { position: relative; padding: 10px 0 10px 38px; }
+.stop { position: relative; padding: 10px 24px 10px 38px; display: block; width: 100%; text-align: left; }
+/* undone stops are buttons — a quiet chevron marks them as doors into the clock */
+button.stop { border-radius: 12px; }
+button.stop:active { background: var(--brass-wash); }
+.st-go {
+  position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
+  color: var(--dim); font-size: 22px; line-height: 1; opacity: 0.55;
+}
+.stop.cur .st-go { color: var(--brass); opacity: 0.9; }
+button.stop:active .st-go { color: var(--brass); opacity: 1; }
 .stop::before { content: ''; position: absolute; left: 11px; top: 0; bottom: 0; width: 2px; background: var(--line); }
 .stop:first-child::before { top: 22px; }
 .stop:last-child::before { bottom: auto; height: 22px; }
@@ -566,6 +575,9 @@ textarea.note:focus { border-color: var(--brass); outline: none; }
   display: flex; flex-direction: column; align-items: center; text-align: center;
   min-height: calc(100dvh - 210px);
 }
+/* logging panel composes from the top — no viewport-filling hollow below it
+   (the calm clock needs the min-height to push its on-deck card down) */
+.clockview.logging { min-height: 0; }
 .cl-big {
   font-family: var(--display); font-weight: 600;
   font-size: min(34vw, 150px); line-height: 1;
@@ -658,7 +670,9 @@ textarea.note:focus { border-color: var(--brass); outline: none; }
   border-radius: 6px; padding: 1px 7px; margin-right: 6px;
 }
 
-.cl-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
+/* align-items + the stepper's fixed height pin the boxes at one size — grid
+   stretch must never tie a stepper's height to its row neighbor */
+.cl-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; align-items: start; }
 .cl-field .flabel {
   font-family: var(--display); font-weight: 600; font-size: 11px;
   letter-spacing: 0.12em; text-transform: uppercase; color: var(--dim); margin-bottom: 5px;
@@ -666,11 +680,15 @@ textarea.note:focus { border-color: var(--brass); outline: none; }
 .cl-field .flabel .target-hint { color: var(--brass); letter-spacing: 0.04em; }
 .cl-stepper {
   display: flex; align-items: center; justify-content: space-between;
+  height: 50px;
   border: 1px solid var(--line); border-radius: 11px; background: var(--surface); overflow: hidden;
 }
 .cl-stepper button { width: 44px; height: 48px; font-size: 22px; color: var(--dim); line-height: 1; }
 .cl-stepper button:active { background: var(--raised); color: var(--ink); }
-.cl-stepper .v { font-family: var(--display); font-weight: 600; font-size: 22px; font-variant-numeric: tabular-nums; }
+/* padding:0 shields a blank value ("v empty") from the generic .empty
+   empty-state banner rule and its 40px padding — that collision was the
+   double-height stepper on iOS */
+.cl-stepper .v { font-family: var(--display); font-weight: 600; font-size: 22px; font-variant-numeric: tabular-nums; padding: 0; }
 .cl-stepper .v.empty { color: var(--danger); }
 .cl-stepper .v small { font-size: 12px; color: var(--dim); font-weight: 600; margin-left: 2px; }
 

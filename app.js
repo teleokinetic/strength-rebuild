@@ -8,7 +8,7 @@
 
 const STORE_KEY = 'sr-state-v1';
 const REPAIR_BACKUP_KEY = STORE_KEY + '.backup.prefill-repair';
-const APP_VERSION = '1.6.0';
+const APP_VERSION = '1.7.0';
 
 let state = null;
 
@@ -491,6 +491,20 @@ function nextPending(day, after) {
   return null;
 }
 
+// Most recently logged set (by timestamp) — the clock and outline continue the
+// work order from here, so an out-of-order jump keeps its place after logging
+// instead of snapping back to the earliest unfinished set. Derived from
+// persisted data, so it survives a reload mid-session.
+function lastLoggedRef() {
+  let ref = null, t = 0;
+  for (const id in state.active.entries) {
+    state.active.entries[id].sets.forEach((s, i) => {
+      if (s.done && s.t > t) { t = s.t; ref = { slotId: id, setIdx: i }; }
+    });
+  }
+  return ref;
+}
+
 function logSet(slotId, setIdx) {
   const day = findDay(state.active.dayId);
   const slot = findSlot(day, slotId);
@@ -578,6 +592,44 @@ function finishSession(note) {
   save();
   location.hash = '#/';
   toast(advanced ? `Session saved · advanced to ${advanced}` : 'Session saved');
+}
+
+// A resumed session that's been idle for hours is yesterday's session, not a
+// live one. Instead of silently continuing its clock, the active-session routes
+// pause on one explicit choice — continue / save / discard — because logged
+// sets are real data and must never be thrown away without a decision.
+const STALE_AFTER_MS = 6 * 3600 * 1000;
+let staleAcked = false;   // per-app-run; logging any set moves lastActivityAt forward anyway
+
+function lastActivityAt() {
+  let t = state.active.startedAt;
+  for (const id in state.active.entries) {
+    for (const s of state.active.entries[id].sets) if (s.done && s.t > t) t = s.t;
+  }
+  return t;
+}
+
+function sessionIsStale() {
+  return !!state.active && !staleAcked && Date.now() - lastActivityAt() > STALE_AFTER_MS;
+}
+
+function viewStaleResume() {
+  const day = findDay(state.active.dayId);
+  let doneSets = 0;
+  for (const id in state.active.entries) doneSets += state.active.entries[id].sets.filter((s) => s.done).length;
+  const hrs = Math.max(1, Math.round((Date.now() - lastActivityAt()) / 3600000));
+  const ago = hrs >= 48 ? `${Math.round(hrs / 24)} days` : `${hrs} h`;
+  return `
+    <button class="back" data-act="nav" data-to="#/">← Home</button>
+    <div class="topbar"><div class="wordmark">Still going?</div></div>
+    <div class="card">
+      <div class="eyebrow">In progress · started ${fmtDate(state.active.startedAt)}</div>
+      <div class="day-name">${esc(day ? day.name : 'Session')}</div>
+      <div class="day-sub">Last activity ~${ago} ago${doneSets ? ` · ${doneSets} set${doneSets === 1 ? '' : 's'} logged — safe either way` : ' · nothing logged yet'}.</div>
+    </div>
+    <button class="btn primary" data-act="stale-continue">Continue where you left off</button>
+    ${doneSets ? `<button class="btn" data-act="stale-finish">Finish &amp; save what's logged</button>` : ''}
+    <button class="btn quiet" data-act="discard-session">Discard session</button>`;
 }
 
 /* ============================== charts ============================== */
@@ -836,6 +888,11 @@ function viewFinish() {
 // Route-local — render() clears it whenever the hash leaves #/clock.
 let clockPanel = null;
 
+// Route-stop jump target: {slotId, setIdx} or null (follow the work order).
+// Pins that set on the clock's deck; dissolves once it's logged or on leaving
+// the clock route, and the order continues from wherever was logged last.
+let clockJump = null;
+
 // Rough session length: every remaining set costs its rest plus ~45s of work,
 // rounded to the nearest 5 minutes.
 function estMinutes(sec) {
@@ -894,7 +951,7 @@ function viewOutline() {
     }
   }
   const started = doneSets > 0;
-  const current = nextPending(day);
+  const current = nextPending(day, lastLoggedRef());
 
   const rxLine = (slot, entry) => {
     const u = metricUnit(slot);
@@ -919,6 +976,7 @@ function viewOutline() {
     return `<div class="dots">${dots}${pill}</div>`;
   };
 
+  const order = workOrder(day);
   let doneStops = 0;
   const stopHTML = stops.map((group, idx) => {
     const allDone = group.every((s) => state.active.entries[s.id].sets.every((x) => x.done));
@@ -940,12 +998,22 @@ function viewOutline() {
         <div class="st-rx">${rxLine(s, state.active.entries[s.id])}${tagFor(s)}</div>
         ${dotsFor(s, state.active.entries[s.id])}`;
     }
-    return `<div class="stop${allDone ? ' done' : isCur ? ' cur' : ''}"><div class="node">${node}</div>${body}</div>`;
+    if (allDone) return `<div class="stop done"><div class="node">${node}</div>${body}</div>`;
+    // Undone stops are doors: tapping one puts its earliest undone set (in work
+    // order, so supersets interleave) on the clock's deck.
+    const target = order.find((it) =>
+      group.some((s) => s.id === it.slot.id) && !state.active.entries[it.slot.id].sets[it.setIdx].done);
+    return `<button class="stop${isCur ? ' cur' : ''}" data-act="ol-jump" data-slot="${target.slot.id}" data-set="${target.setIdx}">
+      <div class="node">${node}</div>${body}<span class="st-go">›</span></button>`;
   }).join('');
 
+  // Elapsed reads in minutes only while minutes mean something: hours past
+  // 90 min, gone entirely past the stale threshold — "min left" does the pacing.
   const elapsedMin = Math.max(1, Math.round((Date.now() - state.active.startedAt) / 60000));
+  const elapsedChip = elapsedMin > 360 ? ''
+    : `<span class="pill">${elapsedMin >= 90 ? (elapsedMin / 60).toFixed(1).replace(/\.0$/, '') + ' h' : elapsedMin + ' min'} in</span>`;
   const chips = started
-    ? `<span class="pill">${elapsedMin} min in</span><span class="pill brass">~${estMinutes(remainSec)} min left</span>`
+    ? `${elapsedChip}<span class="pill brass">~${estMinutes(remainSec)} min left</span>`
     : `<span class="pill brass">Est ~${estMinutes(totalSec)} min</span><span class="pill">${stops.length} stops · ${movements} movements</span>`;
   const primary = current
     ? (started
@@ -1017,7 +1085,7 @@ function clockPanelHTML(day) {
   const noteOpen = entry.note !== '';
   const repLabel = slot.metric === 'seconds' ? 'Seconds' : slot.metric === 'meters' ? 'Meters' : 'Reps';
   return `
-    <div class="clockview">
+    <div class="clockview logging">
       <div class="cl-log">
         <div class="cl-pill${running ? '' : ' idle'}" id="cl-pill">${running ? `Resting <span id="cl-pilltime">${fmtClock(remain)}</span>` : 'Logging'}</div>
         <div class="mv">${esc(slot.name)}</div>
@@ -1051,7 +1119,7 @@ function clockPanelHTML(day) {
         <button class="btn primary" id="cl-logbtn" data-act="cl-log" data-slot="${slot.id}" data-set="${setIdx}" style="margin-top:16px">Log &amp; rest</button>
         <div class="cl-subrow">
           <button class="linklike" data-act="toggle-note" data-slot="${slot.id}">${noteOpen ? 'note ↓' : '+ note'}</button>
-          <button class="linklike" data-act="cl-collapse">↩ back to clock</button>
+          <button class="linklike" data-act="cl-collapse">&#8617;&#xFE0E; back to clock</button>
         </div>
         <div class="note-box" style="${noteOpen ? '' : 'display:none'}" id="note-${slot.id}">
           <textarea class="note cl-note" placeholder="How did it feel? Anything for next time…" data-in="note" data-slot="${slot.id}">${esc(entry.note)}</textarea>
@@ -1063,7 +1131,14 @@ function clockPanelHTML(day) {
 function viewClock() {
   if (!state.active) { location.hash = '#/'; return ''; }
   const day = findDay(state.active.dayId);
-  const next = nextPending(day);
+  if (clockJump) {
+    const e = state.active.entries[clockJump.slotId];
+    const s = e && e.sets[clockJump.setIdx];
+    if (!s || s.done || !findSlot(day, clockJump.slotId)) clockJump = null;
+  }
+  const next = clockJump
+    ? { slot: findSlot(day, clockJump.slotId), setIdx: clockJump.setIdx }
+    : nextPending(day, lastLoggedRef());
   if (!next) { location.hash = '#/finish'; return ''; }
 
   // Stale-panel guard: the referenced set must still exist and be un-logged.
@@ -1417,9 +1492,12 @@ function render() {
   const hash = location.hash || '#/';
   const parts = hash.replace(/^#\//, '').split('/');
   let html = '';
-  if (parts[0] !== 'clock') clockPanel = null;   // panel state is local to the clock route
+  if (parts[0] !== 'clock') { clockPanel = null; clockJump = null; }   // both are local to the clock route
   document.body.classList.toggle('route-clock', parts[0] === 'clock');
+  // Session routes pause on the stale interstitial until the resume decision is made.
+  const stale = ['session', 'outline', 'clock'].includes(parts[0]) && sessionIsStale();
   if (hash === '#/' || hash === '') html = viewHome();
+  else if (stale) html = viewStaleResume();
   else if (parts[0] === 'session') html = viewSession();
   else if (parts[0] === 'outline') html = viewOutline();
   else if (parts[0] === 'clock') html = viewClock();
@@ -1569,6 +1647,21 @@ document.addEventListener('click', (ev) => {
 
     case 'clock-close':
       $('#clock').classList.add('hidden');
+      break;
+
+    case 'ol-jump': {
+      clockJump = { slotId: el.dataset.slot, setIdx: Number(el.dataset.set) };
+      location.hash = '#/clock';
+      break;
+    }
+
+    case 'stale-continue':
+      staleAcked = true;
+      render();
+      break;
+
+    case 'stale-finish':
+      finishSession('');   // keeps only logged sets; empty movements are dropped
       break;
 
     case 'cl-expand': {
