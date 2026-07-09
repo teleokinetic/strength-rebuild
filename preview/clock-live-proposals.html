@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#131518">
+<title>Clock front end — proposed design shifts</title>
+<style>
+@font-face{font-family:'Barlow Condensed';font-style:normal;font-weight:600;font-display:swap;
+  src:url(../fonts/barlow-condensed-600.woff2) format('woff2')}
+@font-face{font-family:'Barlow Condensed';font-style:normal;font-weight:500;font-display:swap;
+  src:url(../fonts/barlow-condensed-500.woff2) format('woff2')}
+
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0E1013; --panel:#16191E; --screen:#131518; --surface:#1F232A;
+  --raised:#272C35; --line:#2C313A; --ink:#E9E7E2; --dim:#9AA1AC;
+  --brass:#D9A03F; --brass-wash:rgba(217,160,63,0.12); --on-brass:#15130C;
+  --warn:#E8836B;
+  --disp:'Barlow Condensed','Arial Narrow',sans-serif;
+  --body:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+}
+body{background:radial-gradient(120% 80% at 50% -10%, #191d24 0%, var(--bg) 60%);
+  color:var(--ink);font-family:var(--body);line-height:1.5;min-height:100vh;
+  padding:28px 16px 48px;overflow-x:hidden}
+.wrap{max-width:920px;margin:0 auto}
+
+/* ---- masthead ---- */
+.masthead{text-align:center;margin-bottom:10px}
+.eyebrow{font-family:var(--disp);font-weight:600;font-size:14px;letter-spacing:.18em;
+  text-transform:uppercase;color:var(--brass)}
+h1{font-family:var(--disp);font-weight:600;font-size:clamp(26px,5vw,38px);
+  line-height:1.05;margin:6px 0 8px}
+.sub{color:var(--dim);font-size:14.5px;max-width:60ch;margin:0 auto}
+.sub b{color:var(--ink);font-weight:600}
+
+/* ---- shift sections ---- */
+.shift{margin-top:44px}
+.shift-eye{font-family:var(--disp);font-weight:600;font-size:12px;letter-spacing:.18em;
+  text-transform:uppercase;color:var(--brass)}
+.shift h2{font-family:var(--disp);font-weight:600;font-size:clamp(21px,3.6vw,27px);
+  line-height:1.1;margin:3px 0 5px}
+.shift .why{color:var(--dim);font-size:13.5px;max-width:66ch}
+.shift .why b{color:var(--ink);font-weight:600}
+
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
+@media(max-width:719px){.pair{grid-template-columns:1fr}}
+
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;
+  padding:14px;min-width:0}
+.state{font-family:var(--disp);font-weight:600;font-size:11px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--dim);display:flex;align-items:center;gap:8px}
+.state::after{content:"";flex:1;height:1px;background:var(--line)}
+.panel.after .state{color:var(--brass)}
+.mini{margin-top:12px;background:var(--screen);border:1px solid var(--line);
+  border-radius:20px;padding:18px 16px;max-width:320px;
+  box-shadow:0 1px 0 rgba(255,255,255,.05) inset, 0 18px 36px -20px rgba(0,0,0,.8)}
+.note{color:var(--dim);font-size:12px;margin-top:11px;line-height:1.5}
+.note b{color:var(--ink);font-weight:600}
+
+/* ---- shared fragment styles (copied from clock-live.html) ---- */
+.prov{margin-top:10px;font-size:11.5px;color:var(--dim);border-left:2px solid var(--line);
+  padding:3px 0 3px 9px;line-height:1.45;font-variant-numeric:tabular-nums}
+.prov:first-child{margin-top:0}
+.prov b{color:var(--ink);font-weight:600}
+.prov.nudge{border-left-color:var(--brass)}.prov.nudge b{color:var(--brass)}
+.prov.blank{border-left-color:var(--warn)}.prov.blank b{color:var(--warn)}
+
+/* proposed provenance states (Shift 1 · AFTER) */
+.prov.blank2{border-left:2px dashed var(--warn)}.prov.blank2 b{color:var(--warn)}
+.prov.blank2 .pbadge{display:inline-flex;align-items:center;justify-content:center;
+  width:18px;height:14px;border-radius:4px;margin-right:6px;vertical-align:-1px;
+  background:rgba(232,131,107,.14);color:var(--warn);font-weight:700;font-size:11px;line-height:1}
+.prov.nudge2{border-left:2px solid var(--brass);background:var(--brass-wash);
+  padding:5px 9px;border-radius:0 8px 8px 0}
+.prov.nudge2 b{color:var(--brass)}
+
+/* rir chips (Shift 2) */
+.flabel{font-family:var(--disp);font-weight:600;font-size:11px;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--dim);margin-bottom:5px}
+.flabel .tgt{color:var(--brass)}
+.rir-row{display:flex;gap:7px}
+.rir-row button{flex:1;font-family:var(--disp);font-weight:600;font-size:15px;
+  letter-spacing:.03em;color:var(--dim);border:1px solid var(--line);border-radius:11px;
+  padding:11px 4px;background:var(--surface);cursor:default;min-height:46px;min-width:0}
+.rir-row button.target{border-style:dashed;border-color:var(--brass);color:var(--ink)}
+.rir-row button.on{background:var(--brass);color:var(--on-brass);border-color:var(--brass);border-style:solid}
+.rir-row .hint{font-size:11px;color:var(--dim);display:block;font-weight:500;
+  letter-spacing:0;text-transform:none;margin-top:1px}
+.rir-row button.on .hint{color:var(--on-brass);opacity:.72}
+/* proposed demoted target (Shift 2 · AFTER): plain border, tiny lowercase caption */
+.rir-row button.target-quiet{border:1px solid var(--line);color:var(--ink)}
+.rir-row button.target-quiet .hint{text-transform:lowercase;letter-spacing:.04em}
+
+/* on-deck card (Shift 3) */
+.ondeck{width:100%;padding:13px 12px;border-radius:12px;
+  border:1px dashed var(--line);background:rgba(255,255,255,.015);cursor:default;text-align:left}
+.ondeck .lbl{font-family:var(--disp);font-weight:600;font-size:11px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--dim)}
+.ondeck .mv{font-family:var(--disp);font-weight:600;font-size:21px;text-transform:uppercase;
+  letter-spacing:.02em;line-height:1.1;margin-top:2px}
+.ondeck .det{color:var(--dim);font-size:13px;font-variant-numeric:tabular-nums;margin-top:2px}
+.ondeck .tap{display:inline-block;margin-top:8px;font-family:var(--disp);font-weight:600;
+  font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--brass)}
+/* proposed flagged on-deck (Shift 3 · AFTER) */
+.ondeck.flagged{border-left:3px solid var(--warn)}
+.ondeck.flagged .det{color:var(--warn)}
+
+.foot{text-align:center;color:var(--dim);font-size:12px;margin-top:44px;line-height:1.6}
+.foot b{color:var(--ink)}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="masthead">
+    <div class="eyebrow">Strength Rebuild · proposal</div>
+    <h1>Clock front end — proposed design shifts</h1>
+    <p class="sub"><b>Non-live proposal.</b> Static before/after fragments of the clock-live front end — nothing here is wired to the engine, and no existing file changes until a shift is approved.</p>
+  </header>
+
+  <!-- ================= SHIFT 1 ================= -->
+  <section class="shift">
+    <div class="shift-eye">Shift 1</div>
+    <h2>Provenance states shouldn't rely on hue alone</h2>
+    <p class="why">Warn orange (#E8836B) and brass (#D9A03F) sit at nearly identical luminance, so the "left blank" and "progression earned" lines read the same at a glance — each state needs a distinct <b>structure</b>, not just a distinct hue.</p>
+
+    <div class="pair">
+      <div class="panel before">
+        <div class="state">Before</div>
+        <div class="mini">
+          <div class="prov blank"><b>Was left blank last time.</b> Nothing to carry forward — you’re starting this set from empty.</div>
+          <div class="prov nudge"><b>Progression earned.</b> Add 5&nbsp;lb — every set hit the top of the range at RIR&nbsp;2+.</div>
+        </div>
+        <p class="note">Both are thin solid left-borders differing only in hue — squint (or desaturate) and they are the same line.</p>
+      </div>
+      <div class="panel after">
+        <div class="state">After</div>
+        <div class="mini">
+          <div class="prov blank2"><span class="pbadge">—</span><b>Was left blank last time.</b> Nothing to carry forward — you’re starting this set from empty.</div>
+          <div class="prov nudge2"><b>Progression earned.</b> Add 5&nbsp;lb — every set hit the top of the range at RIR&nbsp;2+.</div>
+        </div>
+        <p class="note">Blank: <b>dashed</b> edge + leading em-dash badge. Progression: <b>solid</b> brass edge + brass-wash fill. The two states differ even in grayscale.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= SHIFT 2 ================= -->
+  <section class="shift">
+    <div class="shift-eye">Shift 2</div>
+    <h2>Dashed brass means two different things</h2>
+    <p class="why">The on-deck card uses a dashed border for "tappable" while the RIR target chip uses a dashed brass ring for "target" — and once a different chip is selected, the dashed-brass ring next to the solid-brass selection reads like <b>two selections</b>.</p>
+
+    <div class="pair">
+      <div class="panel before">
+        <div class="state">Before</div>
+        <div class="mini">
+          <div class="flabel">Left in the tank · RIR <span class="tgt">(target 2–3)</span></div>
+          <div class="rir-row">
+            <button type="button" tabindex="-1" aria-pressed="false">4+<span class="hint">easy</span></button>
+            <button type="button" tabindex="-1" class="target" aria-pressed="false">2–3<span class="hint">on target</span></button>
+            <button type="button" tabindex="-1" class="on" aria-pressed="true">0–1<span class="hint">near max</span></button>
+          </div>
+        </div>
+        <p class="note">User picked 0–1, but the dashed-brass ring on 2–3 still glows beside it — which one is chosen?</p>
+      </div>
+      <div class="panel after">
+        <div class="state">After</div>
+        <div class="mini">
+          <div class="flabel">Left in the tank · RIR <span class="tgt">(target 2–3)</span></div>
+          <div class="rir-row">
+            <button type="button" tabindex="-1" aria-pressed="false">4+<span class="hint">easy</span></button>
+            <button type="button" tabindex="-1" class="target-quiet" aria-pressed="false">2–3<span class="hint">target</span></button>
+            <button type="button" tabindex="-1" class="on" aria-pressed="true">0–1<span class="hint">near max</span></button>
+          </div>
+        </div>
+        <p class="note">Once any chip is selected, the target ring demotes to a plain border with a tiny lowercase <b>target</b> caption — only the selected chip reads as chosen.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= SHIFT 3 ================= -->
+  <section class="shift">
+    <div class="shift-eye">Shift 3</div>
+    <h2>The blank-set warning is invisible until you tap in</h2>
+    <p class="why">On the calm rest screen a blanked movement's detail sits in plain dim text, identical to a normal set — the one state that needs attention should flag itself <b>before</b> the log panel opens.</p>
+
+    <div class="pair">
+      <div class="panel before">
+        <div class="state">Before</div>
+        <div class="mini">
+          <div class="ondeck">
+            <div class="lbl">On deck · Set 2 of 4</div>
+            <div class="mv">Front squat</div>
+            <div class="det">left blank last time — nothing to pre-fill</div>
+            <span class="tap">tap to log ▸</span>
+          </div>
+        </div>
+        <p class="note">The blank-set note wears the same dim gray as every ordinary "143 lb × 5" detail line — nothing asks for attention.</p>
+      </div>
+      <div class="panel after">
+        <div class="state">After</div>
+        <div class="mini">
+          <div class="ondeck flagged">
+            <div class="lbl">On deck · Set 2 of 4</div>
+            <div class="mv">Front squat</div>
+            <div class="det">left blank last time — nothing to pre-fill</div>
+            <span class="tap">tap to log ▸</span>
+          </div>
+        </div>
+        <p class="note">A 3px warn left edge plus warn-tinted detail text flags the blank set from the rest screen, before the tap.</p>
+      </div>
+    </div>
+  </section>
+
+  <p class="foot">Proposal only — companion to <b>clock-live.html</b> / <b>clock-option-3.html</b>. No engine, no JavaScript, no changes to existing files.</p>
+</div>
+
+</body>
+</html>
