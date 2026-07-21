@@ -17,7 +17,7 @@
 <script>
   // Set the pinned theme before first paint so there's no flash.
   try {
-    var s = JSON.parse(localStorage.getItem('sr-state-v1'));
+    var s = JSON.parse(localStorage.getItem('sr-state-v2')) || JSON.parse(localStorage.getItem('sr-state-v1'));
     var t = s && s.settings && s.settings.theme;
     if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
   } catch (e) {}
@@ -25,10 +25,6 @@
 </head>
 <body>
   <main id="app"></main>
-
-  <!-- Rest timer: bar + fullscreen clock live outside the view container -->
-  <div id="timerbar" class="timerbar hidden" role="timer"></div>
-  <div id="clock" class="clock hidden"></div>
 
   <script src="seed.js"></script>
   <script src="app.js"></script>

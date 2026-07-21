@@ -1,7 +1,7 @@
 /* Strength Rebuild — offline shell.
    Bump CACHE when shipping changes so clients pick up the new version. */
 
-const CACHE = 'sr-v1.8.0';
+const CACHE = 'sr-v2.0.0';
 const SHELL = [
   './',
   'index.html',

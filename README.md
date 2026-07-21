@@ -2,13 +2,13 @@
 
 Personal gym companion for a two-day full-body strength program. Static PWA — no build step, no backend.
 
-- **Log**: weight × reps × RIR per work set, prefilled from the last session of the same movement
-- **Rest clock**: auto-starts on each logged set with that slot's prescribed rest; timestamp-based so it survives screen lock
-- **Progression nudges**: when every work set hits the top of the rep range at target RIR, the next session opens with the suggested load bump (double progression)
-- **Block awareness**: 4-week mesocycle counter; week 4 renders as a deload (one fewer set, 4–5 RIR)
-- **Notes**: optional per-movement and per-session, surfaced in history
-- **History**: per-movement trend chart + full session log
-- **Data**: lives in `localStorage` on the device; export/import as JSON from Settings
+v2 model: anchors + task menus, one-press rest. No per-set logging.
+
+- **Rest**: two big buttons (normal / heavy tier, durations in Settings). Press when you rack the weight. The chime is baked into a WAV — [silence][bell] played as media — so it rings with the screen off, like Still Water. Foreground Web Audio fallback if media is refused.
+- **Log**: tracked slots capture one working weight, prefilled from the last session by movement-name slug — a session with nothing changed is zero taps. Menu slots (jumps, transitional squats, hangs) list their task variations and take a note instead.
+- **Finish**: records every tracked lift at its chip weight plus any notes. A session left open past 12 h auto-saves on next launch — adjusted weights are never lost.
+- **Program**: edited in-app (Settings → Program): name, target, cue, warm-up line, task menu, tracked/added-load flags, rest tier, reorder.
+- **Data**: lives in `localStorage` (`sr-state-v2`) on the device; export / copy / import as JSON from Settings. v1 per-set history migrates automatically — each old entry collapses to its top working weight with the raw sets preserved underneath.
 
 ## Develop
 
