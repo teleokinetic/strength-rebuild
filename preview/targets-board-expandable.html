@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Expandable targets board — 2 treatments</title>
+<style>
+  @font-face { font-family:'Barlow Condensed'; font-weight:500; src:url('../fonts/barlow-condensed-500.woff2') format('woff2'); }
+  @font-face { font-family:'Barlow Condensed'; font-weight:600; src:url('../fonts/barlow-condensed-600.woff2') format('woff2'); }
+  :root {
+    --bg:#131518; --surface:#1B1E23; --card:#1F232A; --raised:#272C35; --line:#2C313A;
+    --ink:#E9E7E2; --dim:#9AA1AC; --brass:#D9A03F; --brass-wash:rgba(217,160,63,.12); --on-brass:#15130C;
+    --display:'Barlow Condensed','Arial Narrow',sans-serif;
+    --body:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#EFEBE3; color:#26241E; font-family:var(--body); font-size:16px; line-height:1.5; padding:36px 20px 80px; }
+  .page { max-width:1120px; margin:0 auto; }
+  h1 { font-family:var(--display); font-weight:600; font-size:34px; letter-spacing:.05em; text-transform:uppercase; }
+  .sub { color:#6C6555; margin:6px 0 30px; max-width:75ch; }
+  .opt { margin:44px 0 60px; }
+  .optlabel { font-family:var(--display); font-weight:600; font-size:15px; letter-spacing:.14em; text-transform:uppercase; color:#9A5B12; }
+  .opt h2 { font-family:var(--display); font-weight:600; font-size:27px; letter-spacing:.04em; text-transform:uppercase; margin:2px 0 10px; }
+  .row { display:flex; gap:30px; align-items:flex-start; flex-wrap:wrap; }
+  .notes { flex:1; min-width:280px; max-width:440px; }
+  .notes p { margin:0 0 12px; }
+  .notes ul { margin:0 0 12px 20px; }
+  .notes li { margin:5px 0; }
+  .good::marker { content:'+  '; color:#3C7A46; }
+  .bad::marker { content:'−  '; color:#A6432A; }
+  .statelabel { text-align:center; font-family:var(--display); font-weight:600; font-size:13px;
+    letter-spacing:.14em; text-transform:uppercase; color:#6C6555; margin-bottom:8px; }
+
+  .phone {
+    width:393px; flex:none; background:var(--bg); color:var(--ink);
+    border-radius:34px; border:6px solid #26241E; padding:22px 14px 26px;
+    box-shadow:0 14px 40px rgba(0,0,0,.25);
+  }
+  .topbar { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:16px; padding:0 2px; }
+  .wordmark { font-family:var(--display); font-weight:600; font-size:20px; letter-spacing:.09em; text-transform:uppercase; }
+  .wordmark span { color:var(--dim); }
+  .gear { color:var(--dim); font-size:18px; }
+  .daycard { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:15px 16px; margin-bottom:11px; }
+  .daycard-name { font-family:var(--display); font-weight:600; font-size:25px; letter-spacing:.05em; text-transform:uppercase; line-height:1.08; }
+  .daycard-sub { color:var(--dim); font-size:14px; }
+  .daycard-last { margin-top:6px; font-family:var(--display); font-weight:500; font-size:13px; letter-spacing:.1em; text-transform:uppercase; color:var(--dim); }
+
+  .caret { display:inline-block; color:var(--dim); font-size:11px; transition:transform .15s; }
+  .open .caret, .caret.up { transform:rotate(180deg); color:var(--brass); }
+
+  /* ============ TREATMENT 1 — INSTRUMENT LEDGER ============ */
+  /* No card fill: sits on the raw bg, brass hairline on top, so it reads
+     as instrumentation etched into the page — not another pressable card. */
+  .ledger {
+    margin-top:16px; padding:11px 4px 4px;
+    border-top:2px solid var(--brass);
+    background:transparent;
+  }
+  .ledger-head { display:flex; justify-content:space-between; align-items:center; padding:0 4px; }
+  .ledger-title { font-family:var(--display); font-weight:600; font-size:14px; letter-spacing:.16em; text-transform:uppercase; color:var(--brass); }
+  .ledger-title .caret { margin-left:7px; }
+  .ledger-check { font-family:var(--display); font-weight:500; font-size:13px; letter-spacing:.09em; text-transform:uppercase; color:var(--dim); }
+
+  .eq { display:flex; gap:5px; align-items:flex-end; height:26px; margin:10px 4px 2px; }
+  .eq .col { width:34px; background:var(--raised); border-radius:2px 2px 0 0; position:relative; height:100%; overflow:hidden; }
+  .eq .col i { position:absolute; left:0; right:0; bottom:0; background:var(--brass); display:block; }
+  .eq .col.off { opacity:.35; }
+  .eqlabels { display:flex; gap:5px; margin:3px 4px 0; }
+  .eqlabels span { width:34px; text-align:center; font-family:var(--display); font-weight:600; font-size:9.5px;
+    letter-spacing:.05em; text-transform:uppercase; color:var(--dim); }
+
+  .lrows { margin-top:10px; border-top:1px solid var(--line); }
+  .lrow { display:flex; justify-content:space-between; align-items:baseline; padding:9px 4px; border-bottom:1px solid var(--line); }
+  .lname { font-family:var(--display); font-weight:600; font-size:16px; letter-spacing:.05em; text-transform:uppercase; }
+  .lnum { font-family:var(--display); font-weight:500; font-size:16px; color:var(--dim); font-variant-numeric:tabular-nums; }
+  .lnum b { color:var(--ink); font-weight:600; }
+  .lbar { height:5px; background:var(--raised); border-radius:2.5px; margin:0 4px; position:relative; top:-2px; }
+  .lbar i { display:block; height:100%; background:var(--brass); border-radius:2.5px; }
+  .dimrow .lname, .dimrow .lnum { color:var(--dim); opacity:.6; }
+  .pips { display:flex; gap:5px; align-items:center; padding:8px 4px 10px; border-bottom:1px solid var(--line); flex-wrap:wrap; }
+  .pip { font-family:var(--display); font-weight:600; font-size:11.5px; letter-spacing:.06em; text-transform:uppercase;
+    border:1px solid var(--line); border-radius:7px; padding:3px 8px; color:var(--dim); background:var(--surface); }
+  .pip.now { background:var(--brass); color:var(--on-brass); border-color:var(--brass); }
+  .parr { color:var(--dim); font-size:11px; }
+  .gates { padding:9px 4px 2px; font-size:12.5px; color:var(--dim); }
+  .gates b { color:var(--ink); font-weight:600; }
+  .gates .tag { font-family:var(--display); font-weight:600; font-size:10px; letter-spacing:.1em; text-transform:uppercase;
+    border:1px solid var(--line); border-radius:5px; padding:1px 6px; color:var(--brass); margin-left:5px; }
+
+  /* ============ TREATMENT 2 — DOSSIER ============ */
+  /* Framed like a printed program card pinned below the days: double
+     hairline frame, no fill, no bars — big fraction numerals only. */
+  .dossier {
+    margin-top:16px; background:transparent;
+    border:1px solid var(--line); outline:1px solid var(--line); outline-offset:3px;
+    border-radius:4px; padding:12px 14px 10px;
+  }
+  .dos-head { display:flex; justify-content:space-between; align-items:center; }
+  .dos-title { font-family:var(--display); font-weight:600; font-size:14px; letter-spacing:.16em; text-transform:uppercase; }
+  .dos-title em { font-style:normal; color:var(--dim); }
+  .dos-sum { font-family:var(--display); font-weight:500; font-size:13px; letter-spacing:.07em; text-transform:uppercase; color:var(--dim); }
+  .dos-sum b { color:var(--brass); font-weight:600; }
+  .dosrows { margin-top:8px; }
+  .dosrow { display:flex; justify-content:space-between; align-items:baseline; padding:7.5px 0; border-top:1px dashed var(--line); }
+  .dosname { font-family:var(--display); font-weight:600; font-size:16px; letter-spacing:.05em; text-transform:uppercase; }
+  .dossub { color:var(--dim); font-size:12px; margin-left:8px; }
+  .dosnum { font-family:var(--display); font-size:20px; font-variant-numeric:tabular-nums; letter-spacing:.02em; color:var(--dim); font-weight:500; }
+  .dosnum b { color:var(--ink); font-weight:600; font-size:23px; }
+  .dosnum .sep { margin:0 3px; }
+  .dosdim .dosname, .dosdim .dosnum { color:var(--dim); opacity:.6; }
+  .dosfoot { border-top:1px solid var(--line); margin-top:2px; padding-top:8px; font-size:12.5px; color:var(--dim); }
+  .dosfoot b { color:var(--ink); }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Expandable targets board</h1>
+  <p class="sub">Round 2 on Option B: collapsed by default, tap the header to expand (same flip-caret grammar as the weight chips), and visually <b>set apart from the day cards</b> — the days stay the only big pressable cards on the page. Numbers are your real currents from the 8/1 export.</p>
+
+  <!-- ================= TREATMENT 1 ================= -->
+  <div class="opt">
+    <div class="optlabel">Treatment 1</div>
+    <h2>Instrument ledger</h2>
+    <div class="row">
+      <div>
+        <div class="statelabel">Collapsed (default)</div>
+        <div class="phone">
+          <div class="topbar"><div class="wordmark">Strength <span>Rebuild</span></div><div class="gear">⚙</div></div>
+          <div class="daycard"><div class="daycard-name">Day A</div><div class="daycard-sub">Squat + Horizontal</div><div class="daycard-last">Last: Jul 28</div></div>
+          <div class="daycard"><div class="daycard-name">Day B</div><div class="daycard-sub">Hinge + Vertical</div><div class="daycard-last">Last: Jul 25</div></div>
+
+          <div class="ledger">
+            <div class="ledger-head">
+              <span class="ledger-title">Targets<span class="caret">▾</span></span>
+              <span class="ledger-check">Re-test Aug 29</span>
+            </div>
+            <div class="eq">
+              <div class="col"><i style="height:80%"></i></div>
+              <div class="col"><i style="height:58%"></i></div>
+              <div class="col off"><i style="height:0"></i></div>
+              <div class="col"><i style="height:42%"></i></div>
+              <div class="col"><i style="height:73%"></i></div>
+              <div class="col"><i style="height:25%"></i></div>
+              <div class="col"><i style="height:0"></i></div>
+            </div>
+            <div class="eqlabels">
+              <span>Sqt</span><span>Bch</span><span>DL</span><span>MU</span><span>Row</span><span>Nrd</span><span>Cry</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="statelabel">Expanded</div>
+        <div class="phone open">
+          <div class="topbar"><div class="wordmark">Strength <span>Rebuild</span></div><div class="gear">⚙</div></div>
+          <div class="daycard"><div class="daycard-name">Day A</div><div class="daycard-sub">Squat + Horizontal</div><div class="daycard-last">Last: Jul 28</div></div>
+          <div class="daycard"><div class="daycard-name">Day B</div><div class="daycard-sub">Hinge + Vertical</div><div class="daycard-last">Last: Jul 25</div></div>
+
+          <div class="ledger">
+            <div class="ledger-head">
+              <span class="ledger-title">Targets — Rebuild<span class="caret up">▾</span></span>
+              <span class="ledger-check">Re-test Aug 29</span>
+            </div>
+            <div class="lrows">
+              <div class="lrow" style="border-bottom:0"><span class="lname">Back squat</span><span class="lnum"><b>185</b> / 230 ×5</span></div>
+              <div class="lbar"><i style="width:80%"></i></div>
+              <div class="lrow" style="border-bottom:0"><span class="lname">Bench</span><span class="lnum"><b>DB 55s</b> / bar 155 ×5</span></div>
+              <div class="lbar"><i style="width:58%"></i></div>
+              <div class="lrow dimrow"><span class="lname">Deadlift</span><span class="lnum">/ 310 ×5 · later phase</span></div>
+              <div class="lrow" style="border-bottom:0"><span class="lname">Muscle-up</span><span class="lnum"><b>chins 5</b> / 12</span></div>
+              <div class="pips">
+                <span class="pip now">12 chins</span><span class="parr">›</span>
+                <span class="pip">+40 chin</span><span class="parr">›</span>
+                <span class="pip">dips ×10</span><span class="parr">›</span>
+                <span class="pip">ring MU</span>
+              </div>
+              <div class="lrow" style="border-bottom:0"><span class="lname">Row</span><span class="lnum"><b>55</b> / 75 ×8</span></div>
+              <div class="lbar"><i style="width:73%"></i></div>
+              <div class="lrow" style="border-bottom:0"><span class="lname">Nordic</span><span class="lnum"><b>negs begun</b> / 5 · R=L</span></div>
+              <div class="lbar"><i style="width:25%"></i></div>
+              <div class="lrow"><span class="lname">Carry</span><span class="lnum"><b>log a weight</b> / 80</span></div>
+            </div>
+            <div class="gates">Gates: DL enters at <b>squat 200×5</b> · dips at <b>10 chins</b><span class="tag">proposed</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="notes">
+        <p>No card, no fill — a <b>brass hairline</b> rules it off from the day cards and the board reads as instrumentation etched into the page. Collapsed, it's an <b>equalizer</b>: seven columns, fill height = distance to each mark. You absorb the whole campaign in half a second without a single number.</p>
+        <ul>
+          <li class="good">Strongest differentiation: days = solid pressable cards, targets = open etched panel. Nothing competes.</li>
+          <li class="good">The equalizer is a glanceable signature — and the empty Carry column nags exactly the right amount.</li>
+          <li class="good">Expanded rows keep B's bars + gate pips; gates line carried from Option C (marked proposed).</li>
+          <li class="bad">Equalizer columns are abstract — needs the 3-letter labels, and first-use requires one expand to learn it.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= TREATMENT 2 ================= -->
+  <div class="opt">
+    <div class="optlabel">Treatment 2</div>
+    <h2>Dossier card</h2>
+    <div class="row">
+      <div>
+        <div class="statelabel">Collapsed (default)</div>
+        <div class="phone">
+          <div class="topbar"><div class="wordmark">Strength <span>Rebuild</span></div><div class="gear">⚙</div></div>
+          <div class="daycard"><div class="daycard-name">Day A</div><div class="daycard-sub">Squat + Horizontal</div><div class="daycard-last">Last: Jul 28</div></div>
+          <div class="daycard"><div class="daycard-name">Day B</div><div class="daycard-sub">Hinge + Vertical</div><div class="daycard-last">Last: Jul 25</div></div>
+
+          <div class="dossier">
+            <div class="dos-head">
+              <span class="dos-title">Targets <em>— Rebuild</em> <span class="caret">▾</span></span>
+              <span class="dos-sum">Nearest: <b>squat 185/230</b> · Aug 29</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="statelabel">Expanded</div>
+        <div class="phone open">
+          <div class="topbar"><div class="wordmark">Strength <span>Rebuild</span></div><div class="gear">⚙</div></div>
+          <div class="daycard"><div class="daycard-name">Day A</div><div class="daycard-sub">Squat + Horizontal</div><div class="daycard-last">Last: Jul 28</div></div>
+          <div class="daycard"><div class="daycard-name">Day B</div><div class="daycard-sub">Hinge + Vertical</div><div class="daycard-last">Last: Jul 25</div></div>
+
+          <div class="dossier">
+            <div class="dos-head">
+              <span class="dos-title">Targets <em>— Rebuild</em> <span class="caret up">▾</span></span>
+              <span class="dos-sum">Re-test <b>Aug 29</b></span>
+            </div>
+            <div class="dosrows">
+              <div class="dosrow" style="border-top:0"><span class="dosname">Back squat</span><span class="dosnum"><b>185</b><span class="sep">/</span>230</span></div>
+              <div class="dosrow"><span class="dosname">Bench<span class="dossub">DB → bar</span></span><span class="dosnum"><b>55s</b><span class="sep">/</span>155</span></div>
+              <div class="dosrow dosdim"><span class="dosname">Deadlift<span class="dossub">later phase</span></span><span class="dosnum">—<span class="sep">/</span>310</span></div>
+              <div class="dosrow"><span class="dosname">Muscle-up<span class="dossub">chins → +40 → dips → MU</span></span><span class="dosnum"><b>5</b><span class="sep">/</span>12</span></div>
+              <div class="dosrow"><span class="dosname">Row</span><span class="dosnum"><b>55</b><span class="sep">/</span>75</span></div>
+              <div class="dosrow"><span class="dosname">Nordic<span class="dossub">eccentrics · R=L</span></span><span class="dosnum"><b>~1</b><span class="sep">/</span>5</span></div>
+              <div class="dosrow"><span class="dosname">Carry<span class="dossub">log a weight</span></span><span class="dosnum">—<span class="sep">/</span>80</span></div>
+            </div>
+            <div class="dosfoot">Gates: DL at <b>squat 200×5</b> · dips at <b>10 chins</b> · re-test every block</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="notes">
+        <p>A <b>double-hairline frame</b> with square corners and dashed rules — a printed program card pinned under the days. No bars at all: each mark is a big <b>fraction</b> (now / target), which is exactly how you'd say it out loud.</p>
+        <ul>
+          <li class="good">Quietest option: collapsed it's one line of type, nearly zero vertical cost.</li>
+          <li class="good">Fractions are honest — no bar pretending DB-bench→barbell progress is precisely 58%.</li>
+          <li class="good">Square corners + hairlines vs. the days' rounded solids = clear "document vs. button" split.</li>
+          <li class="bad">No glanceable overall shape — you read numbers, you don't see the campaign at once.</li>
+          <li class="bad">Sub-labels (gate chains) get cramped; muscle-up's ladder reads better in T1's pips.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= RE-TEST STATE ================= -->
+  <div class="opt">
+    <div class="optlabel">Treatment 1 · third state</div>
+    <h2>Re-test week</h2>
+    <div class="row">
+      <div>
+        <div class="statelabel">During the block's final week</div>
+        <div class="phone open">
+          <div class="topbar"><div class="wordmark">Strength <span>Rebuild</span></div><div class="gear">⚙</div></div>
+          <div class="daycard"><div class="daycard-name">Day A</div><div class="daycard-sub">Squat + Horizontal</div><div class="daycard-last">Last: Aug 25</div></div>
+          <div class="daycard"><div class="daycard-name">Day B</div><div class="daycard-sub">Hinge + Vertical</div><div class="daycard-last">Last: Aug 22</div></div>
+
+          <div class="ledger">
+            <div class="ledger-head">
+              <span class="ledger-title" style="color:var(--brass)">Re-test week<span class="caret up">▾</span></span>
+              <span class="ledger-check">ends Sun → Block 3</span>
+            </div>
+            <div class="lrows">
+              <div class="lrow"><span class="lname">Back squat</span><span class="lnum" style="color:var(--brass)">▲ <b>195</b> — beat 185 ✓</span></div>
+              <div class="lrow"><span class="lname">Bench</span><span class="lnum"><b>top set ×6</b> · beat DB 55s</span></div>
+              <div class="lrow"><span class="lname">Chins</span><span class="lnum"><b>max strict set</b> · beat 5</span></div>
+              <div class="lrow"><span class="lname">Row</span><span class="lnum" style="color:var(--brass)">▲ <b>60</b> — beat 55 ✓</span></div>
+              <div class="lrow"><span class="lname">Nordic</span><span class="lnum"><b>5 slow negs</b> · judge R vs L</span></div>
+              <div class="lrow"><span class="lname">Carry</span><span class="lnum"><b>set a baseline</b> · 40 m clean</span></div>
+            </div>
+            <div class="gates">Week's end: gates check (<b>squat 200×5 → DL enters</b>) · a mark stalled <b>2 re-tests running</b> → change dose or movement</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="notes">
+        <p>A re-test is <b>not a separate session</b> — it's the block's final (lighter) week wearing a different face. Accessory volume drops as usual; each anchor's normal sets are replaced by a warm-up and <b>one top set at the ×5 @ RIR 1–2 convention</b>. The set you'd log anyway <i>is</i> the test — the chip captures it, the board reads it.</p>
+        <ul>
+          <li class="good">Zero new logging machinery: rows flip to "beat ___" during the week and light brass (▲) when a logged chip weight beats the mark.</li>
+          <li class="good">Non-barbell marks test naturally where they live: chins max strict set on Day B, Nordic 5 slow negatives judged R vs L, carry the full distance with posture as the gate.</li>
+          <li class="good">Decisions are written on the board, not remembered: gates check at week's end; stalled-twice rule triggers the pivot conversation.</li>
+          <li class="bad">"Judge R vs L" is subjective — fine for you; it just can't auto-flip, so Nordic gets a tap-to-confirm.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <p class="sub" style="margin-top:-16px"><b>Shared mechanics, either way:</b> tap the whole header to toggle · caret flips brass like the weight chips · state persists in localStorage (remembers how you left it) · "later phase" rows stay dimmed until their gate condition is met, then light up · the gates line ships only if you approve those trigger numbers.</p>
+</div>
+</body>
+</html>

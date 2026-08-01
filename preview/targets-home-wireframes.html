@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Targets on the homepage — 3 wireframes</title>
+<style>
+  @font-face { font-family:'Barlow Condensed'; font-weight:500; src:url('../fonts/barlow-condensed-500.woff2') format('woff2'); }
+  @font-face { font-family:'Barlow Condensed'; font-weight:600; src:url('../fonts/barlow-condensed-600.woff2') format('woff2'); }
+  :root {
+    --bg:#131518; --surface:#1B1E23; --card:#1F232A; --raised:#272C35; --line:#2C313A;
+    --ink:#E9E7E2; --dim:#9AA1AC; --brass:#D9A03F; --brass-wash:rgba(217,160,63,.12); --on-brass:#15130C;
+    --display:'Barlow Condensed','Arial Narrow',sans-serif;
+    --body:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#EFEBE3; color:#26241E; font-family:var(--body); font-size:16px; line-height:1.5; padding:36px 20px 80px; }
+  .page { max-width:1080px; margin:0 auto; }
+  h1 { font-family:var(--display); font-weight:600; font-size:34px; letter-spacing:.05em; text-transform:uppercase; }
+  .sub { color:#6C6555; margin:6px 0 8px; max-width:70ch; }
+  .mocknote { font-size:14px; color:#6C6555; margin-bottom:34px; max-width:70ch; }
+  .opt { display:flex; gap:34px; align-items:flex-start; margin:46px 0 64px; flex-wrap:wrap; }
+  .notes { flex:1; min-width:280px; max-width:520px; }
+  .optlabel { font-family:var(--display); font-weight:600; font-size:15px; letter-spacing:.14em; text-transform:uppercase; color:#9A5B12; }
+  .notes h2 { font-family:var(--display); font-weight:600; font-size:27px; letter-spacing:.04em; text-transform:uppercase; margin:2px 0 10px; }
+  .notes p { margin:0 0 12px; }
+  .notes ul { margin:0 0 12px 20px; }
+  .notes li { margin:5px 0; }
+  .good::marker { content:'+  '; color:#3C7A46; }
+  .bad::marker { content:'−  '; color:#A6432A; }
+
+  /* phone frame */
+  .phone {
+    width:393px; flex:none; background:var(--bg); color:var(--ink);
+    border-radius:34px; border:6px solid #26241E; padding:22px 14px 30px;
+    box-shadow:0 14px 40px rgba(0,0,0,.25);
+  }
+  .topbar { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:16px; padding:0 2px; }
+  .wordmark { font-family:var(--display); font-weight:600; font-size:20px; letter-spacing:.09em; text-transform:uppercase; }
+  .wordmark span { color:var(--dim); }
+  .gear { color:var(--dim); font-size:18px; }
+
+  .daycard { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:15px 16px; margin-bottom:11px; }
+  .daycard-name { font-family:var(--display); font-weight:600; font-size:25px; letter-spacing:.05em; text-transform:uppercase; line-height:1.08; }
+  .daycard-sub { color:var(--dim); font-size:14px; }
+  .daycard-last { margin-top:6px; font-family:var(--display); font-weight:500; font-size:13px; letter-spacing:.1em; text-transform:uppercase; color:var(--dim); }
+
+  .eyebrow { font-family:var(--display); font-weight:600; font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--dim); }
+
+  /* A — phase strip */
+  .strip { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:12px 14px; margin-bottom:12px; }
+  .strip-row { display:flex; justify-content:space-between; align-items:baseline; }
+  .strip-phase { font-family:var(--display); font-weight:600; font-size:19px; letter-spacing:.06em; text-transform:uppercase; }
+  .strip-check { font-family:var(--display); font-weight:500; font-size:14px; letter-spacing:.08em; text-transform:uppercase; color:var(--brass); }
+  .strip-focus { color:var(--dim); font-size:14px; margin-top:3px; }
+  .strip-more { margin-top:9px; padding-top:9px; border-top:1px solid var(--line);
+    display:flex; justify-content:space-between; align-items:center;
+    font-family:var(--display); font-weight:600; font-size:13px; letter-spacing:.1em; text-transform:uppercase; color:var(--dim); }
+
+  /* B — targets board */
+  .board { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px; margin-top:4px; }
+  .board-head { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px; }
+  .board-title { font-family:var(--display); font-weight:600; font-size:18px; letter-spacing:.07em; text-transform:uppercase; }
+  .trow { padding:8px 0; border-top:1px solid var(--line); }
+  .trow:first-of-type { border-top:0; }
+  .trow-top { display:flex; justify-content:space-between; align-items:baseline; }
+  .tname { font-family:var(--display); font-weight:600; font-size:16px; letter-spacing:.05em; text-transform:uppercase; }
+  .tnums { font-family:var(--display); font-weight:500; font-size:15px; letter-spacing:.04em; color:var(--dim); font-variant-numeric:tabular-nums; }
+  .tnums b { color:var(--ink); font-weight:600; }
+  .bar { height:6px; background:var(--raised); border-radius:3px; margin-top:7px; overflow:hidden; }
+  .fill { height:100%; background:var(--brass); border-radius:3px; }
+  .locked .tname, .locked .tnums { color:var(--dim); opacity:.65; }
+  .tag { font-family:var(--display); font-weight:600; font-size:11px; letter-spacing:.1em; text-transform:uppercase;
+    border:1px solid var(--line); border-radius:6px; padding:2px 7px; color:var(--dim); }
+  .pips { display:flex; gap:5px; align-items:center; margin-top:8px; flex-wrap:wrap; }
+  .pip { font-family:var(--display); font-weight:600; font-size:11.5px; letter-spacing:.06em; text-transform:uppercase;
+    border:1px solid var(--line); border-radius:7px; padding:3px 8px; color:var(--dim); background:var(--surface); }
+  .pip.now { background:var(--brass); color:var(--on-brass); border-color:var(--brass); }
+  .pip-arrow { color:var(--dim); font-size:11px; }
+
+  /* C — ladder */
+  .ladder { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px 14px 12px; margin-top:4px; }
+  .lrow { display:flex; gap:12px; }
+  .lrail { width:14px; flex:none; display:flex; flex-direction:column; align-items:center; }
+  .ldot { width:12px; height:12px; border-radius:50%; background:var(--brass); flex:none; margin-top:4px; }
+  .ldot.hollow { background:var(--card); border:2px solid var(--dim); }
+  .lline { width:2px; flex:1; background:var(--line); }
+  .lbody { padding-bottom:16px; }
+  .lrow:last-child .lbody { padding-bottom:2px; }
+  .lwhen { font-family:var(--display); font-weight:600; font-size:12px; letter-spacing:.12em; text-transform:uppercase; color:var(--brass); }
+  .lrow.future .lwhen { color:var(--dim); }
+  .lname { font-family:var(--display); font-weight:600; font-size:18px; letter-spacing:.05em; text-transform:uppercase; margin:1px 0 2px; }
+  .ldesc { color:var(--dim); font-size:13.5px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Targets on the homepage</h1>
+  <p class="sub">Three ways the home screen could carry: <b>current phase focus</b> · <b>when to check in / pivot</b> · <b>long-term marks and the progressions to them</b>. All in the app's existing skin.</p>
+  <p class="mocknote">Current-progress numbers below come from your <b>2026-08-01 export</b> (4 logged sessions: Jul 6, 9, 25, 28 — logging gaps known, so treat currents as a floor). Targets are the real ones set 2026-08-01 (155 lb BW, ×5 @ RIR 1–2).</p>
+
+  <!-- ============ OPTION A ============ -->
+  <div class="opt">
+    <div class="phone">
+      <div class="topbar"><div class="wordmark">Strength <span>Rebuild</span></div><div class="gear">⚙</div></div>
+
+      <div class="strip">
+        <div class="strip-row">
+          <div class="strip-phase">Rebuild · Block 2</div>
+          <div class="strip-check">Re-test Aug 29</div>
+        </div>
+        <div class="strip-focus">Focus: add a set to the anchors; groove the back squat</div>
+        <div class="strip-more"><span>Targets &amp; progressions</span><span>▸</span></div>
+      </div>
+
+      <div class="daycard">
+        <div class="daycard-name">Day A</div>
+        <div class="daycard-sub">Squat + Horizontal</div>
+        <div class="daycard-last">Last: Jul 28</div>
+      </div>
+      <div class="daycard">
+        <div class="daycard-name">Day B</div>
+        <div class="daycard-sub">Hinge + Vertical</div>
+        <div class="daycard-last">Last: Jul 25</div>
+      </div>
+    </div>
+    <div class="notes">
+      <div class="optlabel">Option A</div>
+      <h2>Phase strip</h2>
+      <p>One slim card above the day cards: phase + block, this block's focus in a sentence, and the next check-in date glowing brass. Everything deeper (the full target table, gate chains) lives behind the "Targets &amp; progressions" row on its own page.</p>
+      <ul>
+        <li class="good">Home stays gym-fast — day cards still dominate; zero scroll cost.</li>
+        <li class="good">The check-in date is always in your face, which is the thing that actually triggers a pivot.</li>
+        <li class="good">Focus line doubles as the block's "why" — cheap to update per block.</li>
+        <li class="bad">Long-term goals are a tap away, not visible — less daily gravity from the marks themselves.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ============ OPTION B ============ -->
+  <div class="opt">
+    <div class="phone">
+      <div class="topbar"><div class="wordmark">Strength <span>Rebuild</span></div><div class="gear">⚙</div></div>
+
+      <div class="daycard">
+        <div class="daycard-name">Day A</div>
+        <div class="daycard-sub">Squat + Horizontal</div>
+        <div class="daycard-last">Last: Jul 28</div>
+      </div>
+      <div class="daycard">
+        <div class="daycard-name">Day B</div>
+        <div class="daycard-sub">Hinge + Vertical</div>
+        <div class="daycard-last">Last: Jul 25</div>
+      </div>
+
+      <div class="board">
+        <div class="board-head">
+          <div class="board-title">Targets — Rebuild</div>
+          <div class="eyebrow" style="color:var(--brass)">Re-test Aug 29</div>
+        </div>
+
+        <div class="trow">
+          <div class="trow-top"><span class="tname">Back squat</span><span class="tnums"><b>185</b> → 230 ×5</span></div>
+          <div class="bar"><div class="fill" style="width:80%"></div></div>
+        </div>
+        <div class="trow">
+          <div class="trow-top"><span class="tname">Bench</span><span class="tnums"><b>DB 55s</b> → bar 155 ×5</span></div>
+          <div class="bar"><div class="fill" style="width:58%"></div></div>
+        </div>
+        <div class="trow locked">
+          <div class="trow-top"><span class="tname">Deadlift</span><span class="tnums">→ 310 ×5 &nbsp;<span class="tag">later phase</span></span></div>
+        </div>
+        <div class="trow">
+          <div class="trow-top"><span class="tname">Muscle-up</span><span class="tnums"><b>chins 5 / 12</b></span></div>
+          <div class="pips">
+            <span class="pip now">12 chins</span><span class="pip-arrow">›</span>
+            <span class="pip">+40 chin</span><span class="pip-arrow">›</span>
+            <span class="pip">dips ×10</span><span class="pip-arrow">›</span>
+            <span class="pip">ring MU</span>
+          </div>
+        </div>
+        <div class="trow">
+          <div class="trow-top"><span class="tname">Nordic</span><span class="tnums"><b>negs begun</b> → 5 · R=L</span></div>
+          <div class="bar"><div class="fill" style="width:25%"></div></div>
+        </div>
+        <div class="trow">
+          <div class="trow-top"><span class="tname">Row</span><span class="tnums"><b>55</b> → 75 ×8/side</span></div>
+          <div class="bar"><div class="fill" style="width:73%"></div></div>
+        </div>
+        <div class="trow">
+          <div class="trow-top"><span class="tname">Carry</span><span class="tnums"><b>no weight logged</b> → 80</span></div>
+          <div class="bar"><div class="fill" style="width:0%"></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="notes">
+      <div class="optlabel">Option B</div>
+      <h2>Targets board</h2>
+      <p>The full scoreboard lives on the homepage, below the day cards. Every mark: current → target with a luminance progress bar. The muscle-up renders as its true shape — a gate chain, current gate lit brass. Deadlift sits visibly dimmed with a "later phase" tag, so the long arc is honest without pretending it's active.</p>
+      <ul>
+        <li class="good">Maximum gravity: you see the distance to every mark, every time you open the app.</li>
+        <li class="good">Gate-chain pips are the right grammar for progressions (muscle-up now; dips/DL phase-gates later).</li>
+        <li class="good">Bars are luminance-only (brass on graphite) — reads without hue.</li>
+        <li class="bad">Homepage gets tall; day cards compete with a wall of numbers before a session.</li>
+        <li class="bad">Needs current-×5 estimates per lift — app tracks working weight, so "current" is honest, but bench (DB→barbell) needs a judgement call.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ============ OPTION C ============ -->
+  <div class="opt">
+    <div class="phone">
+      <div class="topbar"><div class="wordmark">Strength <span>Rebuild</span></div><div class="gear">⚙</div></div>
+
+      <div class="daycard">
+        <div class="daycard-name">Day A</div>
+        <div class="daycard-sub">Squat + Horizontal</div>
+        <div class="daycard-last">Last: Jul 28</div>
+      </div>
+      <div class="daycard">
+        <div class="daycard-name">Day B</div>
+        <div class="daycard-sub">Hinge + Vertical</div>
+        <div class="daycard-last">Last: Jul 25</div>
+      </div>
+
+      <div class="ladder">
+        <div class="lrow">
+          <div class="lrail"><div class="ldot"></div><div class="lline"></div></div>
+          <div class="lbody">
+            <div class="lwhen">Now — Rebuild · Block 2</div>
+            <div class="lname">Groove &amp; accumulate</div>
+            <div class="ldesc">Squat already 185 — 80% of the mark. Add a set to the anchors. Pivot rule: a lift stalled 2 sessions running → adjust.</div>
+          </div>
+        </div>
+        <div class="lrow">
+          <div class="lrail"><div class="ldot hollow"></div><div class="lline"></div></div>
+          <div class="lbody">
+            <div class="lwhen">Aug 29 · Block re-test</div>
+            <div class="lname">Check-in</div>
+            <div class="ldesc">Test the ×5s cold. On pace → repeat block. Two marks stalled → change dose or exercise.</div>
+          </div>
+        </div>
+        <div class="lrow future">
+          <div class="lrail"><div class="ldot hollow"></div><div class="lline"></div></div>
+          <div class="lbody">
+            <div class="lwhen">~Oct · Phase gate</div>
+            <div class="lname">Barbell DL + dips enter</div>
+            <div class="ldesc">When squat ≥200×5 and chins ≥10 strict. Deadlift = tissue-lag rule applies most.</div>
+          </div>
+        </div>
+        <div class="lrow future">
+          <div class="lrail"><div class="ldot hollow"></div><div class="lline"></div></div>
+          <div class="lbody">
+            <div class="lwhen">Targets</div>
+            <div class="lname">230 · 310 · 155 · ring MU</div>
+            <div class="ldesc">+ row 75×8/side · Nordic 5 eccentrics R=L · carry 80×40 m.</div>
+          </div>
+        </div>
+        <div class="lrow future">
+          <div class="lrail"><div class="ldot hollow"></div></div>
+          <div class="lbody">
+            <div class="lwhen">Then</div>
+            <div class="lname">Maintenance mode</div>
+            <div class="ldesc">~⅓ volume, intensity stays. Re-test every 6–8 weeks; two misses = dose too low.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="notes">
+      <div class="optlabel">Option C</div>
+      <h2>The ladder</h2>
+      <p>A vertical timeline under the day cards: where you are (brass dot), the next check-in, the phase gates ahead with their entry conditions, the target numbers, and maintenance mode as the explicit endpoint. It's the only option where <i>when to pivot</i> is structural — every future step names its trigger condition, not just a date.</p>
+      <ul>
+        <li class="good">Answers "what's the plan?" in one glance — phases, gates, and the finish line exist in sequence.</li>
+        <li class="good">Pivot conditions written on the rungs ("squat ≥200×5 → DL enters") make check-ins decisive instead of vibes.</li>
+        <li class="good">Cheap to maintain: it's words + dates, no live computation needed to ship v1.</li>
+        <li class="bad">No per-lift progress bars — less "how close am I" fidelity than B.</li>
+        <li class="bad">Longest card of the three; likely wants a collapsed one-rung view with "show the road" expand.</li>
+      </ul>
+    </div>
+  </div>
+
+  <p class="sub" style="margin-top:-10px"><b>Hybrids are cheap:</b> A's strip as the always-visible header with B's board or C's ladder behind the tap is the likely end state — strip answers "what now / when next," the deeper page answers "how far / what road."</p>
+</div>
+</body>
+</html>

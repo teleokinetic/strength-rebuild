@@ -8,7 +8,7 @@
 
 const STORE_KEY = 'sr-state-v2';
 const V1_KEY = 'sr-state-v1';        // read-only: migration source, never written
-const APP_VERSION = '2.0.5';
+const APP_VERSION = '2.1.0';
 
 let state = null;
 
@@ -19,7 +19,10 @@ function slug(name) {
 function defaultState() {
   return {
     version: 2,
-    settings: { unit: 'lb', theme: 'auto', restNormal: 105, restHeavy: 170, lastExport: null },
+    settings: {
+      unit: 'lb', theme: 'auto', restNormal: 105, restHeavy: 170, lastExport: null,
+      recalDate: '2026-08-29', targetsOpen: false,
+    },
     program: JSON.parse(JSON.stringify(SEED_PROGRAM)),
     sessions: [],
     active: null,
@@ -91,7 +94,13 @@ function load() {
     const raw = localStorage.getItem(STORE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (validState(parsed)) { state = parsed; return; }
+      if (validState(parsed)) {
+        state = parsed;
+        // settings added after v2 shipped — backfill on existing devices
+        if (state.settings.recalDate == null) state.settings.recalDate = '2026-08-29';
+        if (state.settings.targetsOpen == null) state.settings.targetsOpen = false;
+        return;
+      }
     }
   } catch (e) { /* corrupted → fall through */ }
 
@@ -249,6 +258,92 @@ function lastSessionFor(dayId) {
     if (state.sessions[i].dayId === dayId) return state.sessions[i];
   }
   return null;
+}
+
+/* ======================= targets board (ledger) =======================
+   Treatment 1 "instrument ledger": collapsed = 7-column equalizer,
+   expanded = current / target rows. The definition lives in CODE, not
+   state — targets change at recalibration sessions (export → redesign),
+   which land here as updates. Static `cur`/`pct` entries are calibration
+   snapshots (chins, Nordic) refreshed the same way. Targets doc:
+   vault → Projects/Strength Rebuild/Project Context, "Targets" section. */
+
+const TARGETS = [
+  { key: 'squat',  label: 'Back squat', eq: 'Sqt', ex: 'back-squat',     goal: 230, goalText: '230 ×5' },
+  // bench mark is barbell 155×5; DB-equivalent proxy ≈ 70s (155 / 2 / ~1.1)
+  { key: 'bench',  label: 'Bench',      eq: 'Bch', ex: 'db-bench-press', goal: 70,  goalText: 'bar 155 ×5', curFmt: (w) => `DB ${w}s` },
+  { key: 'dl',     label: 'Deadlift',   eq: 'DL',  locked: true,         goalText: '310 ×5 · later phase' },
+  { key: 'mu',     label: 'Muscle-up',  eq: 'MU',  cur: 'chins 5', pct: 42, goalText: '12 strict',
+    pips: ['12 chins', '+40 chin', 'dips ×10', 'ring MU'], pipNow: 0 },
+  { key: 'row',    label: 'Row',        eq: 'Row', ex: 'one-arm-db-row', goal: 75,  goalText: '75 ×8' },
+  { key: 'nordic', label: 'Nordic',     eq: 'Nrd', cur: 'negs begun', pct: 25, goalText: '5 · R=L' },
+  { key: 'carry',  label: 'Carry',      eq: 'Cry', ex: 'suitcase-carry', goal: 80,  goalText: '80 lb' },
+];
+
+// Latest weight > 0 — a logged 0 is a logging mishap, not a current.
+function targetState(item) {
+  if (item.locked) return { cur: '', pct: 0 };
+  if (item.ex) {
+    for (let i = state.sessions.length - 1; i >= 0; i--) {
+      const e = (state.sessions[i].entries || []).find((x) => x.exerciseId === item.ex && x.weight > 0);
+      if (e) {
+        const pct = Math.max(0, Math.min(100, Math.round((e.weight / item.goal) * 100)));
+        return { cur: item.curFmt ? item.curFmt(e.weight) : String(e.weight), pct };
+      }
+    }
+    return { cur: 'log a weight', pct: 0 };
+  }
+  return { cur: item.cur, pct: item.pct };
+}
+
+function recalTs() {
+  const parts = (state.settings.recalDate || '').split('-').map(Number);
+  if (parts.length !== 3 || !parts[0]) return null;
+  return new Date(parts[0], parts[1] - 1, parts[2]).getTime();
+}
+
+function ledgerRowsHTML() {
+  return TARGETS.map((item) => {
+    const s = targetState(item);
+    if (item.locked) {
+      return `<div class="litem"><div class="lrow dim">
+        <span class="lrow-name">${esc(item.label)}</span>
+        <span class="lrow-num">/ ${esc(item.goalText)}</span></div></div>`;
+    }
+    const pips = item.pips
+      ? `<div class="pips">${item.pips.map((p, i) =>
+          `<span class="pip ${i === item.pipNow ? 'now' : ''}">${esc(p)}</span>` +
+          (i < item.pips.length - 1 ? '<span class="pip-arrow">›</span>' : '')).join('')}</div>`
+      : '';
+    const bar = item.pips ? '' : `<div class="lbar"><i style="width:${s.pct}%"></i></div>`;
+    return `<div class="litem"><div class="lrow">
+      <span class="lrow-name">${esc(item.label)}</span>
+      <span class="lrow-num"><b>${esc(String(s.cur))}</b> / ${esc(item.goalText)}</span></div>${bar}${pips}</div>`;
+  }).join('');
+}
+
+function ledgerHTML() {
+  const open = !!state.settings.targetsOpen;
+  const ts = recalTs();
+  const due = ts != null && Date.now() >= ts;
+  const check = due
+    ? `<a class="ledger-check due" href="#/settings">Export → recalibrate</a>`
+    : `<a class="ledger-check" href="#/settings">Export → recal ${ts != null ? esc(fmtDate(ts)) : '—'}</a>`;
+  const body = open
+    ? `<div class="ledger-rows">${ledgerRowsHTML()}</div>`
+    : `<div class="eq">${TARGETS.map((item) => {
+        const s = targetState(item);
+        return `<div class="eq-col ${item.locked ? 'off' : ''}"><i class="eq-fill" style="height:${s.pct}%"></i></div>`;
+      }).join('')}</div>
+      <div class="eq-labels">${TARGETS.map((i) => `<span>${esc(i.eq)}</span>`).join('')}</div>`;
+  return `
+    <div class="ledger">
+      <div class="ledger-head">
+        <button class="ledger-title" data-action="targets-toggle">Targets<span class="caret ${open ? 'up' : ''}">▾</span></button>
+        ${check}
+      </div>
+      ${body}
+    </div>`;
 }
 
 /* ============================ session core ============================ */
@@ -612,7 +707,7 @@ function viewHome() {
         <div class="daycard-last">${esc(when)}</div>
       </a>`;
   }).join('');
-  return `${topbar()}<div class="daygrid">${cards}</div>`;
+  return `${topbar()}<div class="daygrid">${cards}</div>${ledgerHTML()}`;
 }
 
 function slotCardHTML(day, slot) {
@@ -747,6 +842,10 @@ function viewSettings() {
       <div class="setrow">
         <div class="setlabel">Rest — heavy</div>
         <input class="setnum" type="number" inputmode="numeric" data-action="rest-heavy" value="${s.restHeavy}"> s
+      </div>
+      <div class="setrow">
+        <div class="setlabel">Recal date</div>
+        <input class="setdate" type="date" data-action="recal-date" value="${esc(s.recalDate || '')}">
       </div>
       <div class="setrow">
         <div class="setlabel">Chime</div>
@@ -884,6 +983,12 @@ document.addEventListener('click', (ev) => {
   if (action === 'rest-cancel') { restCancel(); return; }
   if (action === 'rest-ack') { rest.done = false; renderRestDock(); return; }
 
+  if (action === 'targets-toggle') {
+    state.settings.targetsOpen = !state.settings.targetsOpen;
+    save();
+    render();
+    return;
+  }
   if (action === 'chip') {
     const box = $(`[data-edit="${t.getAttribute('data-slot')}"]`);
     if (box) {
@@ -1038,6 +1143,13 @@ document.addEventListener('input', (ev) => {
     const btn = $(`[data-slotcard="${t.getAttribute('data-slot')}"] .notebtn`);
     if (btn) btn.classList.toggle('has-note', !!t.value.trim());
     saveSoon();
+    return;
+  }
+  if (action === 'recal-date') {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(t.value)) {
+      state.settings.recalDate = t.value;
+      saveSoon();
+    }
     return;
   }
   if (action === 'rest-normal' || action === 'rest-heavy') {
