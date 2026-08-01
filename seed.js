@@ -43,7 +43,7 @@ const SEED_PROGRAM = {
           cue: 'Bench support; lead with the shoulder blade',
         },
         {
-          id: 'a5', name: 'Bulgarian split squat (RFE)', target: '3×8–10 /side',
+          id: 'a5', name: 'Stork squat', target: '3×8–10 /side',
           track: true, rest: 'normal',
           cue: 'Knee tracks past the toes, heel down',
         },

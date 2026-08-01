@@ -8,7 +8,7 @@
 
 const STORE_KEY = 'sr-state-v2';
 const V1_KEY = 'sr-state-v1';        // read-only: migration source, never written
-const APP_VERSION = '2.0.1';
+const APP_VERSION = '2.0.2';
 
 let state = null;
 
@@ -196,8 +196,13 @@ function lastSessionFor(dayId) {
 
 // A session begins lazily: the first weight tweak or note creates it. Finishing
 // records every tracked slot at its effective (prefilled or adjusted) weight.
+// An unfinished session left on the other day is banked, never discarded.
 function ensureActive(dayId) {
   if (state.active && state.active.dayId === dayId) return state.active;
+  if (state.active) {
+    recordSession(state.active.dayId, '(auto-saved — session left open)');
+    toast('Previous session auto-saved');
+  }
   state.active = { dayId, startedAt: Date.now(), lastActivityAt: Date.now(), entries: {} };
   return state.active;
 }
@@ -218,9 +223,11 @@ function effectiveWeight(dayId, slot) {
   return lastWeightFor(slug(slot.name));
 }
 
-function finishSession(dayId, note) {
+// Build and push the session record for a day's active entries, then clear
+// the active session. Navigation, rest, save, and toasts stay with callers.
+function recordSession(dayId, note) {
   const day = findDay(dayId);
-  if (!day) return;
+  if (!day) { state.active = null; return; }
   const a = state.active && state.active.dayId === dayId ? state.active : null;
   const entries = [];
   for (const slot of day.slots) {
@@ -242,6 +249,11 @@ function finishSession(dayId, note) {
     entries,
   });
   state.active = null;
+}
+
+function finishSession(dayId, note) {
+  if (!findDay(dayId)) return;
+  recordSession(dayId, note);
   restCancel();
   save();
   location.hash = '#/';
@@ -256,12 +268,17 @@ function autoFinishStale() {
   if (!a) return;
   const last = a.lastActivityAt || a.startedAt;
   if (Date.now() - last > STALE_AFTER_MS) {
-    const here = location.hash;
-    finishSession(a.dayId, '(auto-saved — session left open)');
-    location.hash = here || '#/';
+    recordSession(a.dayId, '(auto-saved — session left open)');
+    save();
+    render();
     toast('Previous session auto-saved');
   }
 }
+
+// An installed PWA resumes for days without a fresh boot — run the stale
+// check whenever the app comes back, not just at launch.
+document.addEventListener('visibilitychange', () => { if (!document.hidden) autoFinishStale(); });
+window.addEventListener('pageshow', (e) => { if (e.persisted) autoFinishStale(); });
 
 /* ====================== rest engine (baked chime) ======================
    A media element keeps playing with the screen off (like music). We bake
@@ -546,7 +563,7 @@ function slotCardHTML(day, slot) {
     ? `<ul class="menu">${slot.menu.map((m) => `<li>${esc(m)}</li>`).join('')}</ul>` : '';
   const warmup = slot.warmup
     ? `<div class="warmup"><span class="warmup-tag">Warm-up</span> ${esc(slot.warmup)}</div>` : '';
-  let chip = '';
+  let chip = '', chipEdit = '';
   if (slot.track) {
     const w = effectiveWeight(day.id, slot);
     const label = w === '' || w == null ? '—' : (slot.added ? '+' : '') + w;
@@ -554,7 +571,11 @@ function slotCardHTML(day, slot) {
       <button class="chip" data-action="chip" data-slot="${slot.id}">
         <span class="chip-num">${esc(String(label))}</span>
         <span class="chip-unit">${esc(state.settings.unit)}</span>
-      </button>
+        <span class="chip-caret">▾</span>
+      </button>`;
+    // Full-width row below the footer — inside the flex footer it forces
+    // the whole page past the viewport when revealed.
+    chipEdit = `
       <div class="chip-edit hidden" data-edit="${slot.id}">
         <button class="step" data-action="step" data-slot="${slot.id}" data-d="-5">−5</button>
         <input class="chip-input" type="number" inputmode="decimal" step="any"
@@ -574,6 +595,7 @@ function slotCardHTML(day, slot) {
         ${chip}
         <button class="notebtn ${note ? 'has-note' : ''}" data-action="note" data-slot="${slot.id}">✎ note</button>
       </div>
+      ${chipEdit}
       <div class="note-edit hidden" data-noteedit="${slot.id}">
         <textarea rows="2" data-action="notetext" data-slot="${slot.id}"
           placeholder="What happened?">${esc(note)}</textarea>
@@ -805,7 +827,10 @@ document.addEventListener('click', (ev) => {
 
   if (action === 'chip') {
     const box = $(`[data-edit="${t.getAttribute('data-slot')}"]`);
-    if (box) box.classList.toggle('hidden');
+    if (box) {
+      box.classList.toggle('hidden');
+      t.classList.toggle('open', !box.classList.contains('hidden'));
+    }
     return;
   }
   if (action === 'step') {

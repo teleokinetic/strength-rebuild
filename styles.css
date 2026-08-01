@@ -80,6 +80,7 @@ body {
   line-height: 1.45;
   min-height: 100dvh;
   -webkit-tap-highlight-color: transparent;
+  overflow-x: clip;   /* one over-wide element must never shift the page */
 }
 button { font: inherit; color: inherit; background: none; border: none; cursor: pointer; }
 input, textarea, select { font: inherit; color: var(--ink); }
@@ -207,7 +208,8 @@ body::before {
 
 /* ---------- slots ---------- */
 
-.slots { display: grid; gap: 10px; }
+/* minmax(0,1fr): a number input's intrinsic width must never size the track */
+.slots { display: grid; gap: 10px; grid-template-columns: minmax(0, 1fr); }
 .slot {
   background: var(--card); border: 1px solid var(--line);
   border-radius: var(--radius); padding: 13px 14px;
@@ -248,6 +250,13 @@ body::before {
   font-variant-numeric: tabular-nums;
 }
 .chip-unit { color: var(--dim); font-size: 13px; }
+.chip-caret {
+  align-self: center; display: inline-block;
+  color: var(--dim); font-size: 10px; margin-left: 2px;
+  transition: transform 0.15s ease;
+}
+.chip.open { border-color: var(--brass); background: var(--brass-wash); }
+.chip.open .chip-caret { transform: rotate(180deg); color: var(--brass); }
 
 .notebtn {
   margin-left: auto; color: var(--dim); font-size: 14px; padding: 8px 6px;
