@@ -8,7 +8,7 @@
 
 const STORE_KEY = 'sr-state-v2';
 const V1_KEY = 'sr-state-v1';        // read-only: migration source, never written
-const APP_VERSION = '2.0.2';
+const APP_VERSION = '2.0.3';
 
 let state = null;
 
@@ -109,6 +109,35 @@ function load() {
       }
     }
   } catch (e) { /* v1 unreadable → fresh start */ }
+  save();
+}
+
+// One-time program updates for installed devices — the seed only reaches
+// fresh installs; the live program sits in localStorage. Guarded by
+// specVersion so it runs once and in-app edits afterward stick.
+// 0.3 → 0.4: Bulgarian split squat becomes Stork squat; both days open
+// with a no-weight Prep slot (wrist prep + passive/active hangs).
+function patchProgram() {
+  const p = state.program;
+  if (!p || p.specVersion === '0.4') return;
+  for (const day of p.days) {
+    const bsq = day.slots.find((s) => slug(s.name) === 'bulgarian-split-squat-rfe');
+    if (bsq) bsq.name = 'Stork squat';
+    if (!day.slots.some((s) => slug(s.name) === 'prep')) {
+      day.slots.unshift({
+        id: 'prep-' + day.id, name: 'Prep', target: '~4 min',
+        track: false, rest: 'normal',
+        menu: [
+          'Wrist circles — slow, through the end-ranges',
+          'Quadruped rocking on palms — fingers forward, out, back toward knees',
+          'Back-of-hand rocking, light',
+          'Passive hang → active hang × 2',
+        ],
+        cue: 'Wake the wrists and shoulders — easy loading, wide angles, nothing near effort',
+      });
+    }
+  }
+  p.specVersion = '0.4';
   save();
 }
 
@@ -900,6 +929,7 @@ document.addEventListener('click', (ev) => {
         state.sessions = migrateV1Sessions(parsed);
         if (parsed.settings && parsed.settings.theme) state.settings.theme = parsed.settings.theme;
       } else { toast('Not a Strength Rebuild export'); return; }
+      patchProgram();
       save();
       applyTheme();
       location.hash = '#/';
@@ -1036,6 +1066,7 @@ function exportJSON() {
 /* ============================== boot ============================== */
 
 load();
+patchProgram();
 applyTheme();
 autoFinishStale();
 render();

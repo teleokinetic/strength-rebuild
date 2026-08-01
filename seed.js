@@ -8,13 +8,24 @@
 // rest: 'normal' | 'heavy' picks which rest-button tier the slot suggests.
 
 const SEED_PROGRAM = {
-  specVersion: '0.3',
+  specVersion: '0.4',
   days: [
     {
       id: 'dayA',
       name: 'Day A',
       subtitle: 'Squat + Horizontal',
       slots: [
+        {
+          id: 'prep-dayA', name: 'Prep', target: '~4 min',
+          track: false, rest: 'normal',
+          menu: [
+            'Wrist circles — slow, through the end-ranges',
+            'Quadruped rocking on palms — fingers forward, out, back toward knees',
+            'Back-of-hand rocking, light',
+            'Passive hang → active hang × 2',
+          ],
+          cue: 'Wake the wrists and shoulders — easy loading, wide angles, nothing near effort',
+        },
         {
           id: 'a1', name: 'Jump to targets', target: '4 rounds · 3 jumps',
           track: false, rest: 'normal',
@@ -76,6 +87,17 @@ const SEED_PROGRAM = {
       name: 'Day B',
       subtitle: 'Hinge + Vertical',
       slots: [
+        {
+          id: 'prep-dayB', name: 'Prep', target: '~4 min',
+          track: false, rest: 'normal',
+          menu: [
+            'Wrist circles — slow, through the end-ranges',
+            'Quadruped rocking on palms — fingers forward, out, back toward knees',
+            'Back-of-hand rocking, light',
+            'Passive hang → active hang × 2',
+          ],
+          cue: 'Wake the wrists and shoulders — easy loading, wide angles, nothing near effort',
+        },
         {
           id: 'b1', name: 'Kettlebell swing', target: '4×6',
           track: true, rest: 'normal',
