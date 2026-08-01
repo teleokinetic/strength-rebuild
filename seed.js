@@ -8,7 +8,7 @@
 // rest: 'normal' | 'heavy' picks which rest-button tier the slot suggests.
 
 const SEED_PROGRAM = {
-  specVersion: '0.8',
+  specVersion: '0.9',
   days: [
     {
       id: 'dayA',
@@ -44,7 +44,7 @@ const SEED_PROGRAM = {
         },
         {
           id: 'a3', name: 'DB bench press', target: '3×6–8 · RIR 2–3',
-          track: true, rest: 'normal',
+          track: true, reps: true, rest: 'normal',
           cue: 'Free the scapula',
         },
         {
@@ -54,7 +54,7 @@ const SEED_PROGRAM = {
         },
         {
           id: 'a5', name: 'Stork squat', target: '3×8–10 /side',
-          track: true, rest: 'normal',
+          track: true, reps: true, rest: 'normal',
           cue: 'Knee tracks past the toes, heel down',
         },
         {
@@ -70,7 +70,7 @@ const SEED_PROGRAM = {
         },
         {
           id: 'a8', name: 'Pallof press', target: '2×10–12 /side',
-          track: true, rest: 'normal',
+          track: true, reps: true, rest: 'normal',
           cue: "Resist rotation, don't create it",
         },
         {
@@ -104,12 +104,12 @@ const SEED_PROGRAM = {
         },
         {
           id: 'b2', name: 'DB Romanian deadlift', target: '4×6–8 · RIR 2–3',
-          track: true, rest: 'heavy',
+          track: true, reps: true, rest: 'heavy',
           cue: 'Long hamstrings, neutral spine',
         },
         {
           id: 'b3', name: 'DB standing overhead press', target: '3×6–8 · RIR 2–3',
-          track: true, rest: 'normal',
+          track: true, reps: true, rest: 'normal',
           cue: 'Ribs down; vary the tempo or the attention',
         },
         {

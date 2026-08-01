@@ -8,7 +8,7 @@
 
 const STORE_KEY = 'sr-state-v2';
 const V1_KEY = 'sr-state-v1';        // read-only: migration source, never written
-const APP_VERSION = '2.2.0';
+const APP_VERSION = '2.2.1';
 
 let state = null;
 
@@ -128,7 +128,7 @@ function patchProgram() {
   const p = state.program;
   if (!p) return;
   const v = parseFloat(p.specVersion) || 0;
-  if (v >= 0.8) return;
+  if (v >= 0.9) return;
 
   // 0.4: Bulgarian split squat becomes Stork squat; both days open
   // with a no-weight Prep slot (wrist prep + passive/active hangs).
@@ -191,26 +191,36 @@ function patchProgram() {
   // 0.8: working-reps capture on reps-first slots (row, chins), plus a
   // one-time backfill of entry.reps from v1 per-set history so prefill
   // and the board have honest numbers on day one.
-  for (const day of p.days) {
-    for (const s of day.slots) {
-      const sl = slug(s.name);
-      if (sl === 'one-arm-db-row' || sl === 'chin-up-strict') s.reps = true;
-    }
-  }
-  for (const sess of state.sessions) {
-    for (const e of sess.entries || []) {
-      if (e.reps == null && Array.isArray(e.sets)) {
-        let best = '';
-        for (const set of e.sets) {
-          const n = parseInt(set.r, 10);
-          if (Number.isFinite(n) && (best === '' || n > best)) best = n;
+  if (v < 0.8) {
+    for (const sess of state.sessions) {
+      for (const e of sess.entries || []) {
+        if (e.reps == null && Array.isArray(e.sets)) {
+          let best = '';
+          for (const set of e.sets) {
+            const n = parseInt(set.r, 10);
+            if (Number.isFinite(n) && (best === '' || n > best)) best = n;
+          }
+          if (best !== '') e.reps = best;
         }
-        if (best !== '') e.reps = best;
       }
     }
   }
 
-  p.specVersion = '0.8';
+  // 0.9: reps tracking on every double-progression slot — anything with a
+  // rep RANGE (the range is the trigger mechanism; fixed-rep and distance
+  // slots have no rep dial and stay weight-only).
+  const DOUBLE_PROGRESSION = [
+    'one-arm-db-row', 'chin-up-strict',
+    'db-bench-press', 'stork-squat', 'pallof-press',
+    'db-romanian-deadlift', 'db-standing-overhead-press',
+  ];
+  for (const day of p.days) {
+    for (const s of day.slots) {
+      if (DOUBLE_PROGRESSION.indexOf(slug(s.name)) !== -1) s.reps = true;
+    }
+  }
+
+  p.specVersion = '0.9';
   save();
 }
 
