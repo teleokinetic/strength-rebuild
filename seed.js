@@ -8,7 +8,7 @@
 // rest: 'normal' | 'heavy' picks which rest-button tier the slot suggests.
 
 const SEED_PROGRAM = {
-  specVersion: '0.6',
+  specVersion: '0.7',
   days: [
     {
       id: 'dayA',
@@ -50,7 +50,7 @@ const SEED_PROGRAM = {
         {
           id: 'a4', name: 'One-arm DB row', target: '3×8–10 /side',
           track: true, rest: 'normal',
-          cue: 'Bench support; lead with the shoulder blade',
+          cue: 'Reps first — build to 3×8–10, then +5 · bench support, lead with the shoulder blade',
         },
         {
           id: 'a5', name: 'Stork squat', target: '3×8–10 /side',

@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Minimal reps capture — wireframe</title>
+<style>
+  @font-face { font-family:'Barlow Condensed'; font-weight:500; src:url('../fonts/barlow-condensed-500.woff2') format('woff2'); }
+  @font-face { font-family:'Barlow Condensed'; font-weight:600; src:url('../fonts/barlow-condensed-600.woff2') format('woff2'); }
+  :root {
+    --bg:#131518; --surface:#1B1E23; --card:#1F232A; --raised:#272C35; --line:#2C313A;
+    --ink:#E9E7E2; --dim:#9AA1AC; --brass:#D9A03F; --brass-wash:rgba(217,160,63,.12); --on-brass:#15130C;
+    --display:'Barlow Condensed','Arial Narrow',sans-serif;
+    --body:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#EFEBE3; color:#26241E; font-family:var(--body); font-size:16px; line-height:1.5; padding:36px 20px 80px; }
+  .page { max-width:1080px; margin:0 auto; }
+  h1 { font-family:var(--display); font-weight:600; font-size:34px; letter-spacing:.05em; text-transform:uppercase; }
+  .sub { color:#6C6555; margin:6px 0 30px; max-width:75ch; }
+  .row { display:flex; gap:30px; align-items:flex-start; flex-wrap:wrap; }
+  .notes { flex:1; min-width:280px; max-width:460px; }
+  .notes p { margin:0 0 12px; }
+  .notes ul { margin:0 0 12px 20px; }
+  .notes li { margin:5px 0; }
+  .good::marker { content:'+  '; color:#3C7A46; }
+  .statelabel { text-align:center; font-family:var(--display); font-weight:600; font-size:13px;
+    letter-spacing:.14em; text-transform:uppercase; color:#6C6555; margin-bottom:8px; }
+
+  .phone {
+    width:393px; flex:none; background:var(--bg); color:var(--ink);
+    border-radius:34px; border:6px solid #26241E; padding:22px 14px 26px;
+    box-shadow:0 14px 40px rgba(0,0,0,.25);
+  }
+
+  .slot { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:13px 14px; margin-bottom:10px; }
+  .slot-head { display:flex; justify-content:space-between; align-items:baseline; gap:10px; }
+  .slot-name { font-family:var(--display); font-weight:600; font-size:20px; letter-spacing:.05em; text-transform:uppercase; }
+  .slot-target { font-family:var(--display); font-weight:500; font-size:15px; letter-spacing:.06em; color:var(--dim); white-space:nowrap; }
+  .slot-cue { color:var(--dim); font-size:14px; margin-top:3px; }
+  .slot-foot { display:flex; align-items:center; gap:10px; margin-top:10px; }
+  .chip {
+    display:inline-flex; align-items:baseline; gap:5px;
+    background:var(--raised); border:1px solid var(--line); border-radius:10px; padding:8px 14px;
+  }
+  .chip.open { border-color:var(--brass); background:var(--brass-wash); }
+  .chip-num { font-family:var(--display); font-weight:600; font-size:22px; font-variant-numeric:tabular-nums; }
+  .chip-unit { color:var(--dim); font-size:13px; }
+  .chip-reps { font-family:var(--display); font-weight:600; font-size:17px; color:var(--dim); font-variant-numeric:tabular-nums; }
+  .chip.open .chip-reps { color:var(--ink); }
+  .caret { align-self:center; font-size:10px; color:var(--dim); margin-left:2px; }
+  .chip.open .caret { transform:rotate(180deg); color:var(--brass); }
+  .notebtn { margin-left:auto; color:var(--dim); font-size:14px; }
+
+  .edit-row { display:flex; gap:8px; margin-top:10px; align-items:center; }
+  .edit-tag { width:44px; flex:none; font-family:var(--display); font-weight:600; font-size:11px;
+    letter-spacing:.12em; text-transform:uppercase; color:var(--dim); text-align:right; }
+  .step { width:56px; padding:10px 0; text-align:center; border-radius:10px; background:var(--raised);
+    border:1px solid var(--line); font-family:var(--display); font-weight:600; font-size:18px; }
+  .edit-val { flex:1; text-align:center; background:var(--surface); border:1px solid var(--line);
+    border-radius:10px; padding:10px 6px; font-size:20px; font-variant-numeric:tabular-nums; }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Minimal reps capture</h1>
+  <p class="sub">One working-reps number per exercise — the reps of your typical work set — living beside the working weight and persisting the same way: prefilled from last session, <b>zero taps if unchanged</b>, one stepper tap when it moves. Never per-set entry. Shown on the row (reps-first progression) and chins (where reps <i>are</i> the number).</p>
+
+  <div class="row">
+    <div>
+      <div class="statelabel">Closed — reps ride on the chip</div>
+      <div class="phone">
+        <div class="slot">
+          <div class="slot-head"><span class="slot-name">One-arm DB row</span><span class="slot-target">3×8–10 /side</span></div>
+          <div class="slot-cue">Reps first — build to 3×8–10, then +5 · bench support, lead with the shoulder blade</div>
+          <div class="slot-foot">
+            <span class="chip"><span class="chip-num">55</span><span class="chip-unit">lb</span><span class="chip-reps">×5</span><span class="caret">▾</span></span>
+            <span class="notebtn">✎ note</span>
+          </div>
+        </div>
+        <div class="slot">
+          <div class="slot-head"><span class="slot-name">Chin-up, strict</span><span class="slot-target">3×5–12</span></div>
+          <div class="slot-cue">Dead hang, chin over; rotate grips freely</div>
+          <div class="slot-foot">
+            <span class="chip"><span class="chip-num">—</span><span class="chip-unit">lb</span><span class="chip-reps">×5</span><span class="caret">▾</span></span>
+            <span class="notebtn">✎ note</span>
+          </div>
+        </div>
+        <div class="slot">
+          <div class="slot-head"><span class="slot-name">Back squat</span><span class="slot-target">4×5 · RIR 2–3</span></div>
+          <div class="slot-cue">Upright torso, full depth</div>
+          <div class="slot-foot">
+            <span class="chip"><span class="chip-num">185</span><span class="chip-unit">lb</span><span class="caret">▾</span></span>
+            <span class="notebtn">✎ note</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="statelabel">Open — one extra stepper row</div>
+      <div class="phone">
+        <div class="slot">
+          <div class="slot-head"><span class="slot-name">One-arm DB row</span><span class="slot-target">3×8–10 /side</span></div>
+          <div class="slot-cue">Reps first — build to 3×8–10, then +5 · bench support, lead with the shoulder blade</div>
+          <div class="slot-foot">
+            <span class="chip open"><span class="chip-num">55</span><span class="chip-unit">lb</span><span class="chip-reps">×6</span><span class="caret">▾</span></span>
+            <span class="notebtn">✎ note</span>
+          </div>
+          <div class="edit-row">
+            <span class="edit-tag">lb</span>
+            <span class="step">−5</span><span class="edit-val">55</span><span class="step">+5</span>
+          </div>
+          <div class="edit-row">
+            <span class="edit-tag">reps</span>
+            <span class="step">−1</span><span class="edit-val">6</span><span class="step">+1</span>
+          </div>
+        </div>
+        <div class="slot">
+          <div class="slot-head"><span class="slot-name">Chin-up, strict</span><span class="slot-target">3×5–12</span></div>
+          <div class="slot-cue">Dead hang, chin over; rotate grips freely</div>
+          <div class="slot-foot">
+            <span class="chip open"><span class="chip-num">—</span><span class="chip-unit">lb</span><span class="chip-reps">×6</span><span class="caret">▾</span></span>
+            <span class="notebtn">✎ note</span>
+          </div>
+          <div class="edit-row">
+            <span class="edit-tag">lb</span>
+            <span class="step">−5</span><span class="edit-val"></span><span class="step">+5</span>
+          </div>
+          <div class="edit-row">
+            <span class="edit-tag">reps</span>
+            <span class="step">−1</span><span class="edit-val">6</span><span class="step">+1</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="notes">
+      <p><b>The contract:</b> reps behave exactly like the working weight. One number per exercise per session — "what did your work sets hit today" — prefilled from last time, captured at finish, in the export, matched by movement name. If nothing changed, you touch nothing.</p>
+      <ul>
+        <li class="good">Per-slot flag (<code>reps: true</code>): only slots where reps are the progression show it — row and chins to start. Back squat stays weight-only (bottom card, unchanged).</li>
+        <li class="good">Chip reads as the set you'd say out loud: "55 ×5". The ×N sits dim next to the weight; brass when the editor's open.</li>
+        <li class="good">Editor grows one row — same steppers, ±1. Small "lb / reps" tags keep the two rows unmistakable.</li>
+        <li class="good">Chins get honest auto-tracking: the board's "chins 5 / 12" snapshot becomes live data, and the +40 lb gate keeps using the same chip's weight side later.</li>
+        <li class="good">Board effect: row reads "55 ×5 / 75 ×8" — the flattering bar problem fixes itself.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+</body>
+</html>

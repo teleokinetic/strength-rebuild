@@ -8,7 +8,7 @@
 
 const STORE_KEY = 'sr-state-v2';
 const V1_KEY = 'sr-state-v1';        // read-only: migration source, never written
-const APP_VERSION = '2.1.0';
+const APP_VERSION = '2.1.1';
 
 let state = null;
 
@@ -126,11 +126,13 @@ function load() {
 // specVersion so each patch runs once and in-app edits afterward stick.
 function patchProgram() {
   const p = state.program;
-  if (!p || p.specVersion === '0.6') return;
+  if (!p) return;
+  const v = parseFloat(p.specVersion) || 0;
+  if (v >= 0.7) return;
 
-  // 0.3 → 0.4: Bulgarian split squat becomes Stork squat; both days open
+  // 0.4: Bulgarian split squat becomes Stork squat; both days open
   // with a no-weight Prep slot (wrist prep + passive/active hangs).
-  if (p.specVersion !== '0.4' && p.specVersion !== '0.5') {
+  if (v < 0.4) {
     for (const day of p.days) {
       const bsq = day.slots.find((s) => slug(s.name) === 'bulgarian-split-squat-rfe');
       if (bsq) bsq.name = 'Stork squat';
@@ -150,8 +152,8 @@ function patchProgram() {
     }
   }
 
-  // 0.4 → 0.5: Day A prep drops the hangs — that day already closes on them.
-  if (p.specVersion !== '0.5') {
+  // 0.5: Day A prep drops the hangs — that day already closes on them.
+  if (v < 0.5) {
     const dayA = p.days.find((d) => d.id === 'dayA');
     const prepA = dayA && dayA.slots.find((s) => slug(s.name) === 'prep');
     if (prepA && prepA.menu) {
@@ -163,20 +165,28 @@ function patchProgram() {
     }
   }
 
-  // 0.5 → 0.6: he's been back-squatting — rename the slot AND relabel the
+  // 0.6: he's been back-squatting — rename the slot AND relabel the
   // logged history, since those loads were back-squat loads all along.
   // Prefill follows the history rewrite automatically.
-  for (const day of p.days) {
-    const sq = day.slots.find((s) => slug(s.name) === 'front-squat');
-    if (sq) sq.name = 'Back squat';
-  }
-  for (const sess of state.sessions) {
-    for (const e of sess.entries || []) {
-      if (e.exerciseId === 'front-squat') { e.exerciseId = 'back-squat'; e.name = 'Back squat'; }
+  if (v < 0.6) {
+    for (const day of p.days) {
+      const sq = day.slots.find((s) => slug(s.name) === 'front-squat');
+      if (sq) sq.name = 'Back squat';
+    }
+    for (const sess of state.sessions) {
+      for (const e of sess.entries || []) {
+        if (e.exerciseId === 'front-squat') { e.exerciseId = 'back-squat'; e.name = 'Back squat'; }
+      }
     }
   }
 
-  p.specVersion = '0.6';
+  // 0.7: row progression made explicit — reps before load.
+  for (const day of p.days) {
+    const row = day.slots.find((s) => slug(s.name) === 'one-arm-db-row');
+    if (row) row.cue = 'Reps first — build to 3×8–10, then +5 · bench support, lead with the shoulder blade';
+  }
+
+  p.specVersion = '0.7';
   save();
 }
 
