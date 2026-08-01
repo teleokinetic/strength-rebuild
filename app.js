@@ -8,7 +8,7 @@
 
 const STORE_KEY = 'sr-state-v2';
 const V1_KEY = 'sr-state-v1';        // read-only: migration source, never written
-const APP_VERSION = '2.2.2';
+const APP_VERSION = '2.2.3';
 
 let state = null;
 
@@ -1346,6 +1346,30 @@ function exportJSON() {
   state.settings.lastExport = Date.now();
   save();
 }
+
+/* ============================ update flow ============================
+   Installed iOS PWAs cling to old versions: they resume without a fresh
+   boot (no update check) and a single failed request used to sink the
+   whole SW install. Check for an update on every resume, and when a new
+   version takes control, reload into it — unless a rest is running. */
+
+let reloadOnControl = false;
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!reloadOnControl) return;
+    reloadOnControl = false;
+    if (rest.running) { toast('Update ready — lands on next open'); return; }
+    location.reload();
+  });
+}
+function checkForUpdate() {
+  if (!('serviceWorker' in navigator)) return;
+  navigator.serviceWorker.getRegistration()
+    .then((reg) => { if (reg) { reloadOnControl = true; reg.update(); } })
+    .catch(() => {});
+}
+document.addEventListener('visibilitychange', () => { if (!document.hidden) checkForUpdate(); });
+window.addEventListener('load', () => setTimeout(checkForUpdate, 3000));
 
 /* ============================== boot ============================== */
 

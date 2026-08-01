@@ -1,14 +1,18 @@
 /* Strength Rebuild — offline shell.
    Bump CACHE when shipping changes so clients pick up the new version. */
 
-const CACHE = 'sr-v2.2.2';
-const SHELL = [
+const CACHE = 'sr-v2.2.3';
+// Critical shell is all-or-nothing; fonts/icons are best-effort so one
+// flaky request on gym wifi can't silently sink the whole update.
+const CRITICAL = [
   './',
   'index.html',
   'styles.css',
   'app.js',
   'seed.js',
   'manifest.webmanifest',
+];
+const EXTRAS = [
   'fonts/barlow-condensed-500.woff2',
   'fonts/barlow-condensed-600.woff2',
   'icons/icon-180.png',
@@ -17,7 +21,14 @@ const SHELL = [
 ];
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  e.waitUntil(
+    caches.open(CACHE)
+      .then(async (c) => {
+        await c.addAll(CRITICAL);
+        await Promise.allSettled(EXTRAS.map((u) => c.add(u)));
+      })
+      .then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener('activate', (e) => {
