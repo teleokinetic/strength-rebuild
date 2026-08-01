@@ -8,7 +8,7 @@
 
 const STORE_KEY = 'sr-state-v2';
 const V1_KEY = 'sr-state-v1';        // read-only: migration source, never written
-const APP_VERSION = '2.0.4';
+const APP_VERSION = '2.0.5';
 
 let state = null;
 
@@ -117,11 +117,11 @@ function load() {
 // specVersion so each patch runs once and in-app edits afterward stick.
 function patchProgram() {
   const p = state.program;
-  if (!p || p.specVersion === '0.5') return;
+  if (!p || p.specVersion === '0.6') return;
 
   // 0.3 → 0.4: Bulgarian split squat becomes Stork squat; both days open
   // with a no-weight Prep slot (wrist prep + passive/active hangs).
-  if (p.specVersion !== '0.4') {
+  if (p.specVersion !== '0.4' && p.specVersion !== '0.5') {
     for (const day of p.days) {
       const bsq = day.slots.find((s) => slug(s.name) === 'bulgarian-split-squat-rfe');
       if (bsq) bsq.name = 'Stork squat';
@@ -142,17 +142,32 @@ function patchProgram() {
   }
 
   // 0.4 → 0.5: Day A prep drops the hangs — that day already closes on them.
-  const dayA = p.days.find((d) => d.id === 'dayA');
-  const prepA = dayA && dayA.slots.find((s) => slug(s.name) === 'prep');
-  if (prepA && prepA.menu) {
-    prepA.menu = prepA.menu.filter((m) => !/passive hang/i.test(m));
-    if (prepA.target === '~4 min') prepA.target = '~3 min';
-    if (/wrists and shoulders/.test(prepA.cue || '')) {
-      prepA.cue = 'Wake the wrists — easy loading, wide angles, nothing near effort';
+  if (p.specVersion !== '0.5') {
+    const dayA = p.days.find((d) => d.id === 'dayA');
+    const prepA = dayA && dayA.slots.find((s) => slug(s.name) === 'prep');
+    if (prepA && prepA.menu) {
+      prepA.menu = prepA.menu.filter((m) => !/passive hang/i.test(m));
+      if (prepA.target === '~4 min') prepA.target = '~3 min';
+      if (/wrists and shoulders/.test(prepA.cue || '')) {
+        prepA.cue = 'Wake the wrists — easy loading, wide angles, nothing near effort';
+      }
     }
   }
 
-  p.specVersion = '0.5';
+  // 0.5 → 0.6: he's been back-squatting — rename the slot AND relabel the
+  // logged history, since those loads were back-squat loads all along.
+  // Prefill follows the history rewrite automatically.
+  for (const day of p.days) {
+    const sq = day.slots.find((s) => slug(s.name) === 'front-squat');
+    if (sq) sq.name = 'Back squat';
+  }
+  for (const sess of state.sessions) {
+    for (const e of sess.entries || []) {
+      if (e.exerciseId === 'front-squat') { e.exerciseId = 'back-squat'; e.name = 'Back squat'; }
+    }
+  }
+
+  p.specVersion = '0.6';
   save();
 }
 

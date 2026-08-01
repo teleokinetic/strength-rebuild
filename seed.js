@@ -8,7 +8,7 @@
 // rest: 'normal' | 'heavy' picks which rest-button tier the slot suggests.
 
 const SEED_PROGRAM = {
-  specVersion: '0.5',
+  specVersion: '0.6',
   days: [
     {
       id: 'dayA',
@@ -37,7 +37,7 @@ const SEED_PROGRAM = {
           cue: 'Pick a target, stick the landing — a couple past comfortable, never to fatigue',
         },
         {
-          id: 'a2', name: 'Front squat', target: '4×5 · RIR 2–3',
+          id: 'a2', name: 'Back squat', target: '4×5 · RIR 2–3',
           track: true, rest: 'heavy',
           warmup: 'Rack ATM — light bar: where are the ribs, scapula, breath?',
           cue: 'Upright torso, full depth',
