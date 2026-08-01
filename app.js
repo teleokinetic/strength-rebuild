@@ -8,7 +8,7 @@
 
 const STORE_KEY = 'sr-state-v2';
 const V1_KEY = 'sr-state-v1';        // read-only: migration source, never written
-const APP_VERSION = '2.2.1';
+const APP_VERSION = '2.2.2';
 
 let state = null;
 
@@ -128,7 +128,7 @@ function patchProgram() {
   const p = state.program;
   if (!p) return;
   const v = parseFloat(p.specVersion) || 0;
-  if (v >= 0.9) return;
+  if (v >= 1.0) return;
 
   // 0.4: Bulgarian split squat becomes Stork squat; both days open
   // with a no-weight Prep slot (wrist prep + passive/active hangs).
@@ -220,7 +220,16 @@ function patchProgram() {
     }
   }
 
-  p.specVersion = '0.9';
+  // 1.0: dead-hang time test on the Day A hang slot — occasional, logged
+  // via the note button, read at recalibrations.
+  for (const day of p.days) {
+    const hang = day.slots.find((s) => slug(s.name) === 'hang-grip');
+    if (hang && hang.menu && !hang.menu.some((m) => /Dead-hang max/.test(m))) {
+      hang.menu.push('Dead-hang max — occasional test: 60 s solid · 90 s strong (log it in a note)');
+    }
+  }
+
+  p.specVersion = '1.0';
   save();
 }
 

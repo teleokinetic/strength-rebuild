@@ -8,7 +8,7 @@
 // rest: 'normal' | 'heavy' picks which rest-button tier the slot suggests.
 
 const SEED_PROGRAM = {
-  specVersion: '0.9',
+  specVersion: '1.0',
   days: [
     {
       id: 'dayA',
@@ -76,7 +76,10 @@ const SEED_PROGRAM = {
         {
           id: 'a9', name: 'Hang / grip', target: '2×30–45 s',
           track: false, rest: 'normal',
-          menu: ['Active→passive hang', 'Offset grip', 'Single-arm assisted', 'Traverse the bar'],
+          menu: [
+            'Active→passive hang', 'Offset grip', 'Single-arm assisted', 'Traverse the bar',
+            'Dead-hang max — occasional test: 60 s solid · 90 s strong (log it in a note)',
+          ],
           cue: 'Active shoulders',
         },
       ],
