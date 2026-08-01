@@ -8,7 +8,7 @@
 
 const STORE_KEY = 'sr-state-v2';
 const V1_KEY = 'sr-state-v1';        // read-only: migration source, never written
-const APP_VERSION = '2.1.1';
+const APP_VERSION = '2.2.0';
 
 let state = null;
 
@@ -128,7 +128,7 @@ function patchProgram() {
   const p = state.program;
   if (!p) return;
   const v = parseFloat(p.specVersion) || 0;
-  if (v >= 0.7) return;
+  if (v >= 0.8) return;
 
   // 0.4: Bulgarian split squat becomes Stork squat; both days open
   // with a no-weight Prep slot (wrist prep + passive/active hangs).
@@ -181,12 +181,36 @@ function patchProgram() {
   }
 
   // 0.7: row progression made explicit — reps before load.
-  for (const day of p.days) {
-    const row = day.slots.find((s) => slug(s.name) === 'one-arm-db-row');
-    if (row) row.cue = 'Reps first — build to 3×8–10, then +5 · bench support, lead with the shoulder blade';
+  if (v < 0.7) {
+    for (const day of p.days) {
+      const row = day.slots.find((s) => slug(s.name) === 'one-arm-db-row');
+      if (row) row.cue = 'Reps first — build to 3×8–10, then +5 · bench support, lead with the shoulder blade';
+    }
   }
 
-  p.specVersion = '0.7';
+  // 0.8: working-reps capture on reps-first slots (row, chins), plus a
+  // one-time backfill of entry.reps from v1 per-set history so prefill
+  // and the board have honest numbers on day one.
+  for (const day of p.days) {
+    for (const s of day.slots) {
+      const sl = slug(s.name);
+      if (sl === 'one-arm-db-row' || sl === 'chin-up-strict') s.reps = true;
+    }
+  }
+  for (const sess of state.sessions) {
+    for (const e of sess.entries || []) {
+      if (e.reps == null && Array.isArray(e.sets)) {
+        let best = '';
+        for (const set of e.sets) {
+          const n = parseInt(set.r, 10);
+          if (Number.isFinite(n) && (best === '' || n > best)) best = n;
+        }
+        if (best !== '') e.reps = best;
+      }
+    }
+  }
+
+  p.specVersion = '0.8';
   save();
 }
 
@@ -263,6 +287,18 @@ function lastWeightFor(exerciseId) {
   return '';
 }
 
+// Working reps mirror the working weight: one number per exercise per
+// session ("what did your work sets hit"), never per-set entry.
+function lastRepsFor(exerciseId) {
+  for (let i = state.sessions.length - 1; i >= 0; i--) {
+    const entry = (state.sessions[i].entries || []).find(
+      (e) => e.exerciseId === exerciseId && e.reps > 0
+    );
+    if (entry) return entry.reps;
+  }
+  return '';
+}
+
 function lastSessionFor(dayId) {
   for (let i = state.sessions.length - 1; i >= 0; i--) {
     if (state.sessions[i].dayId === dayId) return state.sessions[i];
@@ -283,9 +319,12 @@ const TARGETS = [
   // bench mark is barbell 155×5; DB-equivalent proxy ≈ 70s (155 / 2 / ~1.1)
   { key: 'bench',  label: 'Bench',      eq: 'Bch', ex: 'db-bench-press', goal: 70,  goalText: 'bar 155 ×5', curFmt: (w) => `DB ${w}s` },
   { key: 'dl',     label: 'Deadlift',   eq: 'DL',  locked: true,         goalText: '310 ×5 · later phase' },
-  { key: 'mu',     label: 'Muscle-up',  eq: 'MU',  cur: 'chins 5', pct: 42, goalText: '12 strict',
+  // chins current reads live from working-reps once logged; the static
+  // cur/pct is the 7/9 calibration fallback until then
+  { key: 'mu',     label: 'Muscle-up',  eq: 'MU',  repsEx: 'chin-up-strict', repsGoal: 12,
+    curFmt: (r) => `chins ${r}`, cur: 'chins 5', pct: 42, goalText: '12 strict',
     pips: ['12 chins', '+40 chin', 'dips ×10', 'ring MU'], pipNow: 0 },
-  { key: 'row',    label: 'Row',        eq: 'Row', ex: 'one-arm-db-row', goal: 75,  goalText: '75 ×8' },
+  { key: 'row',    label: 'Row',        eq: 'Row', ex: 'one-arm-db-row', goal: 75,  goalText: '75 ×8', repsAlong: true },
   { key: 'nordic', label: 'Nordic',     eq: 'Nrd', cur: 'negs begun', pct: 25, goalText: '5 · R=L' },
   { key: 'carry',  label: 'Carry',      eq: 'Cry', ex: 'suitcase-carry', goal: 80,  goalText: '80 lb' },
 ];
@@ -293,12 +332,27 @@ const TARGETS = [
 // Latest weight > 0 — a logged 0 is a logging mishap, not a current.
 function targetState(item) {
   if (item.locked) return { cur: '', pct: 0 };
+  if (item.repsEx) {
+    const r = lastRepsFor(item.repsEx);
+    if (r > 0) {
+      return {
+        cur: item.curFmt ? item.curFmt(r) : String(r),
+        pct: Math.max(0, Math.min(100, Math.round((r / item.repsGoal) * 100))),
+      };
+    }
+    return { cur: item.cur, pct: item.pct };
+  }
   if (item.ex) {
     for (let i = state.sessions.length - 1; i >= 0; i--) {
       const e = (state.sessions[i].entries || []).find((x) => x.exerciseId === item.ex && x.weight > 0);
       if (e) {
         const pct = Math.max(0, Math.min(100, Math.round((e.weight / item.goal) * 100)));
-        return { cur: item.curFmt ? item.curFmt(e.weight) : String(e.weight), pct };
+        let cur = item.curFmt ? item.curFmt(e.weight) : String(e.weight);
+        if (item.repsAlong) {
+          const r = lastRepsFor(item.ex);
+          if (r > 0) cur += ' ×' + r;
+        }
+        return { cur, pct };
       }
     }
     return { cur: 'log a weight', pct: 0 };
@@ -399,7 +453,12 @@ function recordSession(dayId, note) {
     const slotNote = e && e.note ? e.note.trim() : '';
     if (slot.track) {
       const w = effectiveWeight(dayId, slot);
-      entries.push({ exerciseId: slug(slot.name), name: slot.name, weight: w === '' ? '' : parseFloat(w), note: slotNote });
+      const entry = { exerciseId: slug(slot.name), name: slot.name, weight: w === '' ? '' : parseFloat(w), note: slotNote };
+      if (slot.reps) {
+        const r = effectiveReps(dayId, slot);
+        entry.reps = r === '' ? '' : parseInt(r, 10);
+      }
+      entries.push(entry);
     } else if (slotNote) {
       entries.push({ exerciseId: slug(slot.name), name: slot.name, weight: '', note: slotNote });
     }
@@ -413,6 +472,14 @@ function recordSession(dayId, note) {
     entries,
   });
   state.active = null;
+}
+
+function effectiveReps(dayId, slot) {
+  const a = state.active;
+  const e = a && a.dayId === dayId ? a.entries[slot.id] : null;
+  if (e && e.reps != null && e.reps !== '') return e.reps;
+  if (e && e.reps === '') return '';
+  return lastRepsFor(slug(slot.name));
 }
 
 function finishSession(dayId, note) {
@@ -731,21 +798,36 @@ function slotCardHTML(day, slot) {
   if (slot.track) {
     const w = effectiveWeight(day.id, slot);
     const label = w === '' || w == null ? '—' : (slot.added ? '+' : '') + w;
+    const r = slot.reps ? effectiveReps(day.id, slot) : null;
+    const repsChip = slot.reps
+      ? `<span class="chip-reps">×${r === '' || r == null ? '—' : esc(String(r))}</span>` : '';
     chip = `
       <button class="chip" data-action="chip" data-slot="${slot.id}">
         <span class="chip-num">${esc(String(label))}</span>
         <span class="chip-unit">${esc(state.settings.unit)}</span>
+        ${repsChip}
         <span class="chip-caret">▾</span>
       </button>`;
-    // Full-width row below the footer — inside the flex footer it forces
-    // the whole page past the viewport when revealed.
-    chipEdit = `
-      <div class="chip-edit hidden" data-edit="${slot.id}">
+    // Full-width row(s) below the footer — inside the flex footer this
+    // forces the whole page past the viewport when revealed.
+    const weightRow = `
         <button class="step" data-action="step" data-slot="${slot.id}" data-d="-5">−5</button>
         <input class="chip-input" type="number" inputmode="decimal" step="any"
                data-action="weight" data-slot="${slot.id}" value="${w === '' || w == null ? '' : esc(String(w))}">
-        <button class="step" data-action="step" data-slot="${slot.id}" data-d="5">+5</button>
-      </div>`;
+        <button class="step" data-action="step" data-slot="${slot.id}" data-d="5">+5</button>`;
+    chipEdit = slot.reps
+      ? `
+      <div class="chip-edit stacked hidden" data-edit="${slot.id}">
+        <div class="edit-row"><span class="edit-tag">${esc(state.settings.unit)}</span>${weightRow}</div>
+        <div class="edit-row"><span class="edit-tag">reps</span>
+          <button class="step" data-action="rstep" data-slot="${slot.id}" data-d="-1">−1</button>
+          <input class="chip-input" type="number" inputmode="numeric"
+                 data-action="reps" data-slot="${slot.id}" value="${r === '' || r == null ? '' : esc(String(r))}">
+          <button class="step" data-action="rstep" data-slot="${slot.id}" data-d="1">+1</button>
+        </div>
+      </div>`
+      : `
+      <div class="chip-edit hidden" data-edit="${slot.id}">${weightRow}</div>`;
   }
   return `
     <div class="slot" data-slotcard="${slot.id}">
@@ -931,6 +1013,10 @@ function viewSlotEdit(dayId, slotId) {
         <button class="seg ${slot.added ? 'on' : ''}" data-action="edit-added">${slot.added ? 'On' : 'Off'}</button>
       </div>
       <div class="setrow">
+        <div class="setlabel">Track reps</div>
+        <button class="seg ${slot.reps ? 'on' : ''}" data-action="edit-reps">${slot.reps ? 'On' : 'Off'}</button>
+      </div>
+      <div class="setrow">
         <div class="setlabel">Rest tier</div>
         <div class="segwrap">
           <button class="seg ${slot.rest !== 'heavy' ? 'on' : ''}" data-action="edit-rest" data-v="normal">Normal</button>
@@ -1024,6 +1110,23 @@ document.addEventListener('click', (ev) => {
     if (chipNum) chipNum.textContent = (slot.added ? '+' : '') + e.weight;
     return;
   }
+  if (action === 'rstep') {
+    const slotId = t.getAttribute('data-slot');
+    const d = parseInt(t.getAttribute('data-d'), 10);
+    const day = findDay(dayId);
+    const slot = findSlot(day, slotId);
+    if (!slot) return;
+    const cur = parseInt(effectiveReps(dayId, slot), 10);
+    const next = (Number.isFinite(cur) ? cur : 0) + d;
+    const e = activeEntry(dayId, slotId);
+    e.reps = Math.max(0, next);
+    save();
+    const input = $(`[data-edit="${slotId}"] input[data-action="reps"]`);
+    if (input) input.value = e.reps;
+    const chipReps = $(`[data-slotcard="${slotId}"] .chip-reps`);
+    if (chipReps) chipReps.textContent = '×' + e.reps;
+    return;
+  }
   if (action === 'note') {
     const box = $(`[data-noteedit="${t.getAttribute('data-slot')}"]`);
     if (box) {
@@ -1092,10 +1195,10 @@ document.addEventListener('click', (ev) => {
     location.hash = `#/program/${day.id}/${id}`;
     return;
   }
-  if (action === 'edit-track' || action === 'edit-added') {
+  if (action === 'edit-track' || action === 'edit-added' || action === 'edit-reps') {
     const { slot } = editedSlot();
     if (!slot) return;
-    const key = action === 'edit-track' ? 'track' : 'added';
+    const key = action === 'edit-track' ? 'track' : action === 'edit-added' ? 'added' : 'reps';
     slot[key] = !slot[key];
     save(); render();
     return;
@@ -1144,6 +1247,16 @@ document.addEventListener('input', (ev) => {
     const slot = findSlot(day, slotId);
     const chipNum = $(`[data-slotcard="${slotId}"] .chip-num`);
     if (chipNum && slot) chipNum.textContent = e.weight === '' ? '—' : (slot.added ? '+' : '') + e.weight;
+    saveSoon();
+    return;
+  }
+  if (action === 'reps') {
+    const slotId = t.getAttribute('data-slot');
+    const e = activeEntry(dayId, slotId);
+    e.reps = t.value === '' ? '' : parseInt(t.value, 10);
+    if (!Number.isFinite(e.reps)) e.reps = '';
+    const chipReps = $(`[data-slotcard="${slotId}"] .chip-reps`);
+    if (chipReps) chipReps.textContent = '×' + (e.reps === '' ? '—' : e.reps);
     saveSoon();
     return;
   }

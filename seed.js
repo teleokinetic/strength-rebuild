@@ -8,7 +8,7 @@
 // rest: 'normal' | 'heavy' picks which rest-button tier the slot suggests.
 
 const SEED_PROGRAM = {
-  specVersion: '0.7',
+  specVersion: '0.8',
   days: [
     {
       id: 'dayA',
@@ -49,7 +49,7 @@ const SEED_PROGRAM = {
         },
         {
           id: 'a4', name: 'One-arm DB row', target: '3×8–10 /side',
-          track: true, rest: 'normal',
+          track: true, reps: true, rest: 'normal',
           cue: 'Reps first — build to 3×8–10, then +5 · bench support, lead with the shoulder blade',
         },
         {
@@ -114,7 +114,7 @@ const SEED_PROGRAM = {
         },
         {
           id: 'b4', name: 'Chin-up, strict', target: '3×5–12',
-          track: true, added: true, rest: 'normal',
+          track: true, added: true, reps: true, rest: 'normal',
           cue: 'Dead hang, chin over; rotate grips freely',
         },
         {
