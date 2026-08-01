@@ -8,7 +8,7 @@
 
 const STORE_KEY = 'sr-state-v2';
 const V1_KEY = 'sr-state-v1';        // read-only: migration source, never written
-const APP_VERSION = '2.0.3';
+const APP_VERSION = '2.0.4';
 
 let state = null;
 
@@ -113,31 +113,46 @@ function load() {
 }
 
 // One-time program updates for installed devices — the seed only reaches
-// fresh installs; the live program sits in localStorage. Guarded by
-// specVersion so it runs once and in-app edits afterward stick.
-// 0.3 → 0.4: Bulgarian split squat becomes Stork squat; both days open
-// with a no-weight Prep slot (wrist prep + passive/active hangs).
+// fresh installs; the live program sits in localStorage. Staged by
+// specVersion so each patch runs once and in-app edits afterward stick.
 function patchProgram() {
   const p = state.program;
-  if (!p || p.specVersion === '0.4') return;
-  for (const day of p.days) {
-    const bsq = day.slots.find((s) => slug(s.name) === 'bulgarian-split-squat-rfe');
-    if (bsq) bsq.name = 'Stork squat';
-    if (!day.slots.some((s) => slug(s.name) === 'prep')) {
-      day.slots.unshift({
-        id: 'prep-' + day.id, name: 'Prep', target: '~4 min',
-        track: false, rest: 'normal',
-        menu: [
-          'Wrist circles — slow, through the end-ranges',
-          'Quadruped rocking on palms — fingers forward, out, back toward knees',
-          'Back-of-hand rocking, light',
-          'Passive hang → active hang × 2',
-        ],
-        cue: 'Wake the wrists and shoulders — easy loading, wide angles, nothing near effort',
-      });
+  if (!p || p.specVersion === '0.5') return;
+
+  // 0.3 → 0.4: Bulgarian split squat becomes Stork squat; both days open
+  // with a no-weight Prep slot (wrist prep + passive/active hangs).
+  if (p.specVersion !== '0.4') {
+    for (const day of p.days) {
+      const bsq = day.slots.find((s) => slug(s.name) === 'bulgarian-split-squat-rfe');
+      if (bsq) bsq.name = 'Stork squat';
+      if (!day.slots.some((s) => slug(s.name) === 'prep')) {
+        day.slots.unshift({
+          id: 'prep-' + day.id, name: 'Prep', target: '~4 min',
+          track: false, rest: 'normal',
+          menu: [
+            'Wrist circles — slow, through the end-ranges',
+            'Quadruped rocking on palms — fingers forward, out, back toward knees',
+            'Back-of-hand rocking, light',
+            'Passive hang → active hang × 2',
+          ],
+          cue: 'Wake the wrists and shoulders — easy loading, wide angles, nothing near effort',
+        });
+      }
     }
   }
-  p.specVersion = '0.4';
+
+  // 0.4 → 0.5: Day A prep drops the hangs — that day already closes on them.
+  const dayA = p.days.find((d) => d.id === 'dayA');
+  const prepA = dayA && dayA.slots.find((s) => slug(s.name) === 'prep');
+  if (prepA && prepA.menu) {
+    prepA.menu = prepA.menu.filter((m) => !/passive hang/i.test(m));
+    if (prepA.target === '~4 min') prepA.target = '~3 min';
+    if (/wrists and shoulders/.test(prepA.cue || '')) {
+      prepA.cue = 'Wake the wrists — easy loading, wide angles, nothing near effort';
+    }
+  }
+
+  p.specVersion = '0.5';
   save();
 }
 
