@@ -8,7 +8,7 @@
 // rest: 'normal' | 'heavy' picks which rest-button tier the slot suggests.
 
 const SEED_PROGRAM = {
-  specVersion: '1.0',
+  specVersion: '1.1',
   days: [
     {
       id: 'dayA',
@@ -131,6 +131,17 @@ const SEED_PROGRAM = {
           track: false, rest: 'normal',
           menu: ['Bent knee', 'Straight leg', 'Toes-to-bar'],
           cue: 'Curl the pelvis first, no swing',
+        },
+        {
+          id: 'b7', name: 'Heel-to-butt curl', target: '2×5–8 /side',
+          track: false, rest: 'normal',
+          menu: [
+            'Prone curl — pause 3–5 s at max closure',
+            'Standing pull — hip extended, no back arch',
+            'Assisted overpressure — hand or strap closes the last bit, hold against it',
+            'Any of these with toes turned in — medial-hamstring bias',
+          ],
+          cue: 'Right leads, rep-matched — the last 20° of closure is the exercise; clicking OK, sharp pinch = back off',
         },
       ],
     },

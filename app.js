@@ -8,7 +8,7 @@
 
 const STORE_KEY = 'sr-state-v2';
 const V1_KEY = 'sr-state-v1';        // read-only: migration source, never written
-const APP_VERSION = '2.2.4';
+const APP_VERSION = '2.3.0';
 
 let state = null;
 
@@ -128,7 +128,7 @@ function patchProgram() {
   const p = state.program;
   if (!p) return;
   const v = parseFloat(p.specVersion) || 0;
-  if (v >= 1.0) return;
+  if (v >= 1.1) return;
 
   // 0.4: Bulgarian split squat becomes Stork squat; both days open
   // with a no-weight Prep slot (wrist prep + passive/active hangs).
@@ -209,27 +209,51 @@ function patchProgram() {
   // 0.9: reps tracking on every double-progression slot — anything with a
   // rep RANGE (the range is the trigger mechanism; fixed-rep and distance
   // slots have no rep dial and stay weight-only).
-  const DOUBLE_PROGRESSION = [
-    'one-arm-db-row', 'chin-up-strict',
-    'db-bench-press', 'stork-squat', 'pallof-press',
-    'db-romanian-deadlift', 'db-standing-overhead-press',
-  ];
-  for (const day of p.days) {
-    for (const s of day.slots) {
-      if (DOUBLE_PROGRESSION.indexOf(slug(s.name)) !== -1) s.reps = true;
+  if (v < 0.9) {
+    const DOUBLE_PROGRESSION = [
+      'one-arm-db-row', 'chin-up-strict',
+      'db-bench-press', 'stork-squat', 'pallof-press',
+      'db-romanian-deadlift', 'db-standing-overhead-press',
+    ];
+    for (const day of p.days) {
+      for (const s of day.slots) {
+        if (DOUBLE_PROGRESSION.indexOf(slug(s.name)) !== -1) s.reps = true;
+      }
     }
   }
 
   // 1.0: dead-hang time test on the Day A hang slot — occasional, logged
   // via the note button, read at recalibrations.
-  for (const day of p.days) {
-    const hang = day.slots.find((s) => slug(s.name) === 'hang-grip');
-    if (hang && hang.menu && !hang.menu.some((m) => /Dead-hang max/.test(m))) {
-      hang.menu.push('Dead-hang max — occasional test: 60 s solid · 90 s strong (log it in a note)');
+  if (v < 1.0) {
+    for (const day of p.days) {
+      const hang = day.slots.find((s) => slug(s.name) === 'hang-grip');
+      if (hang && hang.menu && !hang.menu.some((m) => /Dead-hang max/.test(m))) {
+        hang.menu.push('Dead-hang max — occasional test: 60 s solid · 90 s strong (log it in a note)');
+      }
     }
   }
 
-  p.specVersion = '1.0';
+  // 1.1: deep-flexion reclaim (his 8/1 ask) — active knee flexion at short
+  // muscle length, the semiT+gracilis harvest deficit; opposite end from the
+  // slider curl's long-length eccentrics, so knee-flexion work lands both days.
+  if (v < 1.1) {
+    const dayB = p.days.find((d) => d.id === 'dayB');
+    if (dayB && !dayB.slots.some((s) => slug(s.name) === 'heel-to-butt-curl')) {
+      dayB.slots.push({
+        id: 'b7', name: 'Heel-to-butt curl', target: '2×5–8 /side',
+        track: false, rest: 'normal',
+        menu: [
+          'Prone curl — pause 3–5 s at max closure',
+          'Standing pull — hip extended, no back arch',
+          'Assisted overpressure — hand or strap closes the last bit, hold against it',
+          'Any of these with toes turned in — medial-hamstring bias',
+        ],
+        cue: 'Right leads, rep-matched — the last 20° of closure is the exercise; clicking OK, sharp pinch = back off',
+      });
+    }
+  }
+
+  p.specVersion = '1.1';
   save();
 }
 
