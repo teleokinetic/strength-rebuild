@@ -8,7 +8,7 @@
 
 const STORE_KEY = 'sr-state-v2';
 const V1_KEY = 'sr-state-v1';        // read-only: migration source, never written
-const APP_VERSION = '2.3.0';
+const APP_VERSION = '2.4.0';
 
 let state = null;
 
@@ -128,7 +128,7 @@ function patchProgram() {
   const p = state.program;
   if (!p) return;
   const v = parseFloat(p.specVersion) || 0;
-  if (v >= 1.1) return;
+  if (v >= 1.2) return;
 
   // 0.4: Bulgarian split squat becomes Stork squat; both days open
   // with a no-weight Prep slot (wrist prep + passive/active hangs).
@@ -253,7 +253,25 @@ function patchProgram() {
     }
   }
 
-  p.specVersion = '1.1';
+  // 1.2: single-leg calf closes Day B (pulled forward from the 8/29 recal
+  // agenda at his ask) — soleus-biased bent-knee work, ACL-side capacity;
+  // also supports the dorsiflexion strategy that quiets the knee click.
+  if (v < 1.2) {
+    const dayB = p.days.find((d) => d.id === 'dayB');
+    if (dayB && !dayB.slots.some((s) => slug(s.name) === 'calf-single-leg')) {
+      dayB.slots.push({
+        id: 'b8', name: 'Calf, single-leg', target: '2×8–15 /side',
+        track: true, reps: true, rest: 'normal',
+        menu: [
+          'Split Squat Iso w Calf Raise — front foot off a box edge, nothing moves but the heel',
+          '3D Calf Raise — drive the roller into the wall, find the angles',
+        ],
+        cue: 'Right leads, rep-matched — bent knee, full range, slow heel drop; ribs down, weight forward',
+      });
+    }
+  }
+
+  p.specVersion = '1.2';
   save();
 }
 

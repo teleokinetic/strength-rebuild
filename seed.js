@@ -8,7 +8,7 @@
 // rest: 'normal' | 'heavy' picks which rest-button tier the slot suggests.
 
 const SEED_PROGRAM = {
-  specVersion: '1.1',
+  specVersion: '1.2',
   days: [
     {
       id: 'dayA',
@@ -142,6 +142,15 @@ const SEED_PROGRAM = {
             'Any of these with toes turned in — medial-hamstring bias',
           ],
           cue: 'Right leads, rep-matched — the last 20° of closure is the exercise; clicking OK, sharp pinch = back off',
+        },
+        {
+          id: 'b8', name: 'Calf, single-leg', target: '2×8–15 /side',
+          track: true, reps: true, rest: 'normal',
+          menu: [
+            'Split Squat Iso w Calf Raise — front foot off a box edge, nothing moves but the heel',
+            '3D Calf Raise — drive the roller into the wall, find the angles',
+          ],
+          cue: 'Right leads, rep-matched — bent knee, full range, slow heel drop; ribs down, weight forward',
         },
       ],
     },
