@@ -316,6 +316,11 @@ body::before {
   font-variant-numeric: tabular-nums;
 }
 .chip-unit { color: var(--dim); font-size: 13px; }
+.chip-reps {
+  font-family: var(--display); font-weight: 600; font-size: 17px;
+  color: var(--dim); font-variant-numeric: tabular-nums;
+}
+.chip.open .chip-reps { color: var(--ink); }
 .chip-caret {
   align-self: center; display: inline-block;
   color: var(--dim); font-size: 10px; margin-left: 2px;
@@ -330,6 +335,14 @@ body::before {
 .notebtn.has-note { color: var(--brass); }
 
 .chip-edit { display: flex; gap: 8px; margin-top: 10px; }
+.chip-edit.stacked { display: block; }
+.edit-row { display: flex; gap: 8px; align-items: center; }
+.edit-row + .edit-row { margin-top: 8px; }
+.edit-tag {
+  width: 40px; flex: none; text-align: right;
+  font-family: var(--display); font-weight: 600; font-size: 11px;
+  letter-spacing: 0.12em; text-transform: uppercase; color: var(--dim);
+}
 .step {
   width: 56px; border-radius: 10px; background: var(--raised);
   border: 1px solid var(--line);
