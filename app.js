@@ -1,4 +1,4 @@
-/* Strength Rebuild — v2: one gym surface, one-press rest, baked-WAV chime.
+/* Strength Rebuild — v2: one gym surface, one-press rest (silent timer).
    No per-set logging: tracked slots capture one working weight (prefilled
    from last session), menu slots take a note. Rest never auto-starts. */
 
@@ -8,7 +8,7 @@
 
 const STORE_KEY = 'sr-state-v2';
 const V1_KEY = 'sr-state-v1';        // read-only: migration source, never written
-const APP_VERSION = '2.4.0';
+const APP_VERSION = '2.5.0';
 
 let state = null;
 
@@ -572,190 +572,14 @@ function autoFinishStale() {
 document.addEventListener('visibilitychange', () => { if (!document.hidden) autoFinishStale(); });
 window.addEventListener('pageshow', (e) => { if (e.persisted) autoFinishStale(); });
 
-/* ====================== rest engine (baked chime) ======================
-   A media element keeps playing with the screen off (like music). We bake
-   one WAV = [silence for the rest][chime], so the phone's own audio clock
-   rings it even while JS is suspended. Adapted from Still Water. */
-
-const SR = 8000;   // chime partials all < 4 kHz
-
-// Gym bell: the Still Water bell triad, rung twice, normalized near full scale.
-const CHIME = (() => {
-  const ev = [], notes = [523.25, 659.25, 783.99];
-  for (let ring = 0; ring < 2; ring++) {
-    for (let r = 0; r < 3; r++) {
-      notes.forEach((f, i) => ev.push({ t: ring * 2.4 + r * 0.74 + i * 0.1, f, dur: 0.5, amp: 0.3, k: 6 }));
-    }
-  }
-  return { sec: 5.4, events: ev };
-})();
-
-function chimeSamples() {
-  const N = Math.round(CHIME.sec * SR);
-  const out = new Float32Array(N);
-  for (const ev of CHIME.events) {
-    const s0 = Math.round(ev.t * SR);
-    const s1 = Math.min(N, s0 + Math.round(ev.dur * SR));
-    const w = 2 * Math.PI * ev.f / SR;
-    for (let s = s0; s < s1; s++) {
-      const t = (s - s0) / SR;
-      out[s] += Math.sin(w * (s - s0)) * Math.exp(-ev.k * t) * ev.amp;
-    }
-  }
-  let peak = 0;
-  for (let i = 0; i < N; i++) peak = Math.max(peak, Math.abs(out[i]));
-  if (peak > 0) { const g = 0.95 / peak; for (let i = 0; i < N; i++) out[i] *= g; }
-  return out;
-}
-
-function writeWavHeader(view, dataLen) {
-  const w = (o, s) => { for (let i = 0; i < s.length; i++) view.setUint8(o + i, s.charCodeAt(i)); };
-  w(0, 'RIFF'); view.setUint32(4, 36 + dataLen, true); w(8, 'WAVE');
-  w(12, 'fmt '); view.setUint32(16, 16, true); view.setUint16(20, 1, true);
-  view.setUint16(22, 1, true); view.setUint32(24, SR, true);
-  view.setUint32(28, SR * 2, true); view.setUint16(32, 2, true); view.setUint16(34, 16, true);
-  w(36, 'data'); view.setUint32(40, dataLen, true);
-}
-
-function buildBakedBuf(durationSec) {
-  const silN = Math.max(0, Math.round(durationSec * SR));
-  const ch = chimeSamples();
-  const dataLen = (silN + ch.length) * 2;
-  const buf = new ArrayBuffer(44 + dataLen);   // silence region is already zero
-  const view = new DataView(buf);
-  writeWavHeader(view, dataLen);
-  let o = 44 + silN * 2;
-  for (let i = 0; i < ch.length; i++) {
-    const v = Math.max(-1, Math.min(1, ch[i]));
-    view.setInt16(o, v * 32767, true);
-    o += 2;
-  }
-  return buf;
-}
-
-function bufToDataUri(buf) {
-  const bytes = new Uint8Array(buf);
-  let bin = '';
-  const chunk = 0x8000;
-  for (let i = 0; i < bytes.length; i += chunk) {
-    bin += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
-  }
-  return 'data:audio/wav;base64,' + btoa(bin);
-}
+/* ====================== rest engine (silent) ======================
+   No audio: any media playback takes the iOS audio session and cuts off
+   whatever he's listening to for the whole rest (the v2.0–2.4 baked-WAV
+   chime is in git history if it's ever wanted back). End of rest =
+   vibration where supported + the dock's visual done state. */
 
 const rest = { running: false, endsAt: 0, total: 0, tier: null, done: false };
-let bgAudio = null, bgUrl = null, bgWavBuf = null, bgSrcMode = null;
-let bgLoading = false, bakedArmed = false;
-const bakedCache = {};   // durationSec → { url, buf }
 let restTick = null;
-
-function makeAudioEl() {
-  if (bgAudio) return bgAudio;
-  bgAudio = new Audio();
-  bgAudio.preload = 'auto';
-  bgAudio.loop = false;
-  bgAudio.setAttribute('aria-hidden', 'true');
-  bgAudio.addEventListener('error', onBgError);
-  document.body.appendChild(bgAudio);
-  return bgAudio;
-}
-function onBgError() {
-  if (!bgLoading) return;
-  if (bgSrcMode === 'blob' && bgWavBuf) {
-    bgSrcMode = 'data';
-    try {
-      bgAudio.src = bufToDataUri(bgWavBuf);
-      const p = bgAudio.play(); if (p && p.catch) p.catch(() => {});
-    } catch (e) { bakedArmed = false; }
-    return;
-  }
-  bakedArmed = false;
-}
-
-// Media can also be refused SILENTLY — no error event, readyState pinned at 0.
-// If nothing has loaded a beat after play(), retry as a data: URI, then fall
-// back to the foreground Web Audio chime (bakedArmed=false lets it ring).
-let bgWatchdog = null;
-function armBgWatchdog() {
-  clearTimeout(bgWatchdog);
-  bgWatchdog = setTimeout(() => {
-    if (!rest.running || !bgAudio || bgAudio.readyState > 0) return;
-    if (bgSrcMode === 'blob' && bgWavBuf) {
-      onBgError();
-      armBgWatchdog();
-    } else {
-      bakedArmed = false;
-    }
-  }, 2500);
-}
-
-function startBgAudio(durationSec) {
-  const a = makeAudioEl();
-  try { a.pause(); } catch (e) {}
-  try {
-    let entry = bakedCache[durationSec];
-    if (!entry) {
-      const buf = buildBakedBuf(durationSec);
-      entry = { url: URL.createObjectURL(new Blob([buf], { type: 'audio/wav' })), buf };
-      bakedCache[durationSec] = entry;
-    }
-    bgWavBuf = entry.buf;
-    bgUrl = entry.url;
-    bakedArmed = true;
-    bgSrcMode = 'blob';
-    bgLoading = true;
-    a.src = bgUrl;
-    a.currentTime = 0;
-    a.volume = 1;
-    const p = a.play();
-    if (p && p.catch) p.catch(() => { bakedArmed = false; });
-    setMediaSession();
-    armBgWatchdog();
-  } catch (e) { bakedArmed = false; }
-}
-
-function stopBgAudio() {
-  bgLoading = false;
-  bakedArmed = false;
-  clearTimeout(bgWatchdog);
-  if (bgAudio) { try { bgAudio.pause(); } catch (e) {} }   // pause only, no load(): avoids a spurious error event
-}
-
-function setMediaSession() {
-  try {
-    if (!('mediaSession' in navigator)) return;
-    navigator.mediaSession.metadata = new MediaMetadata({ title: 'Rest', artist: 'Strength Rebuild' });
-  } catch (e) {}
-}
-
-/* ---- foreground chime (Web Audio): preview + fallback ---- */
-let audioContext = null;
-function getCtx() {
-  const AC = window.AudioContext || window.webkitAudioContext;
-  if (!AC) return null;
-  if (!audioContext) audioContext = new AC();
-  return audioContext;
-}
-async function fgChime() {
-  try {
-    const ctx = getCtx();
-    if (!ctx) return;
-    if (ctx.state === 'suspended') { try { await ctx.resume(); } catch (e) {} }
-    if (ctx.state === 'suspended') return;
-    const now = ctx.currentTime + 0.04;
-    for (const ev of CHIME.events) {
-      const osc = ctx.createOscillator();
-      const g = ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(ev.f, now + ev.t);
-      g.gain.setValueAtTime(0.0001, now + ev.t);
-      g.gain.exponentialRampToValueAtTime(Math.min(ev.amp * 0.8, 0.4), now + ev.t + 0.02);
-      g.gain.setTargetAtTime(0.0001, now + ev.t + 0.03, 1 / ev.k);
-      osc.connect(g); g.connect(ctx.destination);
-      osc.start(now + ev.t); osc.stop(now + ev.t + ev.dur + 0.1);
-    }
-  } catch (e) {}
-}
 
 function buzz() {
   try { if (navigator.vibrate) navigator.vibrate([220, 120, 220, 120, 320]); } catch (e) {}
@@ -783,7 +607,6 @@ function restStart(tier) {
   rest.tier = tier;
   rest.total = sec;
   rest.endsAt = Date.now() + sec * 1000;
-  startBgAudio(sec);        // must run inside the button-press gesture
   requestWakeLock();
   startRestTick();
   renderRestDock();
@@ -792,7 +615,6 @@ function restStart(tier) {
 function restCancel() {
   rest.running = false;
   rest.done = false;
-  stopBgAudio();
   releaseWakeLock();
   stopRestTick();
   renderRestDock();
@@ -801,7 +623,6 @@ function restCancel() {
 function restFinish() {
   rest.running = false;
   rest.done = true;
-  if (!bakedArmed) fgChime();   // baked track already rang if it could
   buzz();
   releaseWakeLock();
   stopRestTick();
@@ -999,10 +820,6 @@ function viewSettings() {
       <div class="setrow">
         <div class="setlabel">Recal date</div>
         <input class="setdate" type="date" data-action="recal-date" value="${esc(s.recalDate || '')}">
-      </div>
-      <div class="setrow">
-        <div class="setlabel">Chime</div>
-        <button class="setbtn" data-action="chime-test">Test</button>
       </div>
       <div class="setrow">
         <div class="setlabel">Program</div>
@@ -1205,7 +1022,6 @@ document.addEventListener('click', (ev) => {
 
   if (action === 'theme') { state.settings.theme = t.getAttribute('data-v'); applyTheme(); save(); render(); return; }
   if (action === 'unit') { state.settings.unit = t.getAttribute('data-v'); save(); render(); return; }
-  if (action === 'chime-test') { fgChime(); return; }
   if (action === 'export') { exportJSON(); return; }
   if (action === 'copy-json') {
     navigator.clipboard.writeText(JSON.stringify(state, null, 1))
