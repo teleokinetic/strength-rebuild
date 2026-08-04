@@ -8,7 +8,7 @@
 
 const STORE_KEY = 'sr-state-v2';
 const V1_KEY = 'sr-state-v1';        // read-only: migration source, never written
-const APP_VERSION = '2.8.0';
+const APP_VERSION = '2.9.0';
 
 let state = null;
 
@@ -809,9 +809,29 @@ function refreshChip(dayId, slot) {
   if (btn) btn.innerHTML = chipInnerHTML(dayId, slot);
 }
 
+// The trail: one pip per slot, filled as rings are tapped — where the
+// session is at a glance. Rings are optional; an untouched trail stays quiet.
+function trailHTML(day) {
+  const a = state.active && state.active.dayId === day.id ? state.active : null;
+  let done = 0;
+  const pips = day.slots.map((s) => {
+    const on = !!(a && a.entries[s.id] && a.entries[s.id].done);
+    if (on) done++;
+    return `<span class="trail-pip ${on ? 'on' : ''}"></span>`;
+  }).join('');
+  return `<div class="trail" data-trail>${pips}<span class="trail-count">${done} of ${day.slots.length}</span></div>`;
+}
+
+function updateTrail(dayId) {
+  const el = $('[data-trail]');
+  const day = findDay(dayId);
+  if (el && day) el.outerHTML = trailHTML(day);
+}
+
 function slotCardHTML(day, slot) {
   const a = state.active && state.active.dayId === day.id ? state.active.entries[slot.id] : null;
   const note = a && a.note ? a.note : '';
+  const done = !!(a && a.done);
   const menu = slot.menu && slot.menu.length
     ? `<ul class="menu">${slot.menu.map((m) => `<li>${esc(m)}</li>`).join('')}</ul>` : '';
   const hasRungs = Array.isArray(slot.rungs) && slot.rungs.length;
@@ -849,8 +869,10 @@ function slotCardHTML(day, slot) {
       <div class="chip-edit hidden" data-edit="${slot.id}">${weightRow}</div>`;
   }
   return `
-    <div class="slot" data-slotcard="${slot.id}">
+    <div class="slot ${done ? 'done' : ''}" data-slotcard="${slot.id}">
       <div class="slot-head">
+        <button class="ring ${done ? 'on' : ''}" data-action="ring" data-slot="${slot.id}"
+          aria-label="${done ? 'Done — tap to reopen' : 'Mark done'}"></button>
         <div class="slot-name">${esc(slot.name)}</div>
         <div class="slot-target">${esc(slot.target || '')}</div>
       </div>
@@ -937,6 +959,7 @@ function viewDay(dayId) {
       ${barleyHTML()}
       <div class="dayhead-name">${esc(day.name)} <span class="dayhead-sub">${esc(day.subtitle)}</span></div>
     </div>
+    ${trailHTML(day)}
     <div id="restdock" class="restdock">${restDockHTML()}</div>
     <div class="slots">${day.slots.map((s) => slotCardHTML(day, s)).join('')}</div>
     <button class="finishbtn" data-action="finish" data-day="${day.id}">Finish session</button>`;
@@ -950,6 +973,12 @@ function viewFinish(dayId) {
   if (!day) { location.hash = '#/'; return ''; }
   const a = state.active && state.active.dayId === dayId ? state.active : null;
   const mins = a ? Math.max(1, Math.round((Date.now() - a.startedAt) / 60000)) : 0;
+  // Ring count joins the headline only once rings were used — an ignored
+  // trail must never read "0 of 9" at the finish.
+  let doneCt = 0;
+  if (a) for (const slot of day.slots) {
+    if (a.entries[slot.id] && a.entries[slot.id].done) doneCt++;
+  }
   const rows = [];
   const extras = [];
   for (const slot of day.slots) {
@@ -975,7 +1004,7 @@ function viewFinish(dayId) {
   return `
     ${topbar('#/day/' + dayId)}
     <div class="finish-wrap">
-      <div class="finish-line">${esc(day.name)}${mins ? ` · ${mins} min` : ''}</div>
+      <div class="finish-line">${esc(day.name)}${doneCt ? ` · ${doneCt} of ${day.slots.length}` : ''}${mins ? ` · ${mins} min` : ''}</div>
       <div class="recap">
         <div class="recap-head">Will save</div>
         ${rows.join('')}
@@ -1199,6 +1228,25 @@ document.addEventListener('click', (ev) => {
     const input = $(`[data-edit="${slotId}"] input[data-action="reps"]`);
     if (input) input.value = e.reps;
     refreshChip(dayId, slot);
+    touchSlot(slotId);
+    return;
+  }
+  if (action === 'ring') {
+    const slotId = t.getAttribute('data-slot');
+    const day = findDay(dayId);
+    const slot = findSlot(day, slotId);
+    if (!slot) return;
+    const e = activeEntry(dayId, slotId);
+    // Ephemeral by design: lives in the active session, never in the log —
+    // recordSession ignores it, so Finish works fine if rings go untouched.
+    // Delete on un-ring so exports don't carry done:false keys around.
+    if (e.done) delete e.done; else e.done = true;
+    save();
+    const card = $(`[data-slotcard="${slotId}"]`);
+    if (card) card.classList.toggle('done', !!e.done);
+    t.classList.toggle('on', !!e.done);
+    t.setAttribute('aria-label', e.done ? 'Done — tap to reopen' : 'Mark done');
+    updateTrail(dayId);
     touchSlot(slotId);
     return;
   }
