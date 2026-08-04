@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Strength Rebuild — beautification options</title>
+<style>
+@font-face{font-family:'Barlow Condensed';font-style:normal;font-weight:500;
+  src:url('../fonts/barlow-condensed-500.woff2') format('woff2')}
+@font-face{font-family:'Barlow Condensed';font-style:normal;font-weight:600;
+  src:url('../fonts/barlow-condensed-600.woff2') format('woff2')}
+:root{
+  --bg:#131518; --surface:#1B1E23; --card:#1F232A; --raised:#272C35; --line:#2C313A;
+  --ink:#E9E7E2; --dim:#9AA1AC; --brass:#D9A03F; --brass-wash:rgba(217,160,63,.12);
+  --on-brass:#15130C;
+  --disp:'Barlow Condensed','Avenir Next Condensed','Arial Narrow',sans-serif;
+  --body:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  --knurl:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="7" height="7"><path d="M0 3.5 L3.5 0 L7 3.5 L3.5 7 Z" fill="none" stroke="%23D9A03F" stroke-opacity="0.45"/></svg>');
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0D0F12;color:var(--ink);font-family:var(--body);padding:52px 28px 100px}
+.wrap{max-width:1160px;margin:0 auto}
+h1{font-family:var(--disp);font-weight:600;font-size:38px;letter-spacing:.06em;text-transform:uppercase}
+h1 .half{color:var(--dim)}
+.lead{color:var(--dim);margin-top:10px;font-size:16px;line-height:1.55;max-width:680px}
+.option{margin-top:80px}
+.k{display:inline-block;font-family:var(--disp);font-weight:600;font-size:13px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--brass);border:1px solid rgba(217,160,63,.4);border-radius:7px;padding:4px 12px}
+.option h2{font-family:var(--disp);font-weight:600;font-size:30px;letter-spacing:.05em;text-transform:uppercase;margin-top:12px}
+.blurb{color:var(--dim);margin-top:8px;max-width:660px;line-height:1.55;font-size:15.5px}
+.where{margin-top:8px;font-size:13.5px;color:var(--dim)}
+.where b{color:var(--ink);font-weight:600}
+.phones{display:flex;gap:32px;flex-wrap:wrap;margin-top:26px}
+figure{margin:0}
+figcaption{text-align:center;color:var(--dim);font-size:13.5px;margin-top:10px}
+.note{margin-top:76px;color:var(--dim);font-size:14.5px;line-height:1.55;max-width:660px;
+  border-top:1px solid #23272E;padding-top:20px}
+
+/* ---------- phone shell ---------- */
+.phone{width:320px;height:660px;background:var(--bg);border-radius:38px;border:1px solid #23272E;
+  box-shadow:0 24px 48px rgba(0,0,0,.5);overflow:hidden;position:relative;flex:none}
+.screen{position:relative;height:100%;padding:24px 18px 20px;display:flex;flex-direction:column}
+.z{position:relative;z-index:1}
+
+/* ---------- shared SR chrome ---------- */
+.topbar{display:flex;align-items:baseline;justify-content:space-between}
+.wordmark{font-family:var(--disp);font-weight:600;font-size:19px;letter-spacing:.09em;text-transform:uppercase}
+.wordmark .half{color:var(--dim)}
+.gear{color:var(--dim);font-size:18px}
+.backlink{font-family:var(--disp);font-weight:600;font-size:14px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
+.dayhead{font-family:var(--disp);font-weight:600;font-size:24px;letter-spacing:.05em;text-transform:uppercase;margin-top:14px}
+.dayhead span{color:var(--dim);font-size:16px;font-weight:500;letter-spacing:.03em;margin-left:6px}
+
+.daycard{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:17px 16px;margin-top:14px}
+.home .daycard:first-of-type{margin-top:20px}
+.dayname{font-family:var(--disp);font-weight:600;font-size:28px;letter-spacing:.05em;text-transform:uppercase;line-height:1.1}
+.daysub{color:var(--dim);margin-top:2px;font-size:14.5px}
+.daylast{margin-top:9px;font-family:var(--disp);font-weight:500;font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+
+.ledger{margin-top:22px;padding-top:12px;border-top:2px solid var(--brass)}
+.ledger-head{display:flex;justify-content:space-between;align-items:center}
+.ledger-title{font-family:var(--disp);font-weight:600;font-size:13px;letter-spacing:.16em;text-transform:uppercase;color:var(--brass)}
+.ledger-title i{font-style:normal;color:var(--dim);font-size:10px;margin-left:6px}
+.ledger-check{font-family:var(--disp);font-weight:500;font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--dim)}
+.eq{display:flex;gap:5px;align-items:flex-end;height:26px;margin-top:10px}
+.eq i{flex:1;background:var(--raised);border-radius:2px 2px 0 0;position:relative;display:block;height:100%;overflow:hidden}
+.eq i b{position:absolute;left:0;right:0;bottom:0;background:var(--brass);display:block}
+.eq-labels{display:flex;gap:5px;margin-top:4px}
+.eq-labels span{flex:1;text-align:center;font-family:var(--disp);font-weight:600;font-size:9.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--dim)}
+
+.slot{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:13px 14px;margin-top:11px}
+.shead{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.sname{font-family:var(--disp);font-weight:600;font-size:19px;letter-spacing:.05em;text-transform:uppercase;line-height:1.15}
+.starget{font-family:var(--disp);font-weight:500;font-size:14px;letter-spacing:.06em;color:var(--dim);white-space:nowrap;font-variant-numeric:tabular-nums}
+.scue{color:var(--dim);font-size:13px;margin-top:3px}
+.warmline{margin-top:8px;padding:6px 10px;border-radius:9px;background:var(--brass-wash);font-size:12.5px}
+.warmline b{font-family:var(--disp);font-weight:600;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--brass);margin-right:6px}
+.sfoot{display:flex;align-items:center;gap:10px;margin-top:9px}
+.chip{display:inline-flex;align-items:baseline;gap:5px;background:var(--raised);border:1px solid var(--line);border-radius:10px;padding:6px 13px}
+.chip .n{font-family:var(--disp);font-weight:600;font-size:20px;font-variant-numeric:tabular-nums}
+.chip .u{color:var(--dim);font-size:12px}
+.chip .r{font-family:var(--disp);font-weight:600;font-size:15px;color:var(--dim)}
+.chip .c{align-self:center;color:var(--dim);font-size:9px;margin-left:2px}
+.notebtn{margin-left:auto;color:var(--dim);font-size:13px}
+
+/* the Forte rest treatment, in brass: the running clock IS the pill that fills */
+.rest-running{position:relative;overflow:hidden;background:var(--card);border:1px solid var(--line);
+  border-radius:14px;padding:9px 14px;margin-top:14px}
+.rest-fillwash{position:absolute;top:0;bottom:0;left:0;width:62%;background:var(--brass-wash);
+  border-right:2px solid var(--brass)}
+.rest-row{position:relative;display:flex;align-items:center;gap:10px}
+.rest-time{font-family:var(--disp);font-weight:600;font-size:34px;font-variant-numeric:tabular-nums;letter-spacing:.03em}
+.rest-label{font-family:var(--disp);font-weight:500;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);flex:1}
+.rest-mini{width:36px;height:36px;border-radius:10px;background:var(--raised);border:1px solid var(--line);
+  color:var(--dim);font-size:15px;display:flex;align-items:center;justify-content:center;flex:none}
+
+/* ---------- option 1: pressed oak ---------- */
+.o1 .daycard,.o1 .slot,.o1 .rest-running{border-radius:16px 16px 16px 5px}
+.o1 .chip{border-radius:10px 10px 10px 4px}
+.sprig{position:absolute;pointer-events:none;color:var(--brass);opacity:.5;z-index:0}
+/* SR home has no greeting gap — the twig presses into the open bottom corner instead */
+.o1.home .sprig{bottom:22px;right:16px;width:112px;height:126px}
+.o1.workout .sprig{top:8px;right:8px;width:88px;height:100px}
+
+/* ---------- option 2: blueprint ---------- */
+.o2 .daycard,.o2 .slot,.o2 .rest-running{border:none;background:#232831;border-radius:10px;
+  clip-path:polygon(0 0,calc(100% - 15px) 0,100% 15px,100% 100%,0 100%)}
+.o2 .chip{border-radius:8px}
+.bp{position:absolute;pointer-events:none;color:var(--dim);z-index:0}
+.bp-corner{top:14px;right:12px;width:34px;height:34px;opacity:.65}
+.dimline{display:flex;align-items:center;margin-top:14px;color:var(--dim);opacity:.55}
+.dimline::before,.dimline::after{content:'';width:1px;height:9px;background:var(--brass)}
+.dimline i{flex:1;height:1px;background:repeating-linear-gradient(90deg,currentColor 0 4px,transparent 4px 9px)}
+.dimline span{font-family:var(--disp);font-weight:600;font-size:9.5px;letter-spacing:.18em;
+  text-transform:uppercase;padding:0 8px;color:var(--dim)}
+
+/* ---------- option 3: knurl ---------- */
+.o3 .daycard,.o3 .slot,.o3 .rest-running{border-radius:8px;
+  box-shadow:inset 0 1px 0 rgba(233,231,226,.05)}
+.o3 .chip{border-radius:7px}
+.hemk{height:8px;background-image:var(--knurl);background-repeat:repeat-x;background-position:center;margin-top:12px;opacity:.65}
+.o3 .rest-fillwash{background-image:var(--knurl);background-color:rgba(217,160,63,.07)}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <g id="oak-art" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+    <!-- main stem, top-right corner sweeping down-left -->
+    <path d="M92 6 C 76 20 56 38 44 60 C 36 74 31 88 30 102"/>
+    <!-- short branch to the acorns -->
+    <path d="M58 40 C 54 50 52 58 52 66" stroke-width="1.7"/>
+    <!-- oak leaves: almond bodies with a notched edge suggestion -->
+    <path d="M72 24 c 9 -8 20 -10 28 -5 c -3 3 -3 5 -1 7 c -4 0 -6 2 -6 5 c -4 -1 -7 0 -9 2 c -5 -1 -9 -4 -12 -9 z" fill="currentColor" stroke="none" opacity=".3"/>
+    <path d="M36 64 c -10 -3 -16 -11 -17 -20 c 4 1 6 0 7 -3 c 3 3 6 3 8 1 c 1 4 3 6 6 7 c -1 5 -2 10 -4 15 z" fill="currentColor" stroke="none" opacity=".3"/>
+    <!-- acorn pair where the rose had its blossom -->
+    <g stroke-width="1.6">
+      <path d="M47 76 c -1 6 1 11 5 13 c 4 -2 5 -7 4 -13"/>
+      <path d="M45 74 a 7 5 0 0 1 13 1 z" fill="currentColor" opacity=".45"/>
+      <path d="M51 68 l 2 -5"/>
+      <path d="M62 78 c 0 5 2 9 5 10 c 3 -1 4 -5 3 -10"/>
+      <path d="M60 76 a 6 4.5 0 0 1 11 1 z" fill="currentColor" opacity=".45"/>
+      <path d="M65 71 l 3 -4"/>
+    </g>
+    <!-- bud tip -->
+    <circle cx="30" cy="106" r="2.4" fill="currentColor" stroke="none" opacity=".55"/>
+  </g>
+  <g id="bp-corner-art" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="square">
+    <path d="M2 12 V2 H12"/>
+    <path d="M22 32 H32 V22"/>
+    <path d="M17 6 v6 M14 9 h6" stroke="#D9A03F"/>
+  </g>
+</defs></svg>
+
+<div class="wrap">
+  <h1>Strength <span class="half">Rebuild</span> — beautification</h1>
+  <p class="lead">The three Forte moves you liked — the rest clock that fills like a pill, the pressed
+  sprig, the softened boxes — translated into graphite and brass instead of copied. All three options
+  below include the new rest treatment; they differ in the ornament and the box language. Same bones,
+  nothing moves.</p>
+
+  <!-- ============ option 1 ============ -->
+  <section class="option">
+    <span class="k">Option 1</span>
+    <h2>Pressed oak</h2>
+    <p class="blurb">The companion piece to Carolina's rose: a hand-drawn oak twig with a pair of
+    acorns where her sprig carries a blossom — oak for strength, drawn in brass, tucked behind the
+    cards. Boxes take the tucked corner too (16/16/16/5), the forge-cut sibling of her petal.</p>
+    <p class="where"><b>Where:</b> oak twig pressed into the open bottom corner on home, beside the header on workout · tucked corner on every card and the rest pill.</p>
+    <div class="phones">
+      <figure>
+        <div class="phone o1 home">
+          <svg class="sprig" viewBox="0 0 104 118" aria-hidden="true"><use href="#oak-art"/></svg>
+          <div class="screen">
+            <div class="topbar z"><div class="wordmark">Strength <span class="half">Rebuild</span></div><span class="gear">⚙</span></div>
+            <a class="daycard"><div class="dayname">Day A</div><div class="daysub">Squat + Horizontal</div><div class="daylast">Last: Thu</div></a>
+            <a class="daycard"><div class="dayname">Day B</div><div class="daysub">Hinge + Vertical</div><div class="daylast">Last: Sat</div></a>
+            <div class="ledger z">
+              <div class="ledger-head"><span class="ledger-title">Targets <i>⌄</i></span><span class="ledger-check">Check-in · 2 wk</span></div>
+              <div class="eq"><i><b style="height:80%"></b></i><i><b style="height:55%"></b></i><i><b style="height:70%"></b></i><i><b style="height:40%"></b></i><i><b style="height:65%"></b></i><i><b style="height:30%"></b></i><i><b style="height:50%"></b></i></div>
+              <div class="eq-labels"><span>SQ</span><span>BP</span><span>RW</span><span>SW</span><span>DL</span><span>OP</span><span>CU</span></div>
+            </div>
+          </div>
+        </div>
+        <figcaption>Home</figcaption>
+      </figure>
+      <figure>
+        <div class="phone o1 workout">
+          <svg class="sprig" viewBox="0 0 104 118" aria-hidden="true"><use href="#oak-art"/></svg>
+          <div class="screen">
+            <div class="topbar z"><span class="backlink">‹ Back</span></div>
+            <div class="dayhead z">Day A <span>Squat + Horizontal</span></div>
+            <div class="rest-running z">
+              <div class="rest-fillwash"></div>
+              <div class="rest-row"><span class="rest-time">1:47</span><span class="rest-label">Resting</span><span class="rest-mini">↻</span><span class="rest-mini">✕</span></div>
+            </div>
+            <div class="slot">
+              <div class="shead"><span class="sname">Back squat</span><span class="starget">4×5 · RIR 2–3</span></div>
+              <div class="warmline"><b>Warm-up</b>Bar ×5 → 95 ×3 → 135 ×2</div>
+              <div class="sfoot"><span class="chip"><span class="n">185</span><span class="u">lb</span><span class="r">×5</span><span class="c">▾</span></span><span class="notebtn">✎ note</span></div>
+            </div>
+            <div class="slot">
+              <div class="shead"><span class="sname">DB bench press</span><span class="starget">3×6–8 · RIR 2–3</span></div>
+              <div class="scue">Feet planted, slight tuck — bar path over the wrist</div>
+              <div class="sfoot"><span class="chip"><span class="n">60</span><span class="u">lb</span><span class="r">×8</span><span class="c">▾</span></span><span class="notebtn">✎ note</span></div>
+            </div>
+            <div class="slot">
+              <div class="shead"><span class="sname">One-arm DB row</span><span class="starget">3×8–10 /side</span></div>
+              <div class="sfoot"><span class="chip"><span class="n">70</span><span class="u">lb</span><span class="r">×10</span><span class="c">▾</span></span><span class="notebtn">✎ note</span></div>
+            </div>
+          </div>
+        </div>
+        <figcaption>Workout — rest running, pill filling</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ============ option 2 ============ -->
+  <section class="option">
+    <span class="k">Option 2</span>
+    <h2>Blueprint</h2>
+    <p class="blurb">Rebuild, read literally: the screen as a drafting sheet. Crop-mark brackets and a
+    small brass register cross sit in the header corner, a dashed dimension line underlines the
+    header, and every card becomes a cut plate — one corner chamfered at 45° instead of rounded.
+    The most architectural of the three.</p>
+    <p class="where"><b>Where:</b> crop marks + register cross in the header · dimension hairline under the topbar · chamfered corner on cards and the rest pill.</p>
+    <div class="phones">
+      <figure>
+        <div class="phone o2 home">
+          <svg class="bp bp-corner" viewBox="0 0 34 34" aria-hidden="true"><use href="#bp-corner-art"/></svg>
+          <div class="screen">
+            <div class="topbar z"><div class="wordmark">Strength <span class="half">Rebuild</span></div><span class="gear">⚙</span></div>
+            <div class="dimline z"><i></i><span>A · B split</span><i></i></div>
+            <a class="daycard"><div class="dayname">Day A</div><div class="daysub">Squat + Horizontal</div><div class="daylast">Last: Thu</div></a>
+            <a class="daycard"><div class="dayname">Day B</div><div class="daysub">Hinge + Vertical</div><div class="daylast">Last: Sat</div></a>
+            <div class="ledger z">
+              <div class="ledger-head"><span class="ledger-title">Targets <i>⌄</i></span><span class="ledger-check">Check-in · 2 wk</span></div>
+              <div class="eq"><i><b style="height:80%"></b></i><i><b style="height:55%"></b></i><i><b style="height:70%"></b></i><i><b style="height:40%"></b></i><i><b style="height:65%"></b></i><i><b style="height:30%"></b></i><i><b style="height:50%"></b></i></div>
+              <div class="eq-labels"><span>SQ</span><span>BP</span><span>RW</span><span>SW</span><span>DL</span><span>OP</span><span>CU</span></div>
+            </div>
+          </div>
+        </div>
+        <figcaption>Home</figcaption>
+      </figure>
+      <figure>
+        <div class="phone o2 workout">
+          <svg class="bp bp-corner" viewBox="0 0 34 34" aria-hidden="true"><use href="#bp-corner-art"/></svg>
+          <div class="screen">
+            <div class="topbar z"><span class="backlink">‹ Back</span></div>
+            <div class="dayhead z">Day A <span>Squat + Horizontal</span></div>
+            <div class="rest-running z">
+              <div class="rest-fillwash"></div>
+              <div class="rest-row"><span class="rest-time">1:47</span><span class="rest-label">Resting</span><span class="rest-mini">↻</span><span class="rest-mini">✕</span></div>
+            </div>
+            <div class="slot">
+              <div class="shead"><span class="sname">Back squat</span><span class="starget">4×5 · RIR 2–3</span></div>
+              <div class="warmline"><b>Warm-up</b>Bar ×5 → 95 ×3 → 135 ×2</div>
+              <div class="sfoot"><span class="chip"><span class="n">185</span><span class="u">lb</span><span class="r">×5</span><span class="c">▾</span></span><span class="notebtn">✎ note</span></div>
+            </div>
+            <div class="slot">
+              <div class="shead"><span class="sname">DB bench press</span><span class="starget">3×6–8 · RIR 2–3</span></div>
+              <div class="scue">Feet planted, slight tuck — bar path over the wrist</div>
+              <div class="sfoot"><span class="chip"><span class="n">60</span><span class="u">lb</span><span class="r">×8</span><span class="c">▾</span></span><span class="notebtn">✎ note</span></div>
+            </div>
+            <div class="slot">
+              <div class="shead"><span class="sname">One-arm DB row</span><span class="starget">3×8–10 /side</span></div>
+              <div class="sfoot"><span class="chip"><span class="n">70</span><span class="u">lb</span><span class="r">×10</span><span class="c">▾</span></span><span class="notebtn">✎ note</span></div>
+            </div>
+          </div>
+        </div>
+        <figcaption>Workout — chamfered plates</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ============ option 3 ============ -->
+  <section class="option">
+    <span class="k">Option 3</span>
+    <h2>Knurl</h2>
+    <p class="blurb">Ornament from the bar itself. A thin diamond-knurl band runs under the header —
+    the same cross-hatch you grip every session — and the rest clock fills with knurling instead of a
+    flat wash, so the texture literally builds as you rest. Cards machine down to a tighter radius
+    with a milled top edge. No pictures, all texture.</p>
+    <p class="where"><b>Where:</b> knurl hem under every header · knurled rest fill · radius 8 + milled edge on cards.</p>
+    <div class="phones">
+      <figure>
+        <div class="phone o3 home">
+          <div class="screen">
+            <div class="topbar z"><div class="wordmark">Strength <span class="half">Rebuild</span></div><span class="gear">⚙</span></div>
+            <div class="hemk z"></div>
+            <a class="daycard"><div class="dayname">Day A</div><div class="daysub">Squat + Horizontal</div><div class="daylast">Last: Thu</div></a>
+            <a class="daycard"><div class="dayname">Day B</div><div class="daysub">Hinge + Vertical</div><div class="daylast">Last: Sat</div></a>
+            <div class="ledger z">
+              <div class="ledger-head"><span class="ledger-title">Targets <i>⌄</i></span><span class="ledger-check">Check-in · 2 wk</span></div>
+              <div class="eq"><i><b style="height:80%"></b></i><i><b style="height:55%"></b></i><i><b style="height:70%"></b></i><i><b style="height:40%"></b></i><i><b style="height:65%"></b></i><i><b style="height:30%"></b></i><i><b style="height:50%"></b></i></div>
+              <div class="eq-labels"><span>SQ</span><span>BP</span><span>RW</span><span>SW</span><span>DL</span><span>OP</span><span>CU</span></div>
+            </div>
+          </div>
+        </div>
+        <figcaption>Home</figcaption>
+      </figure>
+      <figure>
+        <div class="phone o3 workout">
+          <div class="screen">
+            <div class="topbar z"><span class="backlink">‹ Back</span></div>
+            <div class="dayhead z">Day A <span>Squat + Horizontal</span></div>
+            <div class="hemk z"></div>
+            <div class="rest-running z">
+              <div class="rest-fillwash"></div>
+              <div class="rest-row"><span class="rest-time">1:47</span><span class="rest-label">Resting</span><span class="rest-mini">↻</span><span class="rest-mini">✕</span></div>
+            </div>
+            <div class="slot">
+              <div class="shead"><span class="sname">Back squat</span><span class="starget">4×5 · RIR 2–3</span></div>
+              <div class="warmline"><b>Warm-up</b>Bar ×5 → 95 ×3 → 135 ×2</div>
+              <div class="sfoot"><span class="chip"><span class="n">185</span><span class="u">lb</span><span class="r">×5</span><span class="c">▾</span></span><span class="notebtn">✎ note</span></div>
+            </div>
+            <div class="slot">
+              <div class="shead"><span class="sname">DB bench press</span><span class="starget">3×6–8 · RIR 2–3</span></div>
+              <div class="scue">Feet planted, slight tuck — bar path over the wrist</div>
+              <div class="sfoot"><span class="chip"><span class="n">60</span><span class="u">lb</span><span class="r">×8</span><span class="c">▾</span></span><span class="notebtn">✎ note</span></div>
+            </div>
+            <div class="slot">
+              <div class="shead"><span class="sname">One-arm DB row</span><span class="starget">3×8–10 /side</span></div>
+              <div class="sfoot"><span class="chip"><span class="n">70</span><span class="u">lb</span><span class="r">×10</span><span class="c">▾</span></span><span class="notebtn">✎ note</span></div>
+            </div>
+          </div>
+        </div>
+        <figcaption>Workout — knurl builds as you rest</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <p class="note">The filling rest pill ships with whichever option you pick — it's the shared upgrade.
+  All three survive the light (paper + bronze) theme: the oak and knurl pick up the deeper bronze, the
+  blueprint marks read like pencil on paper. And everything here is inline SVG or CSS — no new assets,
+  no cache changes beyond the version bump.</p>
+</div>
+</body>
+</html>
