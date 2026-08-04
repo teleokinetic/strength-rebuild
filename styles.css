@@ -68,6 +68,8 @@
   --display: 'Barlow Condensed', 'Avenir Next Condensed', 'Arial Narrow', sans-serif;
   --body: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --radius: 14px;
+  /* the tucked corner: three soft corners, one forge-cut — the box signature */
+  --petal: 16px 16px 16px 5px;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -123,12 +125,26 @@ a { color: inherit; text-decoration: none; }
   margin: 18px 0 8px;
 }
 
+/* ---------- pressed barley ---------- */
+
+/* The one ornament, companion to Forte's rose sprig. On home it stands
+   after the ledger in the open corner; on a workout it hugs the header's
+   right edge and tucks behind the sticky rest dock as you scroll. */
+.barley { color: var(--brass); opacity: 0.5; pointer-events: none; }
+.fieldmark { display: flex; justify-content: flex-end; margin-top: 20px; padding-right: 8px; }
+.fieldmark .barley { width: 64px; height: 128px; }
+.dayhead { position: relative; }
+.dayhead .barley {
+  position: absolute; top: -46px; right: 0; z-index: -1;
+  width: 62px; height: 124px;
+}
+
 /* ---------- home ---------- */
 
 .daygrid { display: grid; gap: 12px; }
 .daycard {
   display: block; background: var(--card); border: 1px solid var(--line);
-  border-radius: var(--radius); padding: 18px 16px;
+  border-radius: var(--petal); padding: 18px 16px;
 }
 .daycard-name {
   font-family: var(--display); font-weight: 600; font-size: 30px;
@@ -238,34 +254,42 @@ body::before {
 .rest-idle { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .restbtn {
   background: var(--brass); color: var(--on-brass);
-  border-radius: var(--radius); padding: 16px 10px;
+  border-radius: var(--petal); padding: 16px 10px;
   font-family: var(--display); font-weight: 600; font-size: 21px;
   letter-spacing: 0.07em; text-transform: uppercase;
 }
 .restbtn span { font-variant-numeric: tabular-nums; opacity: 0.75; margin-left: 4px; }
 .restbtn.heavy { background: var(--raised); color: var(--ink); border: 1px solid var(--line); }
 
+/* Running rest is the box that fills as you rest — the button is the clock. */
 .rest-running {
-  display: flex; align-items: center; gap: 12px;
+  position: relative; overflow: hidden;
   background: var(--card); border: 1px solid var(--line);
-  border-radius: var(--radius); padding: 10px 14px;
+  border-radius: var(--petal); padding: 10px 14px;
 }
+.rest-fill {
+  position: absolute; top: 0; bottom: 0; left: 0; width: 0;
+  background: var(--brass-wash); border-right: 2px solid var(--brass);
+  transition: width 0.25s linear;
+}
+.rest-row { position: relative; display: flex; align-items: center; gap: 12px; }
 .rest-time {
-  font-family: var(--display); font-weight: 600; font-size: 40px;
-  font-variant-numeric: tabular-nums; letter-spacing: 0.03em; min-width: 96px;
+  font-family: var(--display); font-weight: 600; font-size: 36px;
+  font-variant-numeric: tabular-nums; letter-spacing: 0.03em; min-width: 88px;
 }
-.rest-track { flex: 1; height: 6px; background: var(--raised); border-radius: 3px; overflow: hidden; }
-.rest-fill { height: 100%; background: var(--brass); width: 0; transition: width 0.25s linear; }
-.rest-ctl { display: flex; gap: 6px; }
+.rest-label {
+  font-family: var(--display); font-weight: 500; font-size: 13px;
+  letter-spacing: 0.12em; text-transform: uppercase; color: var(--dim); flex: 1;
+}
 .rest-mini {
   width: 42px; height: 42px; border-radius: 10px;
   background: var(--raised); border: 1px solid var(--line);
-  font-size: 18px; color: var(--dim);
+  font-size: 18px; color: var(--dim); flex: none;
 }
 
 .rest-done {
   width: 100%; background: var(--brass); color: var(--on-brass);
-  border-radius: var(--radius); padding: 16px 10px;
+  border-radius: var(--petal); padding: 16px 10px;
   font-family: var(--display); font-weight: 600; font-size: 21px;
   letter-spacing: 0.07em; text-transform: uppercase;
   animation: restpulse 0.9s ease-in-out infinite alternate;
@@ -278,7 +302,7 @@ body::before {
 .slots { display: grid; gap: 10px; grid-template-columns: minmax(0, 1fr); }
 .slot {
   background: var(--card); border: 1px solid var(--line);
-  border-radius: var(--radius); padding: 13px 14px;
+  border-radius: var(--petal); padding: 13px 14px;
 }
 .slot-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
 .slot-name {
@@ -309,7 +333,7 @@ body::before {
 .chip {
   display: inline-flex; align-items: baseline; gap: 5px;
   background: var(--raised); border: 1px solid var(--line);
-  border-radius: 10px; padding: 8px 14px;
+  border-radius: 10px 10px 10px 4px; padding: 8px 14px;
 }
 .chip-num {
   font-family: var(--display); font-weight: 600; font-size: 22px;
@@ -365,7 +389,7 @@ body::before {
 .finishbtn {
   width: 100%; margin-top: 16px;
   border: 1px solid var(--line); background: var(--card); color: var(--ink);
-  border-radius: var(--radius); padding: 15px 10px;
+  border-radius: var(--petal); padding: 15px 10px;
   font-family: var(--display); font-weight: 600; font-size: 19px;
   letter-spacing: 0.07em; text-transform: uppercase;
 }
@@ -379,7 +403,7 @@ body::before {
 .setrow {
   display: flex; align-items: center; justify-content: space-between; gap: 10px;
   background: var(--card); border: 1px solid var(--line);
-  border-radius: var(--radius); padding: 12px 14px;
+  border-radius: var(--petal); padding: 12px 14px;
 }
 .setlabel { font-weight: 600; }
 .segwrap { display: flex; gap: 6px; }

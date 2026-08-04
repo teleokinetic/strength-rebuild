@@ -8,7 +8,7 @@
 
 const STORE_KEY = 'sr-state-v2';
 const V1_KEY = 'sr-state-v1';        // read-only: migration source, never written
-const APP_VERSION = '2.6.0';
+const APP_VERSION = '2.7.0';
 
 let state = null;
 
@@ -667,6 +667,34 @@ document.addEventListener('visibilitychange', () => {
 
 /* ============================== views ============================== */
 
+// Pressed barley — the one ornament (companion to Forte's rose sprig).
+// Tall and narrow so it hugs an edge without spreading into content.
+function barleyHTML() {
+  return `
+    <svg class="barley" viewBox="0 0 90 132" aria-hidden="true">
+      <g stroke-linecap="round">
+        <path d="M46 130 C 48 106 48 88 45 66" fill="none" stroke="currentColor" stroke-width="2"/>
+        <g stroke="currentColor" stroke-width="1.1" opacity="0.5" fill="none">
+          <path d="M42 58 L 30 8"/><path d="M45 54 L 40 4"/><path d="M48 56 L 50 2"/>
+          <path d="M51 60 L 60 10"/><path d="M40 64 L 26 22"/>
+        </g>
+        <g fill="currentColor" opacity="0.45">
+          <ellipse cx="41" cy="62" rx="3.4" ry="7" transform="rotate(24 41 62)"/>
+          <ellipse cx="49" cy="60" rx="3.4" ry="7" transform="rotate(-20 49 60)"/>
+          <ellipse cx="40" cy="50" rx="3.4" ry="7" transform="rotate(22 40 50)"/>
+          <ellipse cx="48" cy="48" rx="3.4" ry="7" transform="rotate(-22 48 48)"/>
+          <ellipse cx="39" cy="38" rx="3.3" ry="6.6" transform="rotate(20 39 38)"/>
+          <ellipse cx="47" cy="36" rx="3.3" ry="6.6" transform="rotate(-24 47 36)"/>
+          <ellipse cx="40" cy="27" rx="3" ry="6" transform="rotate(16 40 27)"/>
+          <ellipse cx="46" cy="25" rx="3" ry="6" transform="rotate(-18 46 25)"/>
+          <ellipse cx="43" cy="17" rx="2.8" ry="5.6" transform="rotate(-2 43 17)"/>
+        </g>
+        <path d="M46 100 C 35 97 27 90 24 79 C 31 83 40 90 46 95 Z" fill="currentColor" opacity="0.3"/>
+        <path d="M47 112 C 55 109 60 104 62 97 C 57 100 51 105 47 109 Z" fill="currentColor" opacity="0.3"/>
+      </g>
+    </svg>`;
+}
+
 function topbar(backTo) {
   const left = backTo
     ? `<a class="backlink" href="${backTo}">‹ Back</a>`
@@ -686,7 +714,7 @@ function viewHome() {
         <div class="daycard-last">${esc(when)}</div>
       </a>`;
   }).join('');
-  return `${topbar()}<div class="daygrid">${cards}</div>${ledgerHTML()}`;
+  return `${topbar()}<div class="daygrid">${cards}</div>${ledgerHTML()}<div class="fieldmark">${barleyHTML()}</div>`;
 }
 
 function slotCardHTML(day, slot) {
@@ -758,9 +786,10 @@ function restDockHTML() {
     const pct = Math.max(0, Math.min(100, (1 - left / rest.total) * 100));
     return `
       <div class="rest-running">
-        <div class="rest-time" data-rest-time>${fmtMMSS(left)}</div>
-        <div class="rest-track"><div class="rest-fill" data-rest-fill style="width:${pct}%"></div></div>
-        <div class="rest-ctl">
+        <div class="rest-fill" data-rest-fill style="width:${pct}%"></div>
+        <div class="rest-row">
+          <div class="rest-time" data-rest-time>${fmtMMSS(left)}</div>
+          <span class="rest-label">Resting</span>
           <button class="rest-mini" data-action="rest-restart">↻</button>
           <button class="rest-mini" data-action="rest-cancel">✕</button>
         </div>
@@ -793,6 +822,7 @@ function viewDay(dayId) {
   return `
     ${topbar('#/')}
     <div class="dayhead">
+      ${barleyHTML()}
       <div class="dayhead-name">${esc(day.name)} <span class="dayhead-sub">${esc(day.subtitle)}</span></div>
     </div>
     <div id="restdock" class="restdock">${restDockHTML()}</div>
