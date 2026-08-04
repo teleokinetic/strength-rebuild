@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Forte — flower options</title>
+<style>
+:root{
+  --bg:#FBF4F1; --surface:#F4E7E2; --card:#FFFDFC; --raised:#F0E1DB; --line:#EDDCD6;
+  --ink:#41302C; --dim:#94756B; --rose:#B44E6B; --rose-wash:rgba(180,78,107,.10);
+  --on-rose:#FFF6F3;
+  --disp:ui-rounded,'SF Pro Rounded','Arial Rounded MT Bold','Trebuchet MS',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#EFE4DF;color:var(--ink);font-family:var(--disp);padding:52px 28px 100px}
+.wrap{max-width:1160px;margin:0 auto}
+h1{font-size:34px;font-weight:800;letter-spacing:.2px}
+.lead{color:#7A6058;margin-top:10px;font-size:16.5px;line-height:1.55;max-width:660px}
+.option{margin-top:76px}
+.k{display:inline-block;background:var(--rose-wash);color:var(--rose);border-radius:999px;padding:4px 12px;font-size:13px;font-weight:700;letter-spacing:.3px}
+.option h2{font-size:26px;margin-top:10px;font-weight:800}
+.blurb{color:#7A6058;margin-top:8px;max-width:640px;line-height:1.55;font-size:15.5px}
+.where{margin-top:8px;font-size:13.5px;color:#7A6058}
+.where b{color:var(--ink);font-weight:700}
+.phones{display:flex;gap:32px;flex-wrap:wrap;margin-top:26px}
+figure{margin:0}
+figcaption{text-align:center;color:#7A6058;font-size:13.5px;margin-top:10px}
+.note{margin-top:72px;color:#7A6058;font-size:14.5px;line-height:1.55;max-width:640px;border-top:1px solid #E2D2CB;padding-top:20px}
+
+/* ---------- phone shell ---------- */
+.phone{width:320px;height:620px;background:var(--bg);border-radius:38px;border:1px solid var(--line);
+  box-shadow:0 24px 48px rgba(65,48,44,.14);overflow:hidden;position:relative;flex:none}
+.screen{position:relative;height:100%;padding:26px 22px 22px;display:flex;flex-direction:column}
+
+/* ---------- home ---------- */
+.homehead{display:flex;justify-content:space-between;align-items:center}
+.wordmark{font-size:22px;font-weight:800;color:var(--rose);letter-spacing:.2px}
+.gear{width:24px;height:24px;color:var(--dim)}
+.greet{font-size:30px;font-weight:800;margin-top:28px;position:relative;z-index:1}
+.gdate{color:var(--dim);margin-top:5px;font-size:15px;position:relative;z-index:1}
+.daycard{display:block;background:var(--card);border:1px solid var(--line);
+  border-radius:26px 26px 26px 10px;padding:20px;margin-top:18px;
+  box-shadow:0 10px 24px rgba(65,48,44,.06);position:relative;z-index:1}
+.home .daycard:first-of-type{margin-top:26px}
+.dayname{font-size:22px;font-weight:800}
+.daysub{color:var(--dim);margin-top:4px;font-size:14px}
+.homefoot{margin-top:auto;text-align:center;color:var(--dim);font-size:15px}
+
+/* ---------- workout ---------- */
+.whead{display:flex;align-items:baseline;gap:12px;position:relative;z-index:1}
+.back{color:var(--dim);font-size:24px;line-height:1}
+.wtitle{font-size:26px;font-weight:800}
+.slot{background:var(--card);border:1px solid var(--line);border-radius:26px 26px 26px 10px;
+  padding:15px 18px;margin-top:14px;position:relative;z-index:1;box-shadow:0 10px 24px rgba(65,48,44,.05)}
+.workout .slot:first-of-type{margin-top:22px}
+.sname{font-weight:800;font-size:17px}
+.starget{color:var(--dim);font-size:13px;margin-top:2px}
+.chip{display:inline-flex;align-items:center;gap:6px;background:var(--raised);border-radius:999px;
+  padding:6px 12px;margin-top:10px;font-size:14px}
+.chip b{color:var(--rose)}
+.scue{color:var(--dim);font-size:12.5px;margin-top:8px;line-height:1.45}
+.dock{margin-top:auto;display:flex;gap:12px;padding-top:14px;position:relative;z-index:1}
+.pill{flex:1;text-align:center;border-radius:999px;padding:12px 0;font-weight:800;font-size:15.5px}
+.pill.solid{background:var(--rose);color:var(--on-rose)}
+.pill.ghost{background:var(--rose-wash);color:var(--rose)}
+
+/* ---------- blossoms ---------- */
+.bloom{width:14px;height:14px;color:var(--rose);flex:none}
+.bloom .bc{fill:var(--card)}
+.mark{position:absolute;top:15px;right:15px;width:17px;height:17px;color:var(--rose)}
+.mark.bud{opacity:.35}
+
+/* option 1 — sprig */
+.sprig{position:absolute;pointer-events:none;color:var(--rose);opacity:.55}
+.home .sprig{top:78px;right:8px;width:104px;height:118px}
+.workout .sprig{top:12px;right:10px;width:88px;height:100px}
+
+/* option 2 — week strip */
+.week{display:flex;align-items:center;gap:9px;margin-top:16px;color:var(--dim);font-size:13.5px;position:relative;z-index:1}
+.week .bloom{width:15px;height:15px}
+.week .rest-dot{width:5px;height:5px;border-radius:50%;background:var(--line);border:1px solid #E0CCC5}
+
+/* option 3 — hem + background petals */
+.hem{display:flex;gap:13px;justify-content:center;align-items:center;margin-top:20px;color:var(--rose);opacity:.4;position:relative;z-index:1}
+.hem .bloom{width:10px;height:10px}
+.hem i{width:3px;height:3px;border-radius:50%;background:currentColor;display:block}
+.workout .hem{margin-top:16px}
+.bgpetal{position:absolute;display:block;background:var(--rose);opacity:.055;border-radius:0 100% 0 100%;pointer-events:none}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <g id="petals-f" fill="currentColor">
+    <ellipse cx="12" cy="6.2" rx="3.4" ry="4.8"/>
+    <ellipse cx="12" cy="6.2" rx="3.4" ry="4.8" transform="rotate(72 12 12)"/>
+    <ellipse cx="12" cy="6.2" rx="3.4" ry="4.8" transform="rotate(144 12 12)"/>
+    <ellipse cx="12" cy="6.2" rx="3.4" ry="4.8" transform="rotate(216 12 12)"/>
+    <ellipse cx="12" cy="6.2" rx="3.4" ry="4.8" transform="rotate(288 12 12)"/>
+  </g>
+  <g id="petals-l" fill="none" stroke="currentColor" stroke-width="1.7">
+    <ellipse cx="12" cy="6.2" rx="3.4" ry="4.8"/>
+    <ellipse cx="12" cy="6.2" rx="3.4" ry="4.8" transform="rotate(72 12 12)"/>
+    <ellipse cx="12" cy="6.2" rx="3.4" ry="4.8" transform="rotate(144 12 12)"/>
+    <ellipse cx="12" cy="6.2" rx="3.4" ry="4.8" transform="rotate(216 12 12)"/>
+    <ellipse cx="12" cy="6.2" rx="3.4" ry="4.8" transform="rotate(288 12 12)"/>
+  </g>
+  <g id="sprig-art" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+    <path d="M96 6 C 78 18 54 38 40 62 C 32 76 27 89 26 102"/>
+    <path d="M60 44 C 54 54 50 62 48 72" stroke-width="1.7"/>
+    <path d="M74 26 c 10 -9 22 -10 30 -4 c -10 9 -22 10 -30 4 z" fill="currentColor" stroke="none" opacity=".3"/>
+    <path d="M38 66 c -11 -3 -18 -11 -19 -21 c 11 3 18 11 19 21 z" fill="currentColor" stroke="none" opacity=".3"/>
+    <g transform="translate(38 70) scale(.8)"><use href="#petals-l"/></g>
+    <circle cx="26" cy="106" r="2.6" fill="currentColor" stroke="none" opacity=".55"/>
+  </g>
+</defs></svg>
+
+<div class="wrap">
+  <h1>Forte — a little flora</h1>
+  <p class="lead">Three ways to let a flower into Morning Rosé. The bones stay exactly the same — this is
+  ornament only. The flower is a five-petal wild rose drawn from the same deep rose as the buttons,
+  so it reads as part of the palette, not a sticker on top.</p>
+
+  <!-- ============ option 1 ============ -->
+  <section class="option">
+    <span class="k">Option 1</span>
+    <h2>Pressed sprig</h2>
+    <p class="blurb">A hand-drawn rose sprig tucked beside the greeting, like a flower pressed into a
+    notebook. It appears once per screen, in the empty corner, and never touches the content. The
+    quietest of the three.</p>
+    <p class="where"><b>Where:</b> beside the greeting on home · header corner on the workout page. Everything else unchanged.</p>
+    <div class="phones">
+      <figure>
+        <div class="phone home">
+          <svg class="sprig" viewBox="0 0 104 118" aria-hidden="true"><use href="#sprig-art"/></svg>
+          <div class="screen">
+            <div class="homehead">
+              <div class="wordmark">Forte</div>
+              <svg class="gear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg>
+            </div>
+            <div class="greet">Olá, Carolina</div>
+            <div class="gdate">Tuesday · August 4</div>
+            <a class="daycard"><div class="dayname">Terra</div><div class="daysub">Squat · push-up · hips</div></a>
+            <a class="daycard"><div class="dayname">Voo</div><div class="daysub">Hinge · chin-up · press</div></a>
+            <div class="homefoot">History</div>
+          </div>
+        </div>
+        <figcaption>Home</figcaption>
+      </figure>
+      <figure>
+        <div class="phone workout">
+          <svg class="sprig" viewBox="0 0 104 118" aria-hidden="true"><use href="#sprig-art"/></svg>
+          <div class="screen">
+            <div class="whead"><span class="back">‹</span><span class="wtitle">Terra</span></div>
+            <div class="slot"><div class="sname">Warm-up</div><div class="starget">~5 min · heart rate up, joints warm</div></div>
+            <div class="slot">
+              <div class="sname">Back squat</div><div class="starget">4×8–12 · RIR 2–3</div>
+              <span class="chip"><b>95 lb</b> · 10 reps</span>
+              <div class="scue">Reps first — build to 12s, then add weight and drop back to 8s</div>
+            </div>
+            <div class="slot">
+              <div class="sname">Push-up progression</div><div class="starget">3×5–8</div>
+              <div class="scue">3×8 crisp at one height → move down a notch. Body one long line</div>
+            </div>
+            <div class="dock"><div class="pill ghost">Rest 1:30</div><div class="pill solid">Rest 3:00</div></div>
+          </div>
+        </div>
+        <figcaption>Workout</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ============ option 2 ============ -->
+  <section class="option">
+    <span class="k">Option 2</span>
+    <h2>Bloom when done</h2>
+    <p class="blurb">The flower is earned, not printed. A finished exercise gets a blossom instead of a
+    checkmark, the current one shows a faint bud, and the week's finished sessions collect beside the
+    greeting. A fresh screen has almost no flowers — by the end of a workout, it's in bloom.</p>
+    <p class="where"><b>Where:</b> done-marks on exercise cards · a small “this week” row on home · a full bloom on the session-done banner.</p>
+    <div class="phones">
+      <figure>
+        <div class="phone home">
+          <div class="screen">
+            <div class="homehead">
+              <div class="wordmark">Forte</div>
+              <svg class="gear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg>
+            </div>
+            <div class="greet">Olá, Carolina</div>
+            <div class="gdate">Tuesday · August 4</div>
+            <div class="week">
+              <span>This week</span>
+              <svg class="bloom" viewBox="0 0 24 24"><use href="#petals-f"/><circle cx="12" cy="12" r="2.6" class="bc"/></svg>
+              <svg class="bloom" viewBox="0 0 24 24"><use href="#petals-f"/><circle cx="12" cy="12" r="2.6" class="bc"/></svg>
+              <span class="rest-dot"></span>
+            </div>
+            <a class="daycard"><div class="dayname">Terra</div><div class="daysub">Squat · push-up · hips</div></a>
+            <a class="daycard"><div class="dayname">Voo</div><div class="daysub">Hinge · chin-up · press</div></a>
+            <div class="homefoot">History</div>
+          </div>
+        </div>
+        <figcaption>Home — two sessions done, one to go</figcaption>
+      </figure>
+      <figure>
+        <div class="phone workout">
+          <div class="screen">
+            <div class="whead"><span class="back">‹</span><span class="wtitle">Terra</span></div>
+            <div class="slot">
+              <div class="sname">Warm-up</div><div class="starget">~5 min · heart rate up, joints warm</div>
+              <svg class="mark" viewBox="0 0 24 24"><use href="#petals-f"/><circle cx="12" cy="12" r="2.6" class="bc"/></svg>
+            </div>
+            <div class="slot">
+              <div class="sname">Back squat</div><div class="starget">4×8–12 · RIR 2–3</div>
+              <span class="chip"><b>95 lb</b> · 10 reps</span>
+              <svg class="mark" viewBox="0 0 24 24"><use href="#petals-f"/><circle cx="12" cy="12" r="2.6" class="bc"/></svg>
+            </div>
+            <div class="slot">
+              <div class="sname">Push-up progression</div><div class="starget">3×5–8</div>
+              <div class="scue">3×8 crisp at one height → move down a notch. Body one long line</div>
+              <svg class="mark bud" viewBox="0 0 24 24"><use href="#petals-l"/></svg>
+            </div>
+            <div class="dock"><div class="pill ghost">Rest 1:30</div><div class="pill solid">Rest 3:00</div></div>
+          </div>
+        </div>
+        <figcaption>Workout — done ones have bloomed</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ============ option 3 ============ -->
+  <section class="option">
+    <span class="k">Option 3</span>
+    <h2>Petal hem</h2>
+    <p class="blurb">A row of tiny petals under the header, like embroidered trim on linen, plus one or
+    two pale petals drifting behind the cards. Always present on every screen, but faint enough to read
+    as texture rather than decoration.</p>
+    <p class="where"><b>Where:</b> a hem under every screen's header · faint background petals. Cards and buttons untouched.</p>
+    <div class="phones">
+      <figure>
+        <div class="phone home">
+          <i class="bgpetal" style="width:130px;height:130px;left:-34px;bottom:96px;transform:rotate(28deg)"></i>
+          <i class="bgpetal" style="width:92px;height:92px;right:-18px;top:238px;transform:rotate(-38deg)"></i>
+          <div class="screen">
+            <div class="homehead">
+              <div class="wordmark">Forte</div>
+              <svg class="gear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg>
+            </div>
+            <div class="greet">Olá, Carolina</div>
+            <div class="gdate">Tuesday · August 4</div>
+            <div class="hem">
+              <i></i><i></i>
+              <svg class="bloom" viewBox="0 0 24 24"><use href="#petals-f"/></svg>
+              <i></i><i></i>
+              <svg class="bloom" viewBox="0 0 24 24"><use href="#petals-f"/></svg>
+              <i></i><i></i>
+              <svg class="bloom" viewBox="0 0 24 24"><use href="#petals-f"/></svg>
+              <i></i><i></i>
+            </div>
+            <a class="daycard"><div class="dayname">Terra</div><div class="daysub">Squat · push-up · hips</div></a>
+            <a class="daycard"><div class="dayname">Voo</div><div class="daysub">Hinge · chin-up · press</div></a>
+            <div class="homefoot">History</div>
+          </div>
+        </div>
+        <figcaption>Home</figcaption>
+      </figure>
+      <figure>
+        <div class="phone workout">
+          <i class="bgpetal" style="width:110px;height:110px;right:-26px;bottom:120px;transform:rotate(24deg)"></i>
+          <div class="screen">
+            <div class="whead"><span class="back">‹</span><span class="wtitle">Terra</span></div>
+            <div class="hem">
+              <i></i><i></i>
+              <svg class="bloom" viewBox="0 0 24 24"><use href="#petals-f"/></svg>
+              <i></i><i></i>
+              <svg class="bloom" viewBox="0 0 24 24"><use href="#petals-f"/></svg>
+              <i></i><i></i>
+              <svg class="bloom" viewBox="0 0 24 24"><use href="#petals-f"/></svg>
+              <i></i><i></i>
+            </div>
+            <div class="slot" style="margin-top:14px"><div class="sname">Warm-up</div><div class="starget">~5 min · heart rate up, joints warm</div></div>
+            <div class="slot">
+              <div class="sname">Back squat</div><div class="starget">4×8–12 · RIR 2–3</div>
+              <span class="chip"><b>95 lb</b> · 10 reps</span>
+              <div class="scue">Reps first — build to 12s, then add weight and drop back to 8s</div>
+            </div>
+            <div class="slot">
+              <div class="sname">Push-up progression</div><div class="starget">3×5–8</div>
+              <div class="scue">3×8 crisp at one height → move down a notch. Body one long line</div>
+            </div>
+            <div class="dock"><div class="pill ghost">Rest 1:30</div><div class="pill solid">Rest 3:00</div></div>
+          </div>
+        </div>
+        <figcaption>Workout</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <p class="note">All three carry over to evening rosé (dark mode) as-is — the blossom just picks up the
+  lighter rose. Mixing is also fine: the sprig on home plus bloom-marks for done exercises is a natural
+  pair. None of these add assets — every flower is a few lines of inline SVG.</p>
+</div>
+</body>
+</html>
