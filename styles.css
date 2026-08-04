@@ -114,9 +114,13 @@ a { color: inherit; text-decoration: none; }
 }
 .wordmark .half { color: var(--dim); }
 .gear { font-size: 20px; color: var(--dim); padding: 2px 6px; }
+/* Padded out to a ~44pt target (negative margin keeps the layout) —
+   it's tapped with chalky thumbs between sets. */
 .backlink {
+  display: inline-block;
   font-family: var(--display); font-weight: 600; font-size: 15px;
   letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim);
+  padding: 13px 14px; margin: -13px -14px;
 }
 
 .eyebrow {
@@ -259,7 +263,18 @@ body::before {
   letter-spacing: 0.07em; text-transform: uppercase;
 }
 .restbtn span { font-variant-numeric: tabular-nums; opacity: 0.75; margin-left: 4px; }
-.restbtn.heavy { background: var(--raised); color: var(--ink); border: 1px solid var(--line); }
+.restbtn.heavy, .restbtn.quiet { background: var(--raised); color: var(--ink); border: 1px solid var(--line); }
+/* Once a slot is touched, brass moves to the tier that slot declares and
+   names the lift. The tag lives inside the button's bottom padding
+   (absolute, one line, ellipsized) so the sticky dock never changes height. */
+.restbtn { position: relative; }
+.restbtn .rest-tag {
+  position: absolute; left: 8px; right: 8px; bottom: 3px;
+  display: block; font-family: var(--display); font-weight: 500; font-size: 11px;
+  letter-spacing: 0.14em; line-height: 1; opacity: 0.8; margin: 0;
+  font-variant-numeric: normal;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
 
 /* Running rest is the box that fills as you rest — the button is the clock. */
 .rest-running {
@@ -329,6 +344,17 @@ body::before {
 .menu { margin: 8px 0 0; padding-left: 18px; font-size: 14px; }
 .menu li { margin: 1px 0; }
 
+/* Rung ladder: ordered progression pills — tap the one done today.
+   Reads as "where am I on the ladder" in the same space as a menu. */
+.rungs { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 9px; }
+.rung {
+  font-family: var(--display); font-weight: 600; font-size: 13.5px;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: 9px 9px 9px 4px; padding: 9px 12px; color: var(--dim);
+}
+.rung.now { background: var(--brass); color: var(--on-brass); border-color: var(--brass); }
+
 .slot-foot { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
 .chip {
   display: inline-flex; align-items: baseline; gap: 5px;
@@ -340,6 +366,14 @@ body::before {
   font-variant-numeric: tabular-nums;
 }
 .chip-unit { color: var(--dim); font-size: 13px; }
+/* Empty chip invites instead of showing a broken-looking "— lb ×—".
+   line-height matches the chip-num line box so the chip doesn't grow
+   when the first weight lands. */
+.chip-add {
+  font-family: var(--display); font-weight: 600; font-size: 15px;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim);
+  line-height: 32px;
+}
 .chip-reps {
   font-family: var(--display); font-weight: 600; font-size: 17px;
   color: var(--dim); font-variant-numeric: tabular-nums;
@@ -396,6 +430,37 @@ body::before {
 .finishbtn.solid { background: var(--brass); color: var(--on-brass); border: none; }
 .finish-wrap { display: grid; gap: 12px; }
 .finish-hint { color: var(--dim); font-size: 14px; }
+
+/* The closing card: what will save, as readable rows — the session as a
+   finished object, not a form submission. */
+.finish-line {
+  font-family: var(--display); font-weight: 600; font-size: 27px;
+  letter-spacing: 0.05em; text-transform: uppercase; line-height: 1.1;
+}
+.recap {
+  background: var(--card); border: 1px solid var(--line);
+  border-radius: var(--petal); padding: 11px 14px 4px;
+}
+.recap-head {
+  font-family: var(--display); font-weight: 600; font-size: 12px;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--brass);
+  margin-bottom: 6px;
+}
+.rrow {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 10px;
+  padding: 8px 0 9px; border-top: 1px solid var(--line);
+}
+.rrow-name { font-weight: 600; font-size: 15px; }
+.rrow-note { color: var(--brass); font-style: normal; font-size: 13px; }
+.rrow-num {
+  font-family: var(--display); font-weight: 500; font-size: 16px;
+  color: var(--dim); font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.rrow-num b { color: var(--ink); font-weight: 600; }
+.recap-extra {
+  color: var(--dim); font-size: 13.5px; padding: 9px 0 10px;
+  border-top: 1px solid var(--line);
+}
 
 /* ---------- settings & editor ---------- */
 

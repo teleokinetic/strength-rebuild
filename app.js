@@ -8,7 +8,7 @@
 
 const STORE_KEY = 'sr-state-v2';
 const V1_KEY = 'sr-state-v1';        // read-only: migration source, never written
-const APP_VERSION = '2.7.0';
+const APP_VERSION = '2.8.0';
 
 let state = null;
 
@@ -128,7 +128,7 @@ function patchProgram() {
   const p = state.program;
   if (!p) return;
   const v = parseFloat(p.specVersion) || 0;
-  if (v >= 1.3) return;
+  if (v >= 1.4) return;
 
   // 0.4: Bulgarian split squat becomes Stork squat; both days open
   // with a no-weight Prep slot (wrist prep + passive/active hangs).
@@ -291,7 +291,26 @@ function patchProgram() {
     }
   }
 
-  p.specVersion = '1.3';
+  // 1.4: the slider curl becomes the Nordic ladder — the loose variant menu
+  // becomes ordered rungs (Forte's rung-pill pattern). Tap today's rung; it
+  // carries forward like a weight, and the board's Nordic row reads it live.
+  // Old slider-leg-curl note entries stay put — they really were slider curls.
+  if (v < 1.4) {
+    const dayA = p.days.find((d) => d.id === 'dayA');
+    const s = dayA && dayA.slots.find((x) => slug(x.name) === 'slider-leg-curl');
+    if (s && !s.rungs) {
+      s.name = 'Nordic ladder';
+      s.target = '3×4–8';
+      delete s.menu;
+      s.rungs = [
+        'Bilateral slider', 'Single-leg slider', 'Shallow negative',
+        'Full negative', 'Band assist', 'Full Nordic',
+      ];
+      s.cue = 'Slow 3–5 s eccentric; right leads, rep-matched — own a rung crisp, then move up';
+    }
+  }
+
+  p.specVersion = '1.4';
   save();
 }
 
@@ -380,6 +399,18 @@ function lastRepsFor(exerciseId) {
   return '';
 }
 
+// Ladder position mirrors the working weight: the rung picked (or carried)
+// per session, matched by name so ladder edits don't orphan history.
+function lastRungFor(exerciseId) {
+  for (let i = state.sessions.length - 1; i >= 0; i--) {
+    const entry = (state.sessions[i].entries || []).find(
+      (e) => e.exerciseId === exerciseId && e.rung
+    );
+    if (entry) return entry.rung;
+  }
+  return '';
+}
+
 function lastSessionFor(dayId) {
   for (let i = state.sessions.length - 1; i >= 0; i--) {
     if (state.sessions[i].dayId === dayId) return state.sessions[i];
@@ -406,13 +437,37 @@ const TARGETS = [
     curFmt: (r) => `chins ${r}`, cur: 'chins 5', pct: 42, goalText: '12 strict',
     pips: ['12 chins', '+40 chin', 'dips ×10', 'ring MU'], pipNow: 0 },
   { key: 'row',    label: 'Row',        eq: 'Row', ex: 'one-arm-db-row', goal: 75,  goalText: '75 ×8', repsAlong: true },
-  { key: 'nordic', label: 'Nordic',     eq: 'Nrd', cur: 'negs begun', pct: 25, goalText: '5 · R=L' },
+  // nordic reads live from the Day A ladder once a rung is tapped; the
+  // static cur/pct is the calibration fallback until then
+  { key: 'nordic', label: 'Nordic',     eq: 'Nrd', rungEx: 'nordic-ladder', cur: 'negs begun', pct: 25, goalText: '5 · R=L' },
   { key: 'carry',  label: 'Carry',      eq: 'Cry', ex: 'suitcase-carry', goal: 80,  goalText: '80 lb' },
 ];
+
+// The ladder itself lives in the program (editable in-app); the board reads it.
+function rungLadderFor(exerciseId) {
+  for (const day of state.program.days) {
+    for (const s of day.slots) {
+      if (slug(s.name) === exerciseId && Array.isArray(s.rungs)) return s.rungs;
+    }
+  }
+  return [];
+}
 
 // Latest weight > 0 — a logged 0 is a logging mishap, not a current.
 function targetState(item) {
   if (item.locked) return { cur: '', pct: 0 };
+  if (item.rungEx) {
+    const ladder = rungLadderFor(item.rungEx);
+    const i = ladder.indexOf(lastRungFor(item.rungEx));
+    if (i !== -1) {
+      return {
+        cur: ladder[i],
+        pct: Math.round(((i + 1) / ladder.length) * 100),
+        pips: ladder, pipNow: i,
+      };
+    }
+    return { cur: item.cur, pct: item.pct };
+  }
   if (item.repsEx) {
     const r = lastRepsFor(item.repsEx);
     if (r > 0) {
@@ -455,12 +510,14 @@ function ledgerRowsHTML() {
         <span class="lrow-name">${esc(item.label)}</span>
         <span class="lrow-num">/ ${esc(item.goalText)}</span></div></div>`;
     }
-    const pips = item.pips
-      ? `<div class="pips">${item.pips.map((p, i) =>
-          `<span class="pip ${i === item.pipNow ? 'now' : ''}">${esc(p)}</span>` +
-          (i < item.pips.length - 1 ? '<span class="pip-arrow">›</span>' : '')).join('')}</div>`
+    const pipList = s.pips || item.pips;
+    const pipNow = s.pipNow != null ? s.pipNow : item.pipNow;
+    const pips = pipList
+      ? `<div class="pips">${pipList.map((p, i) =>
+          `<span class="pip ${i === pipNow ? 'now' : ''}">${esc(p)}</span>` +
+          (i < pipList.length - 1 ? '<span class="pip-arrow">›</span>' : '')).join('')}</div>`
       : '';
-    const bar = item.pips ? '' : `<div class="lbar"><i style="width:${s.pct}%"></i></div>`;
+    const bar = pipList ? '' : `<div class="lbar"><i style="width:${s.pct}%"></i></div>`;
     return `<div class="litem"><div class="lrow">
       <span class="lrow-name">${esc(item.label)}</span>
       <span class="lrow-num"><b>${esc(String(s.cur))}</b> / ${esc(item.goalText)}</span></div>${bar}${pips}</div>`;
@@ -532,6 +589,7 @@ function recordSession(dayId, note) {
   for (const slot of day.slots) {
     const e = a ? a.entries[slot.id] : null;
     const slotNote = e && e.note ? e.note.trim() : '';
+    const rung = slot.rungs ? effectiveRung(dayId, slot) : '';
     if (slot.track) {
       const w = effectiveWeight(dayId, slot);
       const entry = { exerciseId: slug(slot.name), name: slot.name, weight: w === '' ? '' : parseFloat(w), note: slotNote };
@@ -539,9 +597,12 @@ function recordSession(dayId, note) {
         const r = effectiveReps(dayId, slot);
         entry.reps = r === '' ? '' : parseInt(r, 10);
       }
+      if (rung) entry.rung = rung;
       entries.push(entry);
-    } else if (slotNote) {
-      entries.push({ exerciseId: slug(slot.name), name: slot.name, weight: '', note: slotNote });
+    } else if (slotNote || rung) {
+      const entry = { exerciseId: slug(slot.name), name: slot.name, weight: '', note: slotNote };
+      if (rung) entry.rung = rung;
+      entries.push(entry);
     }
   }
   state.sessions.push({
@@ -561,6 +622,16 @@ function effectiveReps(dayId, slot) {
   if (e && e.reps != null && e.reps !== '') return e.reps;
   if (e && e.reps === '') return '';
   return lastRepsFor(slug(slot.name));
+}
+
+// Effective rung mirrors effective weight: today's tap wins, else the last
+// logged rung carries. An explicit '' means "cleared today" — show none.
+function effectiveRung(dayId, slot) {
+  const a = state.active;
+  const e = a && a.dayId === dayId ? a.entries[slot.id] : null;
+  if (e && e.rung != null && e.rung !== '') return e.rung;
+  if (e && e.rung === '') return '';
+  return lastRungFor(slug(slot.name));
 }
 
 function finishSession(dayId, note) {
@@ -717,27 +788,45 @@ function viewHome() {
   return `${topbar()}<div class="daygrid">${cards}</div>${ledgerHTML()}<div class="fieldmark">${barleyHTML()}</div>`;
 }
 
+// Chip face, rebuilt from effective values on every change — a fresh slot
+// invites ("add weight") instead of showing the broken-looking "— lb ×—".
+function chipInnerHTML(dayId, slot) {
+  const w = effectiveWeight(dayId, slot);
+  const r = slot.reps ? effectiveReps(dayId, slot) : null;
+  if (w === '' || w == null) {
+    // keep already-entered reps visible even before a weight exists
+    const reps = r === '' || r == null ? '' : `<span class="chip-reps">×${esc(String(r))}</span>`;
+    return `<span class="chip-add">Add weight</span>${reps}<span class="chip-caret">▾</span>`;
+  }
+  const label = (slot.added ? '+' : '') + w;
+  const repsChip = slot.reps
+    ? `<span class="chip-reps">×${r === '' || r == null ? '—' : esc(String(r))}</span>` : '';
+  return `<span class="chip-num">${esc(String(label))}</span><span class="chip-unit">${esc(state.settings.unit)}</span>${repsChip}<span class="chip-caret">▾</span>`;
+}
+
+function refreshChip(dayId, slot) {
+  const btn = $(`[data-slotcard="${slot.id}"] .chip`);
+  if (btn) btn.innerHTML = chipInnerHTML(dayId, slot);
+}
+
 function slotCardHTML(day, slot) {
   const a = state.active && state.active.dayId === day.id ? state.active.entries[slot.id] : null;
   const note = a && a.note ? a.note : '';
   const menu = slot.menu && slot.menu.length
     ? `<ul class="menu">${slot.menu.map((m) => `<li>${esc(m)}</li>`).join('')}</ul>` : '';
+  const hasRungs = Array.isArray(slot.rungs) && slot.rungs.length;
+  const effRung = hasRungs ? effectiveRung(day.id, slot) : '';
+  const rungs = hasRungs
+    ? `<div class="rungs">${slot.rungs.map((rn) =>
+        `<button class="rung ${rn === effRung ? 'now' : ''}" data-action="rung" data-slot="${slot.id}" data-rung="${esc(rn)}">${esc(rn)}</button>`).join('')}</div>` : '';
   const warmup = slot.warmup
     ? `<div class="warmup"><span class="warmup-tag">Warm-up</span> ${esc(slot.warmup)}</div>` : '';
   let chip = '', chipEdit = '';
   if (slot.track) {
     const w = effectiveWeight(day.id, slot);
-    const label = w === '' || w == null ? '—' : (slot.added ? '+' : '') + w;
     const r = slot.reps ? effectiveReps(day.id, slot) : null;
-    const repsChip = slot.reps
-      ? `<span class="chip-reps">×${r === '' || r == null ? '—' : esc(String(r))}</span>` : '';
     chip = `
-      <button class="chip" data-action="chip" data-slot="${slot.id}">
-        <span class="chip-num">${esc(String(label))}</span>
-        <span class="chip-unit">${esc(state.settings.unit)}</span>
-        ${repsChip}
-        <span class="chip-caret">▾</span>
-      </button>`;
+      <button class="chip" data-action="chip" data-slot="${slot.id}">${chipInnerHTML(day.id, slot)}</button>`;
     // Full-width row(s) below the footer — inside the flex footer this
     // forces the whole page past the viewport when revealed.
     const weightRow = `
@@ -766,7 +855,7 @@ function slotCardHTML(day, slot) {
         <div class="slot-target">${esc(slot.target || '')}</div>
       </div>
       ${slot.cue ? `<div class="slot-cue">${esc(slot.cue)}</div>` : ''}
-      ${warmup}${menu}
+      ${warmup}${menu}${rungs}
       <div class="slot-foot">
         ${chip}
         <button class="notebtn ${note ? 'has-note' : ''}" data-action="note" data-slot="${slot.id}">✎ note</button>
@@ -777,6 +866,26 @@ function slotCardHTML(day, slot) {
           placeholder="What happened?">${esc(note)}</textarea>
       </div>
     </div>`;
+}
+
+/* The dock's suggestion: every slot already declares its rest tier — once a
+   slot is touched (chip, weight, note, rung) the brass follows its tier and
+   names the lift. Ephemeral by design: resets on every route render, and
+   with no touch yet the dock keeps its old neutral look. */
+let currentSlotId = null;
+
+function touchSlot(slotId) {
+  if (slotId === currentSlotId) return;
+  currentSlotId = slotId;
+  if (!rest.running && !rest.done) renderRestDock();
+}
+
+function restHint() {
+  const dayId = currentDayId();
+  if (!dayId || !currentSlotId) return null;
+  const slot = findSlot(findDay(dayId), currentSlotId);
+  if (!slot) return null;
+  return { tier: slot.rest === 'heavy' ? 'heavy' : 'normal', name: slot.name };
 }
 
 function restDockHTML() {
@@ -798,11 +907,14 @@ function restDockHTML() {
   if (rest.done) {
     return `<button class="rest-done" data-action="rest-ack">Rest done — go</button>`;
   }
-  return `
-    <div class="rest-idle">
-      <button class="restbtn" data-action="rest" data-tier="normal">Rest <span>${fmtMMSS(n)}</span></button>
-      <button class="restbtn heavy" data-action="rest" data-tier="heavy">Rest <span>${fmtMMSS(h)}</span></button>
-    </div>`;
+  const hint = restHint();
+  const btn = (tier, sec) => {
+    const suggested = hint && hint.tier === tier;
+    const cls = 'restbtn' + (hint ? (suggested ? '' : ' quiet') : (tier === 'heavy' ? ' heavy' : ''));
+    const tag = suggested ? `<span class="rest-tag">${esc(hint.name)}</span>` : '';
+    return `<button class="${cls}" data-action="rest" data-tier="${tier}">Rest <span>${fmtMMSS(sec)}</span>${tag}</button>`;
+  };
+  return `<div class="rest-idle">${btn('normal', n)}${btn('heavy', h)}</div>`;
 }
 
 function renderRestDock() {
@@ -830,14 +942,45 @@ function viewDay(dayId) {
     <button class="finishbtn" data-action="finish" data-day="${day.id}">Finish session</button>`;
 }
 
+// Confirm + recap in one card: the promise ("saves every tracked lift at the
+// weight on its chip") stops being a sentence and becomes readable rows, so
+// a stale prefill jumps out here — before it's in the log.
 function viewFinish(dayId) {
   const day = findDay(dayId);
   if (!day) { location.hash = '#/'; return ''; }
+  const a = state.active && state.active.dayId === dayId ? state.active : null;
+  const mins = a ? Math.max(1, Math.round((Date.now() - a.startedAt) / 60000)) : 0;
+  const rows = [];
+  const extras = [];
+  for (const slot of day.slots) {
+    const e = a ? a.entries[slot.id] : null;
+    const noted = !!(e && e.note && e.note.trim());
+    const rung = slot.rungs ? effectiveRung(dayId, slot) : '';
+    if (rung) extras.push(`${slot.name} — ${rung}${noted ? ' ✎' : ''}`);
+    if (slot.track) {
+      const w = effectiveWeight(dayId, slot);
+      const wTxt = w === '' || w == null ? '—' : (slot.added ? '+' : '') + w;
+      let num = `<b>${esc(String(wTxt))}</b> ${esc(state.settings.unit)}`;
+      if (slot.reps) {
+        const r = effectiveReps(dayId, slot);
+        num += ` ×${r === '' || r == null ? '—' : esc(String(r))}`;
+      }
+      rows.push(`<div class="rrow">
+        <span class="rrow-name">${esc(slot.name)}${noted ? ' <i class="rrow-note">✎</i>' : ''}</span>
+        <span class="rrow-num">${num}</span></div>`);
+    } else if (noted && !rung) {
+      extras.push(`${slot.name} ✎`);
+    }
+  }
   return `
     ${topbar('#/day/' + dayId)}
     <div class="finish-wrap">
-      <div class="eyebrow">Finish ${esc(day.name)}</div>
-      <p class="finish-hint">Saves every tracked lift at the weight shown on its chip.</p>
+      <div class="finish-line">${esc(day.name)}${mins ? ` · ${mins} min` : ''}</div>
+      <div class="recap">
+        <div class="recap-head">Will save</div>
+        ${rows.join('')}
+        ${extras.length ? `<div class="recap-extra">${esc(extras.join(' · '))}</div>` : ''}
+      </div>
       <textarea id="finishnote" rows="3" placeholder="Session note (optional)"></textarea>
       <button class="finishbtn solid" data-action="finish-save" data-day="${day.id}">Save session</button>
     </div>`;
@@ -932,6 +1075,8 @@ function viewSlotEdit(dayId, slotId) {
       ${field('Warm-up', 'edit-warmup', slot.warmup)}
       <label class="editfield"><span>Menu (one per line)</span>
         <textarea rows="4" data-action="edit-menu">${esc((slot.menu || []).join('\n'))}</textarea></label>
+      <label class="editfield"><span>Rungs (ordered, one per line)</span>
+        <textarea rows="3" data-action="edit-rungs">${esc((slot.rungs || []).join('\n'))}</textarea></label>
       <div class="setrow">
         <div class="setlabel">Track weight</div>
         <button class="seg ${slot.track ? 'on' : ''}" data-action="edit-track">${slot.track ? 'On' : 'Off'}</button>
@@ -962,6 +1107,7 @@ function viewSlotEdit(dayId, slotId) {
 /* ============================== router ============================== */
 
 function render() {
+  currentSlotId = null;
   const hash = location.hash || '#/';
   const parts = hash.replace(/^#\//, '').split('/');
   let html = '';
@@ -1019,6 +1165,7 @@ document.addEventListener('click', (ev) => {
       box.classList.toggle('hidden');
       t.classList.toggle('open', !box.classList.contains('hidden'));
     }
+    touchSlot(t.getAttribute('data-slot'));
     return;
   }
   if (action === 'step') {
@@ -1034,8 +1181,8 @@ document.addEventListener('click', (ev) => {
     save();
     const input = $(`[data-edit="${slotId}"] .chip-input`);
     if (input) input.value = e.weight;
-    const chipNum = $(`[data-slotcard="${slotId}"] .chip-num`);
-    if (chipNum) chipNum.textContent = (slot.added ? '+' : '') + e.weight;
+    refreshChip(dayId, slot);
+    touchSlot(slotId);
     return;
   }
   if (action === 'rstep') {
@@ -1051,8 +1198,25 @@ document.addEventListener('click', (ev) => {
     save();
     const input = $(`[data-edit="${slotId}"] input[data-action="reps"]`);
     if (input) input.value = e.reps;
-    const chipReps = $(`[data-slotcard="${slotId}"] .chip-reps`);
-    if (chipReps) chipReps.textContent = '×' + e.reps;
+    refreshChip(dayId, slot);
+    touchSlot(slotId);
+    return;
+  }
+  if (action === 'rung') {
+    const slotId = t.getAttribute('data-slot');
+    const day = findDay(dayId);
+    const slot = findSlot(day, slotId);
+    if (!slot) return;
+    const name = t.getAttribute('data-rung');
+    const e = activeEntry(dayId, slotId);
+    // Tap selects today's rung; tapping the highlighted one clears it.
+    e.rung = effectiveRung(dayId, slot) === name ? '' : name;
+    save();
+    const eff = effectiveRung(dayId, slot);
+    document.querySelectorAll(`[data-slotcard="${slotId}"] .rung`).forEach((el) => {
+      el.classList.toggle('now', eff !== '' && el.getAttribute('data-rung') === eff);
+    });
+    touchSlot(slotId);
     return;
   }
   if (action === 'note') {
@@ -1061,6 +1225,7 @@ document.addEventListener('click', (ev) => {
       box.classList.toggle('hidden');
       if (!box.classList.contains('hidden')) box.querySelector('textarea').focus();
     }
+    touchSlot(t.getAttribute('data-slot'));
     return;
   }
 
@@ -1172,8 +1337,8 @@ document.addEventListener('input', (ev) => {
     if (!Number.isFinite(e.weight)) e.weight = '';
     const day = findDay(dayId);
     const slot = findSlot(day, slotId);
-    const chipNum = $(`[data-slotcard="${slotId}"] .chip-num`);
-    if (chipNum && slot) chipNum.textContent = e.weight === '' ? '—' : (slot.added ? '+' : '') + e.weight;
+    if (slot) refreshChip(dayId, slot);
+    touchSlot(slotId);
     saveSoon();
     return;
   }
@@ -1182,8 +1347,10 @@ document.addEventListener('input', (ev) => {
     const e = activeEntry(dayId, slotId);
     e.reps = t.value === '' ? '' : parseInt(t.value, 10);
     if (!Number.isFinite(e.reps)) e.reps = '';
-    const chipReps = $(`[data-slotcard="${slotId}"] .chip-reps`);
-    if (chipReps) chipReps.textContent = '×' + (e.reps === '' ? '—' : e.reps);
+    const day = findDay(dayId);
+    const slot = findSlot(day, slotId);
+    if (slot) refreshChip(dayId, slot);
+    touchSlot(slotId);
     saveSoon();
     return;
   }
@@ -1192,6 +1359,7 @@ document.addEventListener('input', (ev) => {
     e.note = t.value;
     const btn = $(`[data-slotcard="${t.getAttribute('data-slot')}"] .notebtn`);
     if (btn) btn.classList.toggle('has-note', !!t.value.trim());
+    touchSlot(t.getAttribute('data-slot'));
     saveSoon();
     return;
   }
@@ -1219,11 +1387,12 @@ document.addEventListener('input', (ev) => {
     saveSoon();
     return;
   }
-  if (action === 'edit-menu') {
+  if (action === 'edit-menu' || action === 'edit-rungs') {
     const { slot } = editedSlot();
     if (!slot) return;
+    const key = action === 'edit-menu' ? 'menu' : 'rungs';
     const lines = t.value.split('\n').map((l) => l.trim()).filter(Boolean);
-    if (lines.length) slot.menu = lines; else delete slot.menu;
+    if (lines.length) slot[key] = lines; else delete slot[key];
     saveSoon();
     return;
   }

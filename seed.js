@@ -1,14 +1,15 @@
-// Strength Rebuild — program seed (v1.3)
+// Strength Rebuild — program seed (v1.4)
 // This is only the FIRST-RUN seed. After first launch the program lives in
 // localStorage and is edited in-app; changes here won't overwrite it.
 //
 // v0.3 model: no per-set logging. Two kinds of slot —
 //   track: true   → one working-weight capture, prefilled from last session
 //   menu: [...]   → task menu (ecological variation), note instead of numbers
+//   rungs: [...]  → ordered ladder; tap today's rung, the targets board reads it
 // rest: 'normal' | 'heavy' picks which rest-button tier the slot suggests.
 
 const SEED_PROGRAM = {
-  specVersion: '1.3',
+  specVersion: '1.4',
   days: [
     {
       id: 'dayA',
@@ -58,10 +59,13 @@ const SEED_PROGRAM = {
           cue: 'Knee tracks past the toes, heel down',
         },
         {
-          id: 'a6', name: 'Slider leg curl', target: '3×6–8',
+          id: 'a6', name: 'Nordic ladder', target: '3×4–8',
           track: false, rest: 'normal',
-          menu: ['Bilateral', 'Slow / paused', 'Single-leg (R first)', 'Nordic negatives'],
-          cue: 'Slow eccentric; right side leads, rep-matched',
+          rungs: [
+            'Bilateral slider', 'Single-leg slider', 'Shallow negative',
+            'Full negative', 'Band assist', 'Full Nordic',
+          ],
+          cue: 'Slow 3–5 s eccentric; right leads, rep-matched — own a rung crisp, then move up',
         },
         {
           id: 'a7', name: 'Suitcase carry', target: '3×30–40 m /side',
