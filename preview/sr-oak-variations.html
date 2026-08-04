@@ -1,0 +1,385 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Strength Rebuild — pressed botanical variations</title>
+<style>
+@font-face{font-family:'Barlow Condensed';font-style:normal;font-weight:500;
+  src:url('../fonts/barlow-condensed-500.woff2') format('woff2')}
+@font-face{font-family:'Barlow Condensed';font-style:normal;font-weight:600;
+  src:url('../fonts/barlow-condensed-600.woff2') format('woff2')}
+:root{
+  --bg:#131518; --surface:#1B1E23; --card:#1F232A; --raised:#272C35; --line:#2C313A;
+  --ink:#E9E7E2; --dim:#9AA1AC; --brass:#D9A03F; --brass-wash:rgba(217,160,63,.12);
+  --disp:'Barlow Condensed','Avenir Next Condensed','Arial Narrow',sans-serif;
+  --body:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0D0F12;color:var(--ink);font-family:var(--body);padding:52px 28px 100px}
+.wrap{max-width:1160px;margin:0 auto}
+h1{font-family:var(--disp);font-weight:600;font-size:38px;letter-spacing:.06em;text-transform:uppercase}
+h1 .half{color:var(--dim)}
+.lead{color:var(--dim);margin-top:10px;font-size:16px;line-height:1.55;max-width:680px}
+.option{margin-top:80px}
+.k{display:inline-block;font-family:var(--disp);font-weight:600;font-size:13px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--brass);border:1px solid rgba(217,160,63,.4);border-radius:7px;padding:4px 12px}
+.option h2{font-family:var(--disp);font-weight:600;font-size:30px;letter-spacing:.05em;text-transform:uppercase;margin-top:12px}
+.blurb{color:var(--dim);margin-top:8px;max-width:660px;line-height:1.55;font-size:15.5px}
+.phones{display:flex;gap:32px;flex-wrap:wrap;margin-top:26px;align-items:flex-start}
+figure{margin:0}
+figcaption{text-align:center;color:var(--dim);font-size:13.5px;margin-top:10px}
+.note{margin-top:76px;color:var(--dim);font-size:14.5px;line-height:1.55;max-width:660px;
+  border-top:1px solid #23272E;padding-top:20px}
+
+/* ---------- specimen plate ---------- */
+.plate{width:250px;height:320px;background:var(--card);border:1px solid rgba(217,160,63,.35);
+  border-radius:16px 16px 16px 5px;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:14px;flex:none}
+.plate svg{color:var(--brass);opacity:.6}
+.plate-label{font-family:var(--disp);font-weight:600;font-size:12px;letter-spacing:.2em;
+  text-transform:uppercase;color:var(--dim)}
+
+/* ---------- phone shell ---------- */
+.phone{width:320px;height:660px;background:var(--bg);border-radius:38px;border:1px solid #23272E;
+  box-shadow:0 24px 48px rgba(0,0,0,.5);overflow:hidden;position:relative;flex:none}
+.screen{position:relative;height:100%;padding:24px 18px 20px;display:flex;flex-direction:column}
+.z{position:relative;z-index:1}
+
+/* ---------- SR chrome (option-1 package: tucked corners + filling rest pill) ---------- */
+.topbar{display:flex;align-items:baseline;justify-content:space-between}
+.wordmark{font-family:var(--disp);font-weight:600;font-size:19px;letter-spacing:.09em;text-transform:uppercase}
+.wordmark .half{color:var(--dim)}
+.gear{color:var(--dim);font-size:18px}
+.backlink{font-family:var(--disp);font-weight:600;font-size:14px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
+.dayhead{font-family:var(--disp);font-weight:600;font-size:24px;letter-spacing:.05em;text-transform:uppercase;margin-top:14px}
+.dayhead span{color:var(--dim);font-size:16px;font-weight:500;letter-spacing:.03em;margin-left:6px}
+
+.daycard{background:var(--card);border:1px solid var(--line);border-radius:16px 16px 16px 5px;padding:17px 16px;margin-top:14px}
+.home .daycard:first-of-type{margin-top:20px}
+.dayname{font-family:var(--disp);font-weight:600;font-size:28px;letter-spacing:.05em;text-transform:uppercase;line-height:1.1}
+.daysub{color:var(--dim);margin-top:2px;font-size:14.5px}
+.daylast{margin-top:9px;font-family:var(--disp);font-weight:500;font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+
+.ledger{margin-top:22px;padding-top:12px;border-top:2px solid var(--brass)}
+.ledger-head{display:flex;justify-content:space-between;align-items:center}
+.ledger-title{font-family:var(--disp);font-weight:600;font-size:13px;letter-spacing:.16em;text-transform:uppercase;color:var(--brass)}
+.ledger-title i{font-style:normal;color:var(--dim);font-size:10px;margin-left:6px}
+.ledger-check{font-family:var(--disp);font-weight:500;font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--dim)}
+.eq{display:flex;gap:5px;align-items:flex-end;height:26px;margin-top:10px}
+.eq i{flex:1;background:var(--raised);border-radius:2px 2px 0 0;position:relative;display:block;height:100%;overflow:hidden}
+.eq i b{position:absolute;left:0;right:0;bottom:0;background:var(--brass);display:block}
+.eq-labels{display:flex;gap:5px;margin-top:4px}
+.eq-labels span{flex:1;text-align:center;font-family:var(--disp);font-weight:600;font-size:9.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--dim)}
+
+.slot{background:var(--card);border:1px solid var(--line);border-radius:16px 16px 16px 5px;padding:13px 14px;margin-top:11px}
+.shead{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.sname{font-family:var(--disp);font-weight:600;font-size:19px;letter-spacing:.05em;text-transform:uppercase;line-height:1.15}
+.starget{font-family:var(--disp);font-weight:500;font-size:14px;letter-spacing:.06em;color:var(--dim);white-space:nowrap;font-variant-numeric:tabular-nums}
+.scue{color:var(--dim);font-size:13px;margin-top:3px}
+.warmline{margin-top:8px;padding:6px 10px;border-radius:9px;background:var(--brass-wash);font-size:12.5px}
+.warmline b{font-family:var(--disp);font-weight:600;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--brass);margin-right:6px}
+.sfoot{display:flex;align-items:center;gap:10px;margin-top:9px}
+.chip{display:inline-flex;align-items:baseline;gap:5px;background:var(--raised);border:1px solid var(--line);border-radius:10px 10px 10px 4px;padding:6px 13px}
+.chip .n{font-family:var(--disp);font-weight:600;font-size:20px;font-variant-numeric:tabular-nums}
+.chip .u{color:var(--dim);font-size:12px}
+.chip .r{font-family:var(--disp);font-weight:600;font-size:15px;color:var(--dim)}
+.chip .c{align-self:center;color:var(--dim);font-size:9px;margin-left:2px}
+.notebtn{margin-left:auto;color:var(--dim);font-size:13px}
+
+.rest-running{position:relative;overflow:hidden;background:var(--card);border:1px solid var(--line);
+  border-radius:16px 16px 16px 5px;padding:9px 14px;margin-top:14px}
+.rest-fillwash{position:absolute;top:0;bottom:0;left:0;width:62%;background:var(--brass-wash);
+  border-right:2px solid var(--brass)}
+.rest-row{position:relative;display:flex;align-items:center;gap:10px}
+.rest-time{font-family:var(--disp);font-weight:600;font-size:34px;font-variant-numeric:tabular-nums;letter-spacing:.03em}
+.rest-label{font-family:var(--disp);font-weight:500;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);flex:1}
+.rest-mini{width:36px;height:36px;border-radius:10px;background:var(--raised);border:1px solid var(--line);
+  color:var(--dim);font-size:15px;display:flex;align-items:center;justify-content:center;flex:none}
+
+/* ---------- ornament placement ---------- */
+.sprig{position:absolute;pointer-events:none;color:var(--brass);opacity:.5;z-index:0}
+.v-a.workout .sprig{top:8px;right:8px;width:92px;height:108px}
+.v-a.home .sprig{bottom:22px;right:16px;width:112px;height:132px}
+.v-b.home .sprig{bottom:18px;right:14px;width:118px;height:114px}
+.v-c.workout .sprig{top:8px;right:8px;width:90px;height:104px}
+.v-d.workout .sprig{top:4px;right:8px;width:66px;height:132px}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+
+  <!-- pressed oak leaf: solid lobed silhouette, base at origin, tip pointing up -->
+  <g id="oakleaf">
+    <g fill="currentColor" opacity=".38">
+      <ellipse cx="0" cy="-26" rx="5.5" ry="21"/>
+      <circle cx="-6.5" cy="-13" r="6"/><circle cx="6.5" cy="-13" r="6"/>
+      <circle cx="-7.5" cy="-25" r="6.3"/><circle cx="7.5" cy="-25" r="6.3"/>
+      <circle cx="-6" cy="-37" r="5.3"/><circle cx="6" cy="-37" r="5.3"/>
+      <circle cx="0" cy="-46" r="5"/>
+    </g>
+    <path d="M0 0 L0 -44" fill="none" stroke="currentColor" stroke-width="1.4" opacity=".75"/>
+  </g>
+  <g id="acorn" stroke="currentColor" fill="none" stroke-width="1.6">
+    <path d="M-5.5 0 C -5.5 6 -2.5 10.5 0 12 C 2.5 10.5 5.5 6 5.5 0"/>
+    <path d="M-6.5 0 A 6.5 5.2 0 0 1 6.5 0 Z" fill="currentColor" opacity=".45" stroke="none"/>
+    <path d="M0 -5 L 2 -9"/>
+  </g>
+  <g id="oak2-art" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+    <path d="M96 8 C 78 22 58 42 46 64 C 38 78 33 92 32 106"/>
+    <path d="M58 42 C 54 52 52 60 52 68" stroke-width="1.8"/>
+    <g transform="translate(70 30) rotate(-52)"><use href="#oakleaf"/></g>
+    <g transform="translate(46 64) rotate(-100) scale(.7)"><use href="#oakleaf"/></g>
+    <use href="#acorn" transform="translate(47 72) rotate(14)"/>
+    <use href="#acorn" transform="translate(60 74) rotate(-16)"/>
+    <circle cx="32" cy="110" r="2.4" fill="currentColor" stroke="none" opacity=".55"/>
+  </g>
+
+  <!-- rooted oak: solid bookplate silhouette, roots through the ground line -->
+  <g id="tree-art">
+    <g opacity=".3" fill="currentColor">
+      <ellipse cx="60" cy="34" rx="30" ry="22"/>
+      <ellipse cx="37" cy="45" rx="17" ry="13"/>
+      <ellipse cx="84" cy="44" rx="16" ry="12.5"/>
+    </g>
+    <path d="M53 98 C 54 82 50 68 44 58 C 52 63 57 62 60 54 C 63 62 68 63 76 58 C 70 68 66 82 67 98 Z"
+      fill="currentColor" opacity=".5"/>
+    <path d="M20 100 H 100" stroke="currentColor" stroke-width="1.4" fill="none" opacity=".3"/>
+    <path d="M53 98 C 46 102 37 105 28 105 M67 98 C 74 102 83 105 92 105 M60 98 C 60 102 59 105 58 108"
+      stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" opacity=".5"/>
+  </g>
+
+  <!-- laurel: filled almond leaf, tip pointing +x -->
+  <path id="llf" d="M0 0 C 5 -4.5 12 -4.5 17.5 0 C 12 4.5 5 4.5 0 0 Z"/>
+  <g id="laurel-art">
+    <path d="M94 10 C 72 28 52 50 41 74 C 36 85 33 96 32 108"
+      fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    <g fill="currentColor" opacity=".42">
+      <use href="#llf" transform="translate(84 19) rotate(100)"/>
+      <use href="#llf" transform="translate(84 19) rotate(180)"/>
+      <use href="#llf" transform="translate(69 34) rotate(97)"/>
+      <use href="#llf" transform="translate(69 34) rotate(177)"/>
+      <use href="#llf" transform="translate(56 50) rotate(88)"/>
+      <use href="#llf" transform="translate(56 50) rotate(168)"/>
+      <use href="#llf" transform="translate(46 67) rotate(78)"/>
+      <use href="#llf" transform="translate(46 67) rotate(158)"/>
+      <use href="#llf" transform="translate(38 85) rotate(68)"/>
+      <use href="#llf" transform="translate(38 85) rotate(148)"/>
+    </g>
+    <g fill="currentColor" opacity=".55">
+      <circle cx="32" cy="103" r="2.3"/><circle cx="27" cy="107" r="2.3"/><circle cx="35" cy="109" r="2.3"/>
+    </g>
+  </g>
+
+  <!-- barley: bearded head, long awns, two blades -->
+  <g id="barley-art" stroke-linecap="round">
+    <path d="M46 130 C 48 106 48 88 45 66" fill="none" stroke="currentColor" stroke-width="2"/>
+    <g stroke="currentColor" stroke-width="1.1" opacity=".5" fill="none">
+      <path d="M42 58 L 30 8"/><path d="M45 54 L 40 4"/><path d="M48 56 L 50 2"/>
+      <path d="M51 60 L 60 10"/><path d="M40 64 L 26 22"/>
+    </g>
+    <g fill="currentColor" opacity=".45">
+      <ellipse cx="41" cy="62" rx="3.4" ry="7" transform="rotate(24 41 62)"/>
+      <ellipse cx="49" cy="60" rx="3.4" ry="7" transform="rotate(-20 49 60)"/>
+      <ellipse cx="40" cy="50" rx="3.4" ry="7" transform="rotate(22 40 50)"/>
+      <ellipse cx="48" cy="48" rx="3.4" ry="7" transform="rotate(-22 48 48)"/>
+      <ellipse cx="39" cy="38" rx="3.3" ry="6.6" transform="rotate(20 39 38)"/>
+      <ellipse cx="47" cy="36" rx="3.3" ry="6.6" transform="rotate(-24 47 36)"/>
+      <ellipse cx="40" cy="27" rx="3" ry="6" transform="rotate(16 40 27)"/>
+      <ellipse cx="46" cy="25" rx="3" ry="6" transform="rotate(-18 46 25)"/>
+      <ellipse cx="43" cy="17" rx="2.8" ry="5.6" transform="rotate(-2 43 17)"/>
+    </g>
+    <path d="M46 100 C 35 97 27 90 24 79 C 31 83 40 90 46 95 Z" fill="currentColor" opacity=".3"/>
+    <path d="M47 112 C 55 109 60 104 62 97 C 57 100 51 105 47 109 Z" fill="currentColor" opacity=".3"/>
+  </g>
+</defs></svg>
+
+<div class="wrap">
+  <h1>Pressed <span class="half">botanical</span> — variations</h1>
+  <p class="lead">Four riffs on the pressed-oak lane. Every phone keeps the rest of the package —
+  tucked-corner boxes, the filling rest pill — so you're only judging the specimen. Each drawing is
+  shown big on a plate, then in place. Any of them can sit in the home bottom corner and the workout
+  header corner interchangeably.</p>
+
+  <!-- ============ A ============ -->
+  <section class="option">
+    <span class="k">Variation A</span>
+    <h2>Oak, redrawn</h2>
+    <p class="blurb">The same twig with a better hand: a true lobed oak leaf with a midrib, a smaller
+    one answering it lower down, and plumper acorns with solid caps. Still line art, still quiet.</p>
+    <div class="phones">
+      <figure>
+        <div class="plate"><svg viewBox="0 -8 110 138" width="150" height="188"><use href="#oak2-art"/></svg>
+          <span class="plate-label">Plate A · Oak</span></div>
+        <figcaption>Specimen</figcaption>
+      </figure>
+      <figure>
+        <div class="phone v-a home">
+          <svg class="sprig" viewBox="0 -8 110 138" aria-hidden="true"><use href="#oak2-art"/></svg>
+          <div class="screen">
+            <div class="topbar z"><div class="wordmark">Strength <span class="half">Rebuild</span></div><span class="gear">⚙</span></div>
+            <a class="daycard"><div class="dayname">Day A</div><div class="daysub">Squat + Horizontal</div><div class="daylast">Last: Thu</div></a>
+            <a class="daycard"><div class="dayname">Day B</div><div class="daysub">Hinge + Vertical</div><div class="daylast">Last: Sat</div></a>
+            <div class="ledger z">
+              <div class="ledger-head"><span class="ledger-title">Targets <i>⌄</i></span><span class="ledger-check">Check-in · 2 wk</span></div>
+              <div class="eq"><i><b style="height:80%"></b></i><i><b style="height:55%"></b></i><i><b style="height:70%"></b></i><i><b style="height:40%"></b></i><i><b style="height:65%"></b></i><i><b style="height:30%"></b></i><i><b style="height:50%"></b></i></div>
+              <div class="eq-labels"><span>SQ</span><span>BP</span><span>RW</span><span>SW</span><span>DL</span><span>OP</span><span>CU</span></div>
+            </div>
+          </div>
+        </div>
+        <figcaption>Home — pressed into the open corner</figcaption>
+      </figure>
+      <figure>
+        <div class="phone v-a workout">
+          <svg class="sprig" viewBox="0 -8 110 138" aria-hidden="true"><use href="#oak2-art"/></svg>
+          <div class="screen">
+            <div class="topbar z"><span class="backlink">‹ Back</span></div>
+            <div class="dayhead z">Day A <span>Squat + Horizontal</span></div>
+            <div class="rest-running z">
+              <div class="rest-fillwash"></div>
+              <div class="rest-row"><span class="rest-time">1:47</span><span class="rest-label">Resting</span><span class="rest-mini">↻</span><span class="rest-mini">✕</span></div>
+            </div>
+            <div class="slot">
+              <div class="shead"><span class="sname">Back squat</span><span class="starget">4×5 · RIR 2–3</span></div>
+              <div class="warmline"><b>Warm-up</b>Bar ×5 → 95 ×3 → 135 ×2</div>
+              <div class="sfoot"><span class="chip"><span class="n">185</span><span class="u">lb</span><span class="r">×5</span><span class="c">▾</span></span><span class="notebtn">✎ note</span></div>
+            </div>
+            <div class="slot">
+              <div class="shead"><span class="sname">DB bench press</span><span class="starget">3×6–8 · RIR 2–3</span></div>
+              <div class="sfoot"><span class="chip"><span class="n">60</span><span class="u">lb</span><span class="r">×8</span><span class="c">▾</span></span><span class="notebtn">✎ note</span></div>
+            </div>
+            <div class="slot">
+              <div class="shead"><span class="sname">One-arm DB row</span><span class="starget">3×8–10 /side</span></div>
+              <div class="sfoot"><span class="chip"><span class="n">70</span><span class="u">lb</span><span class="r">×10</span><span class="c">▾</span></span><span class="notebtn">✎ note</span></div>
+            </div>
+          </div>
+        </div>
+        <figcaption>Workout</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ============ B ============ -->
+  <section class="option">
+    <span class="k">Variation B</span>
+    <h2>The rooted oak</h2>
+    <p class="blurb">Not a twig — the whole tree, as a solid bookplate mark, roots breaking through the
+    ground line. Grown, not assembled, which is rather the point of a rebuild. It stands in the home
+    corner like a stamp; on workout it would shrink to an emblem beside the day name.</p>
+    <div class="phones">
+      <figure>
+        <div class="plate"><svg viewBox="0 0 120 116" width="180" height="174"><use href="#tree-art"/></svg>
+          <span class="plate-label">Plate B · Rooted oak</span></div>
+        <figcaption>Specimen</figcaption>
+      </figure>
+      <figure>
+        <div class="phone v-b home">
+          <svg class="sprig" viewBox="0 0 120 116" aria-hidden="true"><use href="#tree-art"/></svg>
+          <div class="screen">
+            <div class="topbar z"><div class="wordmark">Strength <span class="half">Rebuild</span></div><span class="gear">⚙</span></div>
+            <a class="daycard"><div class="dayname">Day A</div><div class="daysub">Squat + Horizontal</div><div class="daylast">Last: Thu</div></a>
+            <a class="daycard"><div class="dayname">Day B</div><div class="daysub">Hinge + Vertical</div><div class="daylast">Last: Sat</div></a>
+            <div class="ledger z">
+              <div class="ledger-head"><span class="ledger-title">Targets <i>⌄</i></span><span class="ledger-check">Check-in · 2 wk</span></div>
+              <div class="eq"><i><b style="height:80%"></b></i><i><b style="height:55%"></b></i><i><b style="height:70%"></b></i><i><b style="height:40%"></b></i><i><b style="height:65%"></b></i><i><b style="height:30%"></b></i><i><b style="height:50%"></b></i></div>
+              <div class="eq-labels"><span>SQ</span><span>BP</span><span>RW</span><span>SW</span><span>DL</span><span>OP</span><span>CU</span></div>
+            </div>
+          </div>
+        </div>
+        <figcaption>Home — standing in the corner</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ============ C ============ -->
+  <section class="option">
+    <span class="k">Variation C</span>
+    <h2>Laurel</h2>
+    <p class="blurb">The classical strength emblem: a laurel sprig with paired leaves and three berries
+    at the tip, filled rather than outlined. The most graphic and even-textured of the four —
+    it reads cleanly even smaller.</p>
+    <div class="phones">
+      <figure>
+        <div class="plate"><svg viewBox="0 0 110 120" width="158" height="172"><use href="#laurel-art"/></svg>
+          <span class="plate-label">Plate C · Laurel</span></div>
+        <figcaption>Specimen</figcaption>
+      </figure>
+      <figure>
+        <div class="phone v-c workout">
+          <svg class="sprig" viewBox="0 0 110 120" aria-hidden="true"><use href="#laurel-art"/></svg>
+          <div class="screen">
+            <div class="topbar z"><span class="backlink">‹ Back</span></div>
+            <div class="dayhead z">Day A <span>Squat + Horizontal</span></div>
+            <div class="rest-running z">
+              <div class="rest-fillwash"></div>
+              <div class="rest-row"><span class="rest-time">1:47</span><span class="rest-label">Resting</span><span class="rest-mini">↻</span><span class="rest-mini">✕</span></div>
+            </div>
+            <div class="slot">
+              <div class="shead"><span class="sname">Back squat</span><span class="starget">4×5 · RIR 2–3</span></div>
+              <div class="warmline"><b>Warm-up</b>Bar ×5 → 95 ×3 → 135 ×2</div>
+              <div class="sfoot"><span class="chip"><span class="n">185</span><span class="u">lb</span><span class="r">×5</span><span class="c">▾</span></span><span class="notebtn">✎ note</span></div>
+            </div>
+            <div class="slot">
+              <div class="shead"><span class="sname">DB bench press</span><span class="starget">3×6–8 · RIR 2–3</span></div>
+              <div class="sfoot"><span class="chip"><span class="n">60</span><span class="u">lb</span><span class="r">×8</span><span class="c">▾</span></span><span class="notebtn">✎ note</span></div>
+            </div>
+            <div class="slot">
+              <div class="shead"><span class="sname">One-arm DB row</span><span class="starget">3×8–10 /side</span></div>
+              <div class="sfoot"><span class="chip"><span class="n">70</span><span class="u">lb</span><span class="r">×10</span><span class="c">▾</span></span><span class="notebtn">✎ note</span></div>
+            </div>
+          </div>
+        </div>
+        <figcaption>Workout</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ============ D ============ -->
+  <section class="option">
+    <span class="k">Variation D</span>
+    <h2>Barley</h2>
+    <p class="blurb">A pressed field specimen instead of a forest one: a bearded barley head on a tall
+    stem, awns fanning up, two thin blades low. Harvest and patience — the quietest and most vertical,
+    it hugs the right edge without spreading.</p>
+    <div class="phones">
+      <figure>
+        <div class="plate"><svg viewBox="0 0 90 132" width="122" height="180"><use href="#barley-art"/></svg>
+          <span class="plate-label">Plate D · Barley</span></div>
+        <figcaption>Specimen</figcaption>
+      </figure>
+      <figure>
+        <div class="phone v-d workout">
+          <svg class="sprig" viewBox="0 0 90 132" aria-hidden="true"><use href="#barley-art"/></svg>
+          <div class="screen">
+            <div class="topbar z"><span class="backlink">‹ Back</span></div>
+            <div class="dayhead z">Day A <span>Squat + Horizontal</span></div>
+            <div class="rest-running z">
+              <div class="rest-fillwash"></div>
+              <div class="rest-row"><span class="rest-time">1:47</span><span class="rest-label">Resting</span><span class="rest-mini">↻</span><span class="rest-mini">✕</span></div>
+            </div>
+            <div class="slot">
+              <div class="shead"><span class="sname">Back squat</span><span class="starget">4×5 · RIR 2–3</span></div>
+              <div class="warmline"><b>Warm-up</b>Bar ×5 → 95 ×3 → 135 ×2</div>
+              <div class="sfoot"><span class="chip"><span class="n">185</span><span class="u">lb</span><span class="r">×5</span><span class="c">▾</span></span><span class="notebtn">✎ note</span></div>
+            </div>
+            <div class="slot">
+              <div class="shead"><span class="sname">DB bench press</span><span class="starget">3×6–8 · RIR 2–3</span></div>
+              <div class="sfoot"><span class="chip"><span class="n">60</span><span class="u">lb</span><span class="r">×8</span><span class="c">▾</span></span><span class="notebtn">✎ note</span></div>
+            </div>
+            <div class="slot">
+              <div class="shead"><span class="sname">One-arm DB row</span><span class="starget">3×8–10 /side</span></div>
+              <div class="sfoot"><span class="chip"><span class="n">70</span><span class="u">lb</span><span class="r">×10</span><span class="c">▾</span></span><span class="notebtn">✎ note</span></div>
+            </div>
+          </div>
+        </div>
+        <figcaption>Workout — tall, hugs the edge</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <p class="note">All four sit at the same brass, same opacity, same placements — home's open bottom
+  corner and the workout header corner — so they're interchangeable once you pick. The rooted oak also
+  works as a pair: tree on home, its twig (Plate A) on workout. Same species, two scales.</p>
+</div>
+</body>
+</html>
