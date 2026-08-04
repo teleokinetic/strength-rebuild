@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0E1013">
+<title>Forte — three design directions</title>
+<style>
+/* Forte — Carolina's app. Three gentler skins over the Strength Rebuild bones.
+   Each option is a self-contained token system scoped to .o1/.o2/.o3 so the
+   winner (or the mix) can lift straight into a styles.css. */
+
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --shell:#0E1013; --shell-ink:#E9E7E2; --shell-dim:#9AA1AC; --shell-line:#2C313A;
+  --disp:'Barlow Condensed','Arial Narrow',sans-serif;
+  --sys:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+}
+html{background:var(--shell)}
+body{background:radial-gradient(120% 80% at 50% -10%, #191d24 0%, var(--shell) 60%) no-repeat var(--shell);
+  color:var(--shell-ink);font-family:var(--sys);line-height:1.5;min-height:100vh;
+  padding:30px 16px 56px;overflow-x:hidden}
+.wrap{max-width:1480px;margin:0 auto}
+
+.masthead{text-align:center;margin-bottom:6px}
+.eyebrow{font-family:var(--disp);font-weight:600;font-size:13px;letter-spacing:.2em;
+  text-transform:uppercase;color:var(--shell-dim)}
+h1{font-family:var(--disp);font-weight:600;font-size:clamp(28px,5vw,40px);line-height:1.05;margin:6px 0 10px}
+.sub{color:var(--shell-dim);font-size:14.5px;max-width:66ch;margin:0 auto}
+.sub b{color:var(--shell-ink);font-weight:600}
+
+.options{display:flex;flex-direction:column;gap:64px;margin-top:44px}
+.option{display:flex;flex-direction:column;align-items:center}
+.opt-eye{font-family:var(--disp);font-weight:600;font-size:12px;letter-spacing:.2em;
+  text-transform:uppercase;color:var(--shell-dim)}
+.opt-name{font-family:var(--disp);font-weight:600;font-size:30px;line-height:1.05;
+  text-transform:uppercase;letter-spacing:.02em;margin-top:3px}
+.swatches{display:flex;gap:7px;margin-top:10px}
+.sw{width:17px;height:17px;border-radius:50%;border:1px solid rgba(255,255,255,.16)}
+.opt-why{color:var(--shell-dim);font-size:13.5px;max-width:52ch;margin:9px auto 0;text-align:center}
+.opt-why b{color:var(--shell-ink);font-weight:600}
+.duo{display:flex;flex-wrap:wrap;gap:0 28px;justify-content:center}
+.ph-col{display:flex;flex-direction:column;align-items:center;min-width:0}
+.statecap{font-family:var(--disp);font-weight:600;font-size:11px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--shell-dim);margin-top:18px}
+.opt-foot{color:var(--shell-dim);font-size:12.5px;text-align:center;margin-top:16px;
+  max-width:52ch;line-height:1.6}
+.opt-foot b{color:var(--shell-ink);font-weight:600}
+
+.howto{color:var(--shell-dim);font-size:13.5px;text-align:center;max-width:56ch;
+  margin:56px auto 0;line-height:1.65;border-top:1px solid var(--shell-line);padding-top:22px}
+.howto b{color:var(--shell-ink);font-weight:600}
+
+/* ---- phone frame (shared) ---- */
+.phone{width:320px;max-width:92vw;height:660px;margin:20px auto 0;
+  border-radius:38px;position:relative;overflow:hidden;border:1px solid var(--shell-line);
+  box-shadow:0 1px 0 rgba(255,255,255,.05) inset, 0 30px 60px -24px rgba(0,0,0,.8)}
+.notch{position:absolute;top:11px;left:50%;transform:translateX(-50%);
+  width:96px;height:22px;background:#000;border-radius:12px;z-index:6}
+.scr{position:absolute;inset:0;padding:50px 18px 0;text-align:left;overflow:hidden}
+
+/* ============================================================
+   OPTION 1 · MORNING ROSÉ
+   Warm shell + one deep rose. Rounded display type, petal-cornered
+   day cards, a greeting up top, rest as a pill that drains.
+   ============================================================ */
+.o1{
+  --bg:#FBF4F1; --surface:#F4E7E2; --card:#FFFDFC; --line:#EDDCD6;
+  --ink:#41302C; --dim:#94756B;
+  --rose:#B44E6B; --wash:rgba(180,78,107,.10); --on-rose:#FFF6F3;
+  --round:ui-rounded,'SF Pro Rounded','Arial Rounded MT Bold',var(--sys);
+}
+.o1 .scr{background:var(--bg);color:var(--ink);font-family:var(--sys);font-size:14px}
+.o1 .top{display:flex;justify-content:space-between;align-items:center}
+.o1 .wordmark{font-family:var(--round);font-weight:700;font-size:19px;color:var(--rose);letter-spacing:.01em}
+.o1 .gear,.o1 .back{color:var(--dim);font-size:15px}
+.o1 .greet{margin:16px 0 14px}
+.o1 .ola{font-family:var(--round);font-weight:700;font-size:27px;line-height:1.1}
+.o1 .date{color:var(--dim);font-size:13.5px;margin-top:2px}
+.o1 .dcard{background:var(--card);border:1px solid var(--line);
+  border-radius:26px 26px 26px 10px;padding:16px 18px;margin-bottom:12px}
+.o1 .dname{font-family:var(--round);font-weight:700;font-size:24px;line-height:1.1}
+.o1 .dsub{color:var(--dim);margin-top:1px}
+.o1 .dlast{margin-top:9px;font-size:12.5px;color:var(--rose);font-weight:600;
+  font-variant-numeric:tabular-nums}
+.o1 .panel{background:var(--surface);border-radius:22px;padding:14px 16px;margin-top:16px}
+.o1 .p-head{display:flex;justify-content:space-between;align-items:baseline}
+.o1 .p-title{font-family:var(--round);font-weight:700;font-size:16px}
+.o1 .p-check{color:var(--rose);font-size:12px;font-weight:600}
+.o1 .prow{margin-top:12px}
+.o1 .pr-line{display:flex;justify-content:space-between;align-items:baseline}
+.o1 .pr-name{font-weight:600;font-size:14px}
+.o1 .pr-num{color:var(--dim);font-size:13px;font-variant-numeric:tabular-nums}
+.o1 .pr-num b{color:var(--ink);font-family:var(--round);font-weight:700;font-size:15px}
+.o1 .pbar{height:7px;background:#EADCD5;border-radius:4px;margin-top:7px;overflow:hidden}
+.o1 .pbar i{display:block;height:100%;background:var(--rose);border-radius:4px}
+.o1 .pips{display:flex;gap:6px;align-items:center;margin-top:8px;flex-wrap:wrap}
+.o1 .pip{font-family:var(--round);font-weight:700;font-size:11.5px;color:var(--dim);
+  background:var(--card);border:1px solid var(--line);border-radius:999px;padding:3px 10px;
+  font-variant-numeric:tabular-nums}
+.o1 .pip.now{background:var(--rose);border-color:var(--rose);color:var(--on-rose)}
+.o1 .arr{color:var(--dim);font-size:11px}
+/* session */
+.o1 .dhead{margin:14px 0 12px}
+.o1 .dhead .dname{font-size:27px}
+.o1 .dock{position:relative;background:var(--card);border:1px solid var(--line);
+  border-radius:999px;padding:13px 18px;overflow:hidden;margin-bottom:14px}
+.o1 .dock-fill{position:absolute;inset:0;width:43%;background:var(--wash);
+  border-right:2px solid var(--rose)}
+.o1 .dock-row{position:relative;display:flex;align-items:center;gap:10px}
+.o1 .d-time{font-family:var(--round);font-weight:700;font-size:24px;
+  font-variant-numeric:tabular-nums}
+.o1 .d-label{color:var(--dim);font-size:12.5px;flex:1}
+.o1 .d-mini{font-family:var(--round);font-weight:700;font-size:13px;color:var(--dim);
+  background:var(--surface);border-radius:999px;padding:6px 11px}
+.o1 .slot{background:var(--card);border:1px solid var(--line);border-radius:20px;
+  padding:13px 16px;margin-bottom:11px}
+.o1 .s-line{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.o1 .s-name{font-family:var(--round);font-weight:700;font-size:17.5px;line-height:1.15}
+.o1 .s-target{color:var(--dim);font-size:12.5px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.o1 .warm{margin-top:8px;background:var(--wash);border-radius:12px;padding:7px 11px;font-size:12.5px}
+.o1 .warm b{color:var(--rose);font-weight:700;font-size:11px;margin-right:4px}
+.o1 .cue{color:var(--dim);font-size:12.5px;margin-top:6px}
+.o1 .s-foot{display:flex;align-items:center;gap:10px;margin-top:10px}
+.o1 .chip{display:inline-flex;align-items:baseline;gap:5px;background:var(--surface);
+  border-radius:999px;padding:8px 15px;font-size:12px;color:var(--dim)}
+.o1 .chip b{font-family:var(--round);font-weight:700;font-size:19px;color:var(--ink);
+  font-variant-numeric:tabular-nums}
+.o1 .chip i{font-style:normal;font-size:9px;align-self:center}
+.o1 .note{margin-left:auto;color:var(--dim);font-size:14px}
+
+/* ============================================================
+   OPTION 2 · SAGE & LINEN
+   Linen paper + deep sage. Serif voice in title case, hairline
+   cards, leaf-shaped progression pips. Quiet, editorial, spa-calm.
+   ============================================================ */
+.o2{
+  --bg:#F7F6F1; --surface:#EDEBE2; --card:#FDFCF9; --line:#E0DDD0;
+  --ink:#2F3329; --dim:#7E8274;
+  --sage:#5B7457; --wash:rgba(91,116,87,.10); --on-sage:#F7F8F3;
+  --serif:ui-serif,'New York','Palatino',Georgia,serif;
+}
+.o2 .scr{background:var(--bg);color:var(--ink);font-family:var(--sys);font-size:14px}
+.o2 .top{display:flex;justify-content:space-between;align-items:center}
+.o2 .wordmark{font-family:var(--serif);font-style:italic;font-weight:600;font-size:21px;color:var(--sage)}
+.o2 .gear,.o2 .back{color:var(--dim);font-size:15px}
+.o2 .hairline{border:none;border-top:1px solid var(--line);margin:14px 0 16px}
+.o2 .dcard{background:var(--card);border:1px solid var(--line);border-radius:14px;
+  padding:17px 18px;margin-bottom:12px}
+.o2 .dname{font-family:var(--serif);font-weight:600;font-size:25px;line-height:1.1}
+.o2 .dsub{font-family:var(--serif);font-style:italic;color:var(--dim);font-size:15px;margin-top:2px}
+.o2 .dlast{margin-top:10px;font-size:12px;color:var(--dim);letter-spacing:.06em;
+  text-transform:uppercase;font-variant-numeric:tabular-nums}
+.o2 .panel{margin-top:18px;border-top:2px solid var(--sage);padding-top:12px}
+.o2 .p-head{display:flex;justify-content:space-between;align-items:baseline}
+.o2 .p-title{font-family:var(--serif);font-weight:600;font-size:17px;color:var(--sage)}
+.o2 .p-check{color:var(--dim);font-size:12px;letter-spacing:.05em;text-transform:uppercase}
+.o2 .prow{margin-top:12px}
+.o2 .pr-line{display:flex;justify-content:space-between;align-items:baseline}
+.o2 .pr-name{font-weight:600;font-size:14px}
+.o2 .pr-num{color:var(--dim);font-size:13px;font-variant-numeric:tabular-nums}
+.o2 .pr-num b{color:var(--ink);font-family:var(--serif);font-weight:600;font-size:15.5px}
+.o2 .pbar{height:5px;background:var(--surface);border-radius:3px;margin-top:7px;overflow:hidden}
+.o2 .pbar i{display:block;height:100%;background:var(--sage);border-radius:3px}
+.o2 .leaves{display:flex;gap:9px;align-items:center;margin-top:9px;flex-wrap:wrap}
+.o2 .leafstep{display:flex;align-items:center;gap:5px;color:var(--dim);font-size:12px;
+  font-variant-numeric:tabular-nums}
+.o2 .leaf{width:9px;height:9px;border-radius:0 100% 0 100%;transform:rotate(45deg);
+  border:1px solid var(--dim);display:inline-block}
+.o2 .leafstep.now{color:var(--ink);font-weight:600}
+.o2 .leafstep.now .leaf{background:var(--sage);border-color:var(--sage)}
+/* session */
+.o2 .dhead{margin:14px 0 12px}
+.o2 .dhead .dname{font-size:28px}
+.o2 .dock{display:flex;align-items:center;gap:12px;background:var(--card);
+  border:1px solid var(--line);border-radius:14px;padding:11px 15px;margin-bottom:14px}
+.o2 .d-time{font-family:var(--serif);font-weight:600;font-size:26px;
+  font-variant-numeric:tabular-nums;min-width:62px}
+.o2 .d-track{flex:1;height:4px;background:var(--surface);border-radius:2px;overflow:hidden}
+.o2 .d-track i{display:block;height:100%;width:43%;background:var(--sage)}
+.o2 .d-mini{color:var(--dim);font-size:12.5px;border:1px solid var(--line);
+  border-radius:9px;padding:5px 9px}
+.o2 .slot{background:var(--card);border:1px solid var(--line);border-radius:14px;
+  padding:14px 16px;margin-bottom:11px}
+.o2 .s-line{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.o2 .s-name{font-family:var(--serif);font-weight:600;font-size:18.5px;line-height:1.15}
+.o2 .s-target{color:var(--dim);font-size:12.5px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.o2 .warm{margin-top:8px;border-left:2px solid var(--sage);padding:2px 0 2px 10px;
+  font-size:12.5px;color:var(--ink)}
+.o2 .warm b{color:var(--sage);font-style:italic;font-family:var(--serif);font-weight:600;margin-right:4px}
+.o2 .cue{font-family:var(--serif);font-style:italic;color:var(--dim);font-size:13.5px;margin-top:6px}
+.o2 .s-foot{display:flex;align-items:center;gap:10px;margin-top:10px}
+.o2 .chip{display:inline-flex;align-items:baseline;gap:5px;background:var(--surface);
+  border:1px solid var(--line);border-radius:11px;padding:7px 14px;font-size:12px;color:var(--dim)}
+.o2 .chip b{font-family:var(--serif);font-weight:600;font-size:19px;color:var(--ink);
+  font-variant-numeric:tabular-nums}
+.o2 .chip i{font-style:normal;font-size:9px;align-self:center}
+.o2 .note{margin-left:auto;color:var(--dim);font-size:14px}
+
+/* ============================================================
+   OPTION 3 · LILAC HOUR
+   Lilac-white + violet with an apricot counterpoint. Avenir Next,
+   squircle cards on soft shadows, the rest track runs a dawn
+   gradient. Friendly energy rather than hush.
+   ============================================================ */
+.o3{
+  --bg:#F6F4FB; --surface:#ECE9F5; --card:#FFFFFF; --line:#E4DFF1;
+  --ink:#322E40; --dim:#847E9C;
+  --lilac:#6F5BC5; --wash:rgba(111,91,197,.10); --on-lilac:#F7F5FF;
+  --apricot:#E8875F;
+  --av:'Avenir Next','Avenir',var(--sys);
+}
+.o3 .scr{background:var(--bg);color:var(--ink);font-family:var(--av);font-size:14px}
+.o3 .top{display:flex;justify-content:space-between;align-items:center}
+.o3 .wordmark{font-weight:700;font-size:17px;letter-spacing:.22em;text-transform:uppercase;
+  background:linear-gradient(90deg,var(--lilac),var(--apricot));
+  -webkit-background-clip:text;background-clip:text;color:transparent}
+.o3 .gear,.o3 .back{color:var(--dim);font-size:15px}
+.o3 .kicker{margin:16px 0 12px;font-weight:600;font-size:12px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--dim)}
+.o3 .dcard{background:var(--card);border-radius:20px;padding:16px 18px;margin-bottom:13px;
+  box-shadow:0 10px 24px -14px rgba(80,64,150,.28)}
+.o3 .dname{font-weight:600;font-size:23px;line-height:1.15}
+.o3 .dsub{color:var(--dim);margin-top:1px}
+.o3 .dlast{margin-top:9px;font-size:12px;font-weight:600;color:var(--lilac);
+  font-variant-numeric:tabular-nums}
+.o3 .panel{background:var(--card);border-radius:20px;padding:14px 16px;margin-top:16px;
+  box-shadow:0 10px 24px -14px rgba(80,64,150,.28)}
+.o3 .p-head{display:flex;justify-content:space-between;align-items:baseline}
+.o3 .p-title{font-weight:600;font-size:15px}
+.o3 .p-check{color:var(--apricot);font-size:12px;font-weight:600}
+.o3 .prow{margin-top:12px}
+.o3 .pr-line{display:flex;justify-content:space-between;align-items:baseline}
+.o3 .pr-name{font-weight:600;font-size:14px}
+.o3 .pr-num{color:var(--dim);font-size:13px;font-variant-numeric:tabular-nums}
+.o3 .pr-num b{color:var(--ink);font-weight:600;font-size:15px}
+.o3 .pbar{height:7px;background:var(--surface);border-radius:4px;margin-top:7px;overflow:hidden}
+.o3 .pbar i{display:block;height:100%;border-radius:4px;
+  background:linear-gradient(90deg,var(--lilac),var(--apricot))}
+.o3 .pips{display:flex;gap:6px;align-items:center;margin-top:8px;flex-wrap:wrap}
+.o3 .pip{font-weight:600;font-size:11.5px;color:var(--dim);background:var(--surface);
+  border-radius:8px;padding:3px 10px;font-variant-numeric:tabular-nums}
+.o3 .pip.now{background:var(--lilac);color:var(--on-lilac)}
+.o3 .arr{color:var(--dim);font-size:11px}
+/* session */
+.o3 .dhead{margin:14px 0 12px}
+.o3 .dhead .dname{font-size:26px}
+.o3 .dock{background:var(--card);border-radius:20px;padding:12px 16px;margin-bottom:14px;
+  box-shadow:0 10px 24px -14px rgba(80,64,150,.28)}
+.o3 .dock-row{display:flex;align-items:baseline;gap:10px}
+.o3 .d-time{font-weight:600;font-size:26px;font-variant-numeric:tabular-nums}
+.o3 .d-label{color:var(--dim);font-size:12.5px;flex:1}
+.o3 .d-mini{font-weight:600;font-size:12.5px;color:var(--dim);background:var(--surface);
+  border-radius:9px;padding:5px 10px}
+.o3 .d-track{height:6px;background:var(--surface);border-radius:3px;margin-top:10px;overflow:hidden}
+.o3 .d-track i{display:block;height:100%;width:43%;border-radius:3px;
+  background:linear-gradient(90deg,var(--lilac),var(--apricot))}
+.o3 .slot{background:var(--card);border-radius:18px;padding:13px 16px;margin-bottom:11px;
+  box-shadow:0 10px 24px -14px rgba(80,64,150,.28)}
+.o3 .s-line{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.o3 .s-name{font-weight:600;font-size:16.5px;line-height:1.2}
+.o3 .s-target{color:var(--dim);font-size:12.5px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.o3 .warm{margin-top:8px;background:var(--wash);border-radius:11px;padding:7px 11px;font-size:12.5px}
+.o3 .warm b{color:var(--lilac);font-weight:600;font-size:11px;letter-spacing:.08em;
+  text-transform:uppercase;margin-right:4px}
+.o3 .cue{color:var(--dim);font-size:12.5px;margin-top:6px}
+.o3 .s-foot{display:flex;align-items:center;gap:10px;margin-top:10px}
+.o3 .chip{display:inline-flex;align-items:baseline;gap:5px;background:var(--surface);
+  border-radius:11px;padding:8px 14px;font-size:12px;color:var(--dim)}
+.o3 .chip b{font-weight:600;font-size:18px;color:var(--ink);font-variant-numeric:tabular-nums}
+.o3 .chip i{font-style:normal;font-size:9px;align-self:center}
+.o3 .note{margin-left:auto;color:var(--dim);font-size:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="eyebrow">Carolina's app</div>
+    <h1>Forte — three directions</h1>
+    <p class="sub"><b>Forte</b> is Portuguese for strong. Same bones as Strength Rebuild —
+    two day cards and a targets panel at home, one-press rest and weight chips in session —
+    with a gentler, friendlier skin. React to <b>palette, type, shape, and voice</b> separately;
+    mixing across options is a fine answer.</p>
+  </header>
+
+  <div class="options">
+
+    <!-- ══════════ OPTION 1 ══════════ -->
+    <section class="option">
+      <div class="opt-eye">Option 1</div>
+      <div class="opt-name">Morning Rosé</div>
+      <div class="swatches">
+        <span class="sw" style="background:#FBF4F1"></span>
+        <span class="sw" style="background:#F4E7E2"></span>
+        <span class="sw" style="background:#B44E6B"></span>
+        <span class="sw" style="background:#41302C"></span>
+      </div>
+      <p class="opt-why">Soft warmth. Rounded type, petal-cornered day cards, a greeting up top.
+      The rest timer is a <b>pill that drains</b> as she rests — the whole button is the clock.</p>
+
+      <div class="duo">
+        <div class="ph-col">
+          <div class="phone o1"><div class="notch"></div>
+            <div class="scr">
+              <div class="top"><span class="wordmark">Forte</span><span class="gear">⚙︎</span></div>
+              <div class="greet">
+                <div class="ola">Olá, Carolina</div>
+                <div class="date">Tuesday · Aug 4</div>
+              </div>
+              <div class="dcard">
+                <div class="dname">Day A</div>
+                <div class="dsub">Squat + Horizontal</div>
+                <div class="dlast">Last · Fri, Jul 31</div>
+              </div>
+              <div class="dcard">
+                <div class="dname">Day B</div>
+                <div class="dsub">Hinge + Vertical</div>
+                <div class="dlast">Last · Sat, Aug 1</div>
+              </div>
+              <div class="panel">
+                <div class="p-head"><span class="p-title">Targets</span><span class="p-check">Check-in Friday</span></div>
+                <div class="prow">
+                  <div class="pr-line"><span class="pr-name">Chin-up</span><span class="pr-num"><b>18</b> / 30 reps</span></div>
+                  <div class="pbar"><i style="width:60%"></i></div>
+                </div>
+                <div class="prow">
+                  <div class="pr-line"><span class="pr-name">Suitcase carry</span><span class="pr-num"><b>45</b> lb</span></div>
+                  <div class="pips"><span class="pip">40</span><span class="pip now">45</span><span class="pip">50</span><span class="arr">→</span><span class="pip">60</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="statecap">Home</div>
+        </div>
+
+        <div class="ph-col">
+          <div class="phone o1"><div class="notch"></div>
+            <div class="scr">
+              <div class="top"><span class="back">‹ Home</span><span class="gear">⚙︎</span></div>
+              <div class="dhead">
+                <div class="dname">Day A</div>
+                <div class="dsub" style="color:var(--dim)">Squat + Horizontal</div>
+              </div>
+              <div class="dock">
+                <div class="dock-fill"></div>
+                <div class="dock-row">
+                  <span class="d-time">1:04</span><span class="d-label">resting</span>
+                  <span class="d-mini">+15</span><span class="d-mini">✕</span>
+                </div>
+              </div>
+              <div class="slot">
+                <div class="s-line"><span class="s-name">Back squat</span><span class="s-target">4×5 · RIR 2–3</span></div>
+                <div class="warm"><b>Warm-up</b>Rack ATM — light bar: ribs, scapula, breath?</div>
+                <div class="cue">Upright torso, full depth</div>
+                <div class="s-foot"><span class="chip"><b>95</b> lb <i>▾</i></span><span class="note">✎</span></div>
+              </div>
+              <div class="slot">
+                <div class="s-line"><span class="s-name">DB bench press</span><span class="s-target">3×6–8 · RIR 2–3</span></div>
+                <div class="cue">Free the scapula</div>
+                <div class="s-foot"><span class="chip"><b>27.5</b> lb · ×8 <i>▾</i></span><span class="note">✎</span></div>
+              </div>
+              <div class="slot">
+                <div class="s-line"><span class="s-name">One-arm DB row</span><span class="s-target">3×8–10 /side</span></div>
+                <div class="cue">Lead with the shoulder blade</div>
+              </div>
+            </div>
+          </div>
+          <div class="statecap">Session — resting</div>
+        </div>
+      </div>
+
+      <p class="opt-foot">Feminine as <b>warmth</b>: blush neutrals, one deep rose, round type
+      (SF&nbsp;Rounded on her phone). The uneven petal corner is the one flourish — everything
+      else stays quiet.</p>
+    </section>
+
+    <!-- ══════════ OPTION 2 ══════════ -->
+    <section class="option">
+      <div class="opt-eye">Option 2</div>
+      <div class="opt-name">Sage &amp; Linen</div>
+      <div class="swatches">
+        <span class="sw" style="background:#F7F6F1"></span>
+        <span class="sw" style="background:#EDEBE2"></span>
+        <span class="sw" style="background:#5B7457"></span>
+        <span class="sw" style="background:#2F3329"></span>
+      </div>
+      <p class="opt-why">Quiet elegance. Serif voice in title case — no shouting caps anywhere —
+      linen paper, hairlines, and <b>leaf-shaped pips</b> marking the load progression.</p>
+
+      <div class="duo">
+        <div class="ph-col">
+          <div class="phone o2"><div class="notch"></div>
+            <div class="scr">
+              <div class="top"><span class="wordmark">forte</span><span class="gear">⚙︎</span></div>
+              <hr class="hairline">
+              <div class="dcard">
+                <div class="dname">Day A</div>
+                <div class="dsub">Squat + Horizontal</div>
+                <div class="dlast">Last · Fri, Jul 31</div>
+              </div>
+              <div class="dcard">
+                <div class="dname">Day B</div>
+                <div class="dsub">Hinge + Vertical</div>
+                <div class="dlast">Last · Sat, Aug 1</div>
+              </div>
+              <div class="panel">
+                <div class="p-head"><span class="p-title">Targets</span><span class="p-check">Check-in Fri</span></div>
+                <div class="prow">
+                  <div class="pr-line"><span class="pr-name">Chin-up</span><span class="pr-num"><b>18</b> / 30 reps</span></div>
+                  <div class="pbar"><i style="width:60%"></i></div>
+                </div>
+                <div class="prow">
+                  <div class="pr-line"><span class="pr-name">Suitcase carry</span><span class="pr-num"><b>45</b> lb</span></div>
+                  <div class="leaves">
+                    <span class="leafstep"><span class="leaf"></span>40</span>
+                    <span class="leafstep now"><span class="leaf"></span>45</span>
+                    <span class="leafstep"><span class="leaf"></span>50</span>
+                    <span class="leafstep"><span class="leaf"></span>60</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="statecap">Home</div>
+        </div>
+
+        <div class="ph-col">
+          <div class="phone o2"><div class="notch"></div>
+            <div class="scr">
+              <div class="top"><span class="back">‹ Home</span><span class="gear">⚙︎</span></div>
+              <div class="dhead">
+                <div class="dname">Day A</div>
+                <div class="dsub">Squat + Horizontal</div>
+              </div>
+              <div class="dock">
+                <span class="d-time">1:04</span>
+                <div class="d-track"><i></i></div>
+                <span class="d-mini">+15</span><span class="d-mini">✕</span>
+              </div>
+              <div class="slot">
+                <div class="s-line"><span class="s-name">Back squat</span><span class="s-target">4×5 · RIR 2–3</span></div>
+                <div class="warm"><b>Warm-up</b>Rack ATM — light bar: ribs, scapula, breath?</div>
+                <div class="cue">Upright torso, full depth</div>
+                <div class="s-foot"><span class="chip"><b>95</b> lb <i>▾</i></span><span class="note">✎</span></div>
+              </div>
+              <div class="slot">
+                <div class="s-line"><span class="s-name">DB bench press</span><span class="s-target">3×6–8 · RIR 2–3</span></div>
+                <div class="cue">Free the scapula</div>
+                <div class="s-foot"><span class="chip"><b>27.5</b> lb · ×8 <i>▾</i></span><span class="note">✎</span></div>
+              </div>
+              <div class="slot">
+                <div class="s-line"><span class="s-name">One-arm DB row</span><span class="s-target">3×8–10 /side</span></div>
+                <div class="cue">Lead with the shoulder blade</div>
+              </div>
+            </div>
+          </div>
+          <div class="statecap">Session — resting</div>
+        </div>
+      </div>
+
+      <p class="opt-foot">Feminine as <b>calm</b>: the serif (New&nbsp;York on iPhone) carries it,
+      cues set in italic like margin notes. Closest in spirit to the current app — same restraint,
+      warmer soul.</p>
+    </section>
+
+    <!-- ══════════ OPTION 3 ══════════ -->
+    <section class="option">
+      <div class="opt-eye">Option 3</div>
+      <div class="opt-name">Lilac Hour</div>
+      <div class="swatches">
+        <span class="sw" style="background:#F6F4FB"></span>
+        <span class="sw" style="background:#FFFFFF"></span>
+        <span class="sw" style="background:#6F5BC5"></span>
+        <span class="sw" style="background:#E8875F"></span>
+        <span class="sw" style="background:#322E40"></span>
+      </div>
+      <p class="opt-why">Friendly energy. Lilac-white field, floating squircle cards, and a second
+      hue: violet does structure, apricot does <b>time and “due”</b>. The rest track runs a dawn
+      gradient between them.</p>
+
+      <div class="duo">
+        <div class="ph-col">
+          <div class="phone o3"><div class="notch"></div>
+            <div class="scr">
+              <div class="top"><span class="wordmark">Forte</span><span class="gear">⚙︎</span></div>
+              <div class="kicker">Tuesday · Aug 4</div>
+              <div class="dcard">
+                <div class="dname">Day A</div>
+                <div class="dsub">Squat + Horizontal</div>
+                <div class="dlast">Last · Fri, Jul 31</div>
+              </div>
+              <div class="dcard">
+                <div class="dname">Day B</div>
+                <div class="dsub">Hinge + Vertical</div>
+                <div class="dlast">Last · Sat, Aug 1</div>
+              </div>
+              <div class="panel">
+                <div class="p-head"><span class="p-title">Targets</span><span class="p-check">Check-in Friday</span></div>
+                <div class="prow">
+                  <div class="pr-line"><span class="pr-name">Chin-up</span><span class="pr-num"><b>18</b> / 30 reps</span></div>
+                  <div class="pbar"><i style="width:60%"></i></div>
+                </div>
+                <div class="prow">
+                  <div class="pr-line"><span class="pr-name">Suitcase carry</span><span class="pr-num"><b>45</b> lb</span></div>
+                  <div class="pips"><span class="pip">40</span><span class="pip now">45</span><span class="pip">50</span><span class="arr">→</span><span class="pip">60</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="statecap">Home</div>
+        </div>
+
+        <div class="ph-col">
+          <div class="phone o3"><div class="notch"></div>
+            <div class="scr">
+              <div class="top"><span class="back">‹ Home</span><span class="gear">⚙︎</span></div>
+              <div class="dhead">
+                <div class="dname">Day A</div>
+                <div class="dsub" style="color:var(--dim)">Squat + Horizontal</div>
+              </div>
+              <div class="dock">
+                <div class="dock-row">
+                  <span class="d-time">1:04</span><span class="d-label">resting</span>
+                  <span class="d-mini">+15</span><span class="d-mini">✕</span>
+                </div>
+                <div class="d-track"><i></i></div>
+              </div>
+              <div class="slot">
+                <div class="s-line"><span class="s-name">Back squat</span><span class="s-target">4×5 · RIR 2–3</span></div>
+                <div class="warm"><b>Warm-up</b>Rack ATM — light bar: ribs, scapula, breath?</div>
+                <div class="cue">Upright torso, full depth</div>
+                <div class="s-foot"><span class="chip"><b>95</b> lb <i>▾</i></span><span class="note">✎</span></div>
+              </div>
+              <div class="slot">
+                <div class="s-line"><span class="s-name">DB bench press</span><span class="s-target">3×6–8 · RIR 2–3</span></div>
+                <div class="cue">Free the scapula</div>
+                <div class="s-foot"><span class="chip"><b>27.5</b> lb · ×8 <i>▾</i></span><span class="note">✎</span></div>
+              </div>
+              <div class="slot">
+                <div class="s-line"><span class="s-name">One-arm DB row</span><span class="s-target">3×8–10 /side</span></div>
+                <div class="cue">Lead with the shoulder blade</div>
+              </div>
+            </div>
+          </div>
+          <div class="statecap">Session — resting</div>
+        </div>
+      </div>
+
+      <p class="opt-foot">Feminine as <b>lightness</b>: no borders, cards float on soft shadow,
+      Avenir&nbsp;Next throughout. The two-hue system is the risk — apricot only ever means
+      time or attention.</p>
+    </section>
+
+  </div>
+
+  <p class="howto">All three keep the program content, the one-press rest, and the
+  luminance-first state rules intact — this is skin, not surgery. Useful feedback:
+  <b>which palette, which type voice, which shapes</b> — and anything that reads
+  “too much” or “not her.” Exercise details are placeholders from the current program;
+  Carolina's actual programming comes after the design lands.</p>
+
+</div>
+</body>
+</html>
