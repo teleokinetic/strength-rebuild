@@ -1,4 +1,4 @@
-// Strength Rebuild — program seed (v0.3)
+// Strength Rebuild — program seed (v1.3)
 // This is only the FIRST-RUN seed. After first launch the program lives in
 // localStorage and is edited in-app; changes here won't overwrite it.
 //
@@ -8,7 +8,7 @@
 // rest: 'normal' | 'heavy' picks which rest-button tier the slot suggests.
 
 const SEED_PROGRAM = {
-  specVersion: '1.2',
+  specVersion: '1.3',
   days: [
     {
       id: 'dayA',
@@ -127,10 +127,15 @@ const SEED_PROGRAM = {
           cue: 'Light and smooth — own each shape',
         },
         {
-          id: 'b6', name: 'Hanging leg raise', target: '3×8–12',
+          id: 'b6', name: 'Hollow body', target: '3×20–30 s',
           track: false, rest: 'normal',
-          menu: ['Bent knee', 'Straight leg', 'Toes-to-bar'],
-          cue: 'Curl the pelvis first, no swing',
+          menu: [
+            'Tuck hollow — low back pressed into the floor',
+            'One leg extended',
+            'Full hollow — arms overhead last',
+            'Rocking hollow — once the shape is solid',
+          ],
+          cue: 'Low back glued down — shrink the shape before it breaks',
         },
         {
           id: 'b7', name: 'Heel-to-butt curl', target: '2×5–8 /side',

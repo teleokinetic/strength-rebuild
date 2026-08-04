@@ -8,7 +8,7 @@
 
 const STORE_KEY = 'sr-state-v2';
 const V1_KEY = 'sr-state-v1';        // read-only: migration source, never written
-const APP_VERSION = '2.5.0';
+const APP_VERSION = '2.6.0';
 
 let state = null;
 
@@ -128,7 +128,7 @@ function patchProgram() {
   const p = state.program;
   if (!p) return;
   const v = parseFloat(p.specVersion) || 0;
-  if (v >= 1.2) return;
+  if (v >= 1.3) return;
 
   // 0.4: Bulgarian split squat becomes Stork squat; both days open
   // with a no-weight Prep slot (wrist prep + passive/active hangs).
@@ -271,7 +271,27 @@ function patchProgram() {
     }
   }
 
-  p.specVersion = '1.2';
+  // 1.3: hollow body replaces the hanging leg raise — shared slot with
+  // Carolina's Forte program so they can do it together; anti-extension
+  // work the week was otherwise missing (Pallof covers rotation, carry
+  // covers lateral). Same position in the Day B order.
+  if (v < 1.3) {
+    const dayB = p.days.find((d) => d.id === 'dayB');
+    const hlr = dayB && dayB.slots.find((s) => slug(s.name) === 'hanging-leg-raise');
+    if (hlr) {
+      hlr.name = 'Hollow body';
+      hlr.target = '3×20–30 s';
+      hlr.menu = [
+        'Tuck hollow — low back pressed into the floor',
+        'One leg extended',
+        'Full hollow — arms overhead last',
+        'Rocking hollow — once the shape is solid',
+      ];
+      hlr.cue = 'Low back glued down — shrink the shape before it breaks';
+    }
+  }
+
+  p.specVersion = '1.3';
   save();
 }
 
