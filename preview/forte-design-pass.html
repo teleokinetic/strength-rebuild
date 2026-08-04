@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Forte — a design pass in four moments</title>
+<style>
+  :root {
+    --bg:#FBF4F1; --surface:#F4E7E2; --card:#FFFDFC; --raised:#F0E1DB; --line:#EDDCD6;
+    --ink:#41302C; --dim:#94756B; --rose:#B44E6B; --rose-wash:rgba(180,78,107,.10);
+    --on-rose:#FFF6F3; --good:#5B7A4E;
+    --display:ui-rounded,'SF Pro Rounded','Arial Rounded MT Bold',-apple-system,sans-serif;
+    --body:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    --petal:26px 26px 26px 10px;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--surface); color:var(--ink); font-family:var(--body); font-size:16px; line-height:1.5; padding:40px 20px 90px; }
+  .page { max-width:1060px; margin:0 auto; }
+
+  header { position:relative; margin-bottom:10px; }
+  h1 { font-family:var(--display); font-weight:700; font-size:33px; line-height:1.15; color:var(--ink); }
+  h1 b { color:var(--rose); font-weight:700; }
+  .sub { color:var(--dim); margin:8px 0 0; max-width:72ch; }
+  .sings { margin:14px 0 0; max-width:72ch; font-size:14.5px; color:var(--dim);
+    background:var(--bg); border:1px solid var(--line); border-radius:16px; padding:10px 14px; }
+  .sings b { color:var(--ink); font-weight:600; }
+  .head-sprig { position:absolute; top:-14px; right:0; width:96px; height:108px; color:var(--rose); opacity:.5; pointer-events:none; }
+  @media (max-width:640px){ .head-sprig{ display:none; } }
+
+  .opt { display:flex; gap:36px; align-items:flex-start; margin:52px 0 20px; flex-wrap:wrap; }
+  .notes { flex:1; min-width:280px; max-width:520px; padding-top:6px; }
+  .optlabel { font-family:var(--display); font-weight:700; font-size:14px; color:var(--rose); }
+  .notes h2 { font-family:var(--display); font-weight:700; font-size:25px; line-height:1.2; margin:3px 0 10px; }
+  .notes p { margin:0 0 12px; }
+  .notes ul { margin:0 0 12px 22px; }
+  .notes li { margin:6px 0; }
+  .good::marker { content:'+  '; color:var(--good); font-weight:700; }
+  .flag::marker { content:'−  '; color:var(--rose); font-weight:700; }
+  .buildtag { display:inline-block; font-family:var(--display); font-weight:700; font-size:12.5px;
+    color:var(--dim); background:var(--bg); border:1px solid var(--line); border-radius:999px; padding:3px 11px; margin-top:2px; }
+
+  /* ---------- phone frame ---------- */
+  .phone { width:393px; flex:none; background:var(--bg); color:var(--ink);
+    border-radius:38px; border:7px solid #3A2A26; padding:24px 14px 28px;
+    box-shadow:0 16px 44px rgba(65,48,44,.18); overflow:hidden; position:relative; }
+  .p-topbar { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; padding:0 4px; }
+  .p-wordmark { font-family:var(--display); font-weight:700; font-size:20px; color:var(--rose); }
+  .p-back { font-family:var(--display); font-weight:700; font-size:15px; color:var(--dim); padding:6px 10px; margin:-6px -10px; }
+  .p-gear { color:var(--dim); font-size:19px; }
+
+  .p-sprig { position:absolute; pointer-events:none; color:var(--rose); opacity:.5; z-index:0; }
+
+  /* home */
+  .p-greet { position:relative; margin:2px 4px 18px; }
+  .p-greet .p-sprig { top:-10px; right:-4px; width:100px; height:114px; }
+  .p-ola { font-family:var(--display); font-weight:700; font-size:28px; line-height:1.1; }
+  .p-date { color:var(--dim); margin-top:2px; }
+
+  .p-daycard { position:relative; background:var(--card); border:1px solid var(--line);
+    border-radius:var(--petal); padding:17px 18px; margin-bottom:12px; z-index:1; }
+  .p-dayname { font-family:var(--display); font-weight:700; font-size:29px; line-height:1.1; }
+  .p-daysub { color:var(--dim); margin-top:2px; }
+  .p-daylast { margin-top:10px; font-family:var(--display); font-weight:700; font-size:13px;
+    color:var(--rose); font-variant-numeric:tabular-nums; display:flex; align-items:center; gap:8px; }
+  .p-daylast .when { color:var(--dim); font-weight:600; font-family:var(--body); font-size:13px; }
+  .p-upnext { background:var(--rose); color:var(--on-rose); border-radius:999px; padding:2px 10px 3px;
+    font-family:var(--display); font-weight:700; font-size:12px; }
+  .p-dayglyph { position:absolute; top:16px; right:16px; width:44px; height:44px; color:var(--rose); opacity:.4; }
+
+  .p-progrow { display:flex; align-items:center; gap:12px; background:var(--card); border:1px solid var(--line);
+    border-radius:18px; padding:13px 16px; margin-top:2px; }
+  .p-progrow .mark { width:30px; height:30px; color:var(--rose); flex:none; }
+  .p-progrow .t { font-family:var(--display); font-weight:700; font-size:17px; }
+  .p-progrow .s { color:var(--dim); font-size:13.5px; margin-top:1px; }
+  .p-progrow .chev { margin-left:auto; color:var(--dim); font-size:18px; }
+
+  /* day view */
+  .p-dayhead { position:relative; margin:0 4px 8px; }
+  .p-dayhead .p-sprig { top:-46px; right:-2px; width:84px; height:96px; }
+  .p-dayhead-name { font-family:var(--display); font-weight:700; font-size:26px; }
+  .p-dayhead-sub { color:var(--dim); font-size:17px; font-weight:500; }
+  .p-trail { display:flex; align-items:center; gap:7px; margin:7px 4px 12px; }
+  .p-pip { width:11px; height:11px; border-radius:50% 50% 50% 22%; transform:rotate(-8deg);
+    border:1.8px solid var(--dim); opacity:.55; }
+  .p-pip.on { background:var(--rose); border-color:var(--rose); opacity:1; }
+  .p-trail .count { font-family:var(--display); font-weight:700; font-size:13px; color:var(--dim); margin-left:4px; }
+
+  .p-rest { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:13px; }
+  .p-restbtn { border-radius:999px; padding:15px 10px; text-align:center;
+    font-family:var(--display); font-weight:700; font-size:18px;
+    background:var(--raised); color:var(--ink); border:1px solid var(--line); }
+  .p-restbtn span { font-variant-numeric:tabular-nums; opacity:.75; margin-left:4px; font-weight:700; }
+  .p-restbtn.hint { background:var(--rose); color:var(--on-rose); border-color:var(--rose); }
+  .p-resttag { display:block; font-size:11px; font-weight:600; opacity:.85; margin-top:1px; font-family:var(--body); }
+
+  .p-slot { position:relative; background:var(--card); border:1px solid var(--line); border-radius:20px;
+    padding:14px 16px 14px 15px; margin-bottom:11px; z-index:1; }
+  .p-slothead { display:flex; align-items:baseline; gap:10px; }
+  .p-ring { width:24px; height:24px; border-radius:50%; border:2px solid var(--line); flex:none;
+    align-self:center; position:relative; }
+  .p-slot.done .p-ring { background:var(--rose); border-color:var(--rose); }
+  .p-slot.done .p-ring::after { content:'✓'; position:absolute; inset:0; display:grid; place-items:center;
+    color:var(--on-rose); font-size:13px; font-weight:700; }
+  .p-slotname { font-family:var(--display); font-weight:700; font-size:19px; line-height:1.15; }
+  .p-slottarget { font-family:var(--display); font-weight:700; font-size:13.5px; color:var(--dim);
+    white-space:nowrap; margin-left:auto; font-variant-numeric:tabular-nums; }
+  .p-slot.done .dimwrap { opacity:.45; }
+  .p-cue { color:var(--dim); font-size:14px; margin:3px 0 0 34px; }
+  .p-warm { margin:8px 0 0 34px; padding:7px 11px; border-radius:12px; background:var(--rose-wash); font-size:14px; }
+  .p-warmtag { font-family:var(--display); font-weight:700; font-size:12.5px; color:var(--rose); margin-right:6px; }
+  .p-foot { display:flex; align-items:center; gap:10px; margin:10px 0 0 34px; }
+  .p-chip { display:inline-flex; align-items:baseline; gap:5px; background:var(--raised);
+    border:1px solid var(--line); border-radius:999px; padding:8px 16px; }
+  .p-chipnum { font-family:var(--display); font-weight:700; font-size:21px; font-variant-numeric:tabular-nums; }
+  .p-chipunit { color:var(--dim); font-size:13px; }
+  .p-chipreps { font-family:var(--display); font-weight:700; font-size:16px; color:var(--dim); }
+  .p-caret { align-self:center; color:var(--dim); font-size:10px; margin-left:2px; }
+  .p-note { margin-left:auto; color:var(--dim); font-size:14px; }
+  .p-rungs { display:flex; flex-wrap:wrap; gap:7px; margin:9px 0 0 34px; }
+  .p-rung { font-size:13.5px; font-weight:600; color:var(--dim); background:var(--bg);
+    border:1px solid var(--line); border-radius:999px; padding:6px 13px; }
+  .p-rung.now { background:var(--rose); color:var(--on-rose); border-color:var(--rose); }
+  .p-fade { position:relative; height:64px; overflow:hidden; opacity:.6; }
+  .p-fade::after { content:''; position:absolute; inset:0; background:linear-gradient(transparent, var(--bg)); }
+
+  /* finish */
+  .p-bloomwrap { text-align:center; margin:6px 0 4px; }
+  .p-bloom { width:88px; height:88px; color:var(--rose); }
+  @media (prefers-reduced-motion:no-preference) {
+    .p-bloom .petal { animation:openpetal .9s ease-out backwards; }
+    .p-bloom .petal:nth-child(2){ animation-delay:.15s } .p-bloom .petal:nth-child(3){ animation-delay:.3s }
+    .p-bloom .petal:nth-child(4){ animation-delay:.45s } .p-bloom .petal:nth-child(5){ animation-delay:.6s }
+  }
+  @keyframes openpetal { from { opacity:0; } }
+  .p-boa { font-family:var(--display); font-weight:700; font-size:28px; text-align:center; }
+  .p-fsub { text-align:center; color:var(--dim); margin:3px 0 14px; font-variant-numeric:tabular-nums; }
+  .p-recap { background:var(--card); border:1px solid var(--line); border-radius:var(--petal); padding:6px 16px; margin-bottom:12px; }
+  .p-rrow { display:flex; justify-content:space-between; align-items:baseline; padding:9px 0; border-top:1px solid var(--line); }
+  .p-rrow:first-child { border-top:0; }
+  .p-rname { font-weight:600; font-size:15px; }
+  .p-rnum { font-family:var(--display); font-weight:700; font-size:15px; color:var(--dim); font-variant-numeric:tabular-nums; }
+  .p-rnum b { color:var(--ink); }
+  .p-rmenu { color:var(--dim); font-size:13.5px; padding:9px 0 10px; border-top:1px solid var(--line); }
+  .p-notes-in { background:var(--surface); border:1px solid var(--line); border-radius:14px;
+    padding:10px 12px; color:var(--dim); font-size:15px; margin-bottom:12px; min-height:56px; }
+  .p-save { background:var(--rose); color:var(--on-rose); border-radius:999px; padding:15px 10px; text-align:center;
+    font-family:var(--display); font-weight:700; font-size:18px; }
+
+  /* progresso */
+  .p-eyebrow { font-family:var(--display); font-weight:700; font-size:15px; color:var(--rose); margin:16px 4px 8px; }
+  .p-ladder { background:var(--card); border:1px solid var(--line); border-radius:var(--petal); padding:16px 16px 12px; }
+  .p-lrow { display:flex; gap:13px; }
+  .p-lrail { width:16px; flex:none; display:flex; flex-direction:column; align-items:center; }
+  .p-ldot { width:12px; height:12px; border-radius:50%; background:var(--rose); flex:none; margin-top:4px; }
+  .p-ldot.now { width:16px; height:16px; box-shadow:0 0 0 4px var(--rose-wash); }
+  .p-ldot.next { background:var(--card); border:2px solid var(--dim); }
+  .p-lline { width:2px; flex:1; background:var(--line); }
+  .p-lbody { padding-bottom:15px; min-width:0; }
+  .p-lrow:first-child .p-lbody { padding-bottom:12px; }
+  .p-lwhen { font-family:var(--display); font-weight:700; font-size:12px; color:var(--rose); }
+  .p-lrow.future .p-lwhen { color:var(--dim); }
+  .p-lname { font-family:var(--display); font-weight:700; font-size:17px; margin:1px 0 1px; }
+  .p-lrow.future .p-lname { color:var(--dim); font-weight:600; }
+  .p-ldesc { color:var(--dim); font-size:13px; }
+  .p-goalmark { width:22px; height:22px; color:var(--rose); vertical-align:-5px; margin-left:4px; }
+  .p-lcap { color:var(--dim); font-size:13px; border-top:1px solid var(--line); padding-top:9px; margin-top:2px; }
+
+  .p-trend { background:var(--card); border:1px solid var(--line); border-radius:20px; padding:13px 16px; margin-bottom:11px;
+    display:flex; align-items:center; gap:14px; }
+  .p-tinfo { min-width:0; }
+  .p-tname2 { font-family:var(--display); font-weight:700; font-size:17px; }
+  .p-tline { color:var(--dim); font-size:13.5px; margin-top:1px; }
+  .p-tline b { color:var(--rose); font-weight:700; }
+  .p-spark { margin-left:auto; flex:none; }
+  .p-rhythm { display:flex; gap:18px; align-items:flex-end; padding:4px 2px 0; }
+  .p-week { text-align:center; }
+  .p-week .dots { display:flex; gap:5px; justify-content:center; }
+  .p-wdot { width:10px; height:10px; border-radius:50%; background:var(--rose); }
+  .p-week .wl { font-size:11px; color:var(--dim); margin-top:5px; }
+
+  /* small fixes + footer */
+  .fixes { background:var(--bg); border:1px solid var(--line); border-radius:var(--petal); padding:20px 24px; margin-top:56px; }
+  .fixes h2 { font-family:var(--display); font-weight:700; font-size:22px; margin-bottom:10px; }
+  .fixes ol { margin-left:22px; }
+  .fixes li { margin:8px 0; }
+  .fixes .why { color:var(--dim); }
+  .leftout { color:var(--dim); font-size:14.5px; max-width:72ch; margin:26px auto 0; }
+  .leftout b { color:var(--ink); font-weight:600; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header>
+  <svg class="head-sprig" viewBox="0 0 104 118" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M96 6 C 78 18 54 38 40 62 C 32 76 27 89 26 102"/><path d="M60 44 C 54 54 50 62 48 72" stroke-width="1.7"/><path d="M74 26 c 10 -9 22 -10 30 -4 c -10 9 -22 10 -30 4 z" fill="currentColor" stroke="none" opacity="0.3"/><path d="M38 66 c -11 -3 -18 -11 -19 -21 c 11 3 18 11 19 21 z" fill="currentColor" stroke="none" opacity="0.3"/><g transform="translate(38 70) scale(0.8)" stroke-width="1.7"><ellipse cx="12" cy="6.2" rx="3.4" ry="4.8"/><ellipse cx="12" cy="6.2" rx="3.4" ry="4.8" transform="rotate(72 12 12)"/><ellipse cx="12" cy="6.2" rx="3.4" ry="4.8" transform="rotate(144 12 12)"/><ellipse cx="12" cy="6.2" rx="3.4" ry="4.8" transform="rotate(216 12 12)"/><ellipse cx="12" cy="6.2" rx="3.4" ry="4.8" transform="rotate(288 12 12)"/></g><circle cx="26" cy="106" r="2.6" fill="currentColor" stroke="none" opacity="0.55"/></g></svg>
+  <h1><b>Forte</b> — a design pass in four moments</h1>
+  <p class="sub">The skin is right; what's missing is <em>feel</em>. The app doesn't know what's next, doesn't know where Carolina is mid-workout, ends a session with a toast, and keeps her progress invisible. Four moments fix that — every one is additive UI on the existing engine, no new logging burden.</p>
+  <p class="sings"><b>Already sings, don't touch:</b> safe-area handling, wake lock during rest, the silent draining-pill timer, sticky rest dock, petal corners, the pressed sprig, and the one-weight-per-lift model.</p>
+</header>
+
+<!-- ============ MOMENT 1 · HOME ============ -->
+<div class="opt">
+  <div class="phone">
+    <div class="p-topbar"><div class="p-wordmark">Forte</div><div class="p-gear">⚙</div></div>
+    <div class="p-greet">
+      <svg class="p-sprig" viewBox="0 0 104 118" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M96 6 C 78 18 54 38 40 62 C 32 76 27 89 26 102"/><path d="M60 44 C 54 54 50 62 48 72" stroke-width="1.7"/><path d="M74 26 c 10 -9 22 -10 30 -4 c -10 9 -22 10 -30 4 z" fill="currentColor" stroke="none" opacity="0.3"/><path d="M38 66 c -11 -3 -18 -11 -19 -21 c 11 3 18 11 19 21 z" fill="currentColor" stroke="none" opacity="0.3"/><g transform="translate(38 70) scale(0.8)" stroke-width="1.7"><ellipse cx="12" cy="6.2" rx="3.4" ry="4.8"/><ellipse cx="12" cy="6.2" rx="3.4" ry="4.8" transform="rotate(72 12 12)"/><ellipse cx="12" cy="6.2" rx="3.4" ry="4.8" transform="rotate(144 12 12)"/><ellipse cx="12" cy="6.2" rx="3.4" ry="4.8" transform="rotate(216 12 12)"/><ellipse cx="12" cy="6.2" rx="3.4" ry="4.8" transform="rotate(288 12 12)"/></g><circle cx="26" cy="106" r="2.6" fill="currentColor" stroke="none" opacity="0.55"/></g></svg>
+      <div class="p-ola">Boa tarde, Carolina</div>
+      <div class="p-date">Tuesday · Aug 4</div>
+    </div>
+
+    <div class="p-daycard">
+      <svg class="p-dayglyph" viewBox="0 0 44 44" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 26 C 12 18 20 16 27 20 C 24 24 16 27 8 27 Z" fill="currentColor" stroke="none" opacity=".35"/><path d="M26 20 C 31 14 38 12 42 13 C 39 18 33 21 27 21"/><path d="M26 20 C 28 25 28 31 25 36"/><path d="M27 20 L 21 15"/></g></svg>
+      <div class="p-dayname">Voo</div>
+      <div class="p-daysub">Hinge · chin-up · press</div>
+      <div class="p-daylast"><span class="p-upnext">Up next</span><span class="when">last done Tue, Jul 28</span></div>
+    </div>
+
+    <div class="p-daycard">
+      <svg class="p-dayglyph" viewBox="0 0 44 44" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 36 Q 22 30 38 36"/><path d="M22 34 V 20"/><path d="M22 22 C 20 14 13 11 7 12 C 9 19 15 22 22 22 Z" fill="currentColor" stroke="none" opacity=".35"/><path d="M22 18 C 24 11 30 8 36 9 C 34 16 28 19 22 18 Z" fill="currentColor" stroke="none" opacity=".35"/></g></svg>
+      <div class="p-dayname">Terra</div>
+      <div class="p-daysub">Squat · push-up · hips</div>
+      <div class="p-daylast"><span class="when">Fri, Aug 1 — 3 days ago</span></div>
+    </div>
+
+    <div class="p-progrow">
+      <svg class="mark" viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 20 L 12 4"/><path d="M13 20 L 20 4"/><path d="M7 15 H 16"/><path d="M9 9 H 18"/></g></svg>
+      <div>
+        <div class="t">Progresso</div>
+        <div class="s">Push-up ladder · rung 2 of 6 — 9 sessions</div>
+      </div>
+      <div class="chev">›</div>
+    </div>
+  </div>
+
+  <div class="notes">
+    <div class="optlabel">Moment 1 · Home</div>
+    <h2>The home knows what's next</h2>
+    <p>Today the two cards are identical twins and the screen goes quiet below them. Four small moves make opening the app feel like being expected:</p>
+    <ul>
+      <li class="good"><b>Up next</b> on whichever day she didn't do last (simple alternation). Open → tap, zero thinking. It's a suggestion chip, not a lock — both cards stay tappable.</li>
+      <li class="good"><b>Greeting follows the clock</b> — Bom dia / Boa tarde / Boa noite. Three lines of code, and the app feels awake. (The date line already localizes to her iPhone's language on its own.)</li>
+      <li class="good"><b>A glyph per day</b>, drawn in the sprig's hand: Terra gets a sprouting seed, Voo a swallow. The days finally look like their names.</li>
+      <li class="good"><b>Relative dates</b> — "3 days ago" instead of making her do calendar math from "Aug 1".</li>
+      <li class="good"><b>One Progresso row</b> under the cards — the only new navigation on the whole pass, and the home's empty bottom half earns its keep.</li>
+      <li class="flag">"Up next" guesses wrong if she deliberately repeats a day — harmless, she taps the other card.</li>
+    </ul>
+    <span class="buildtag">Build: small — an afternoon</span>
+  </div>
+</div>
+
+<!-- ============ MOMENT 2 · MID-WORKOUT ============ -->
+<div class="opt">
+  <div class="phone">
+    <div class="p-topbar"><div class="p-back">‹ Back</div></div>
+    <div class="p-dayhead">
+      <svg class="p-sprig" viewBox="0 0 104 118" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M96 6 C 78 18 54 38 40 62 C 32 76 27 89 26 102"/><path d="M60 44 C 54 54 50 62 48 72" stroke-width="1.7"/><path d="M74 26 c 10 -9 22 -10 30 -4 c -10 9 -22 10 -30 4 z" fill="currentColor" stroke="none" opacity="0.3"/><path d="M38 66 c -11 -3 -18 -11 -19 -21 c 11 3 18 11 19 21 z" fill="currentColor" stroke="none" opacity="0.3"/><g transform="translate(38 70) scale(0.8)" stroke-width="1.7"><ellipse cx="12" cy="6.2" rx="3.4" ry="4.8"/><ellipse cx="12" cy="6.2" rx="3.4" ry="4.8" transform="rotate(72 12 12)"/><ellipse cx="12" cy="6.2" rx="3.4" ry="4.8" transform="rotate(144 12 12)"/><ellipse cx="12" cy="6.2" rx="3.4" ry="4.8" transform="rotate(216 12 12)"/><ellipse cx="12" cy="6.2" rx="3.4" ry="4.8" transform="rotate(288 12 12)"/></g><circle cx="26" cy="106" r="2.6" fill="currentColor" stroke="none" opacity="0.55"/></g></svg>
+      <div class="p-dayhead-name">Terra <span class="p-dayhead-sub">Squat · push-up · hips</span></div>
+    </div>
+    <div class="p-trail">
+      <div class="p-pip on"></div><div class="p-pip"></div><div class="p-pip"></div><div class="p-pip"></div>
+      <div class="p-pip"></div><div class="p-pip"></div><div class="p-pip"></div>
+      <span class="count">1 of 7</span>
+    </div>
+
+    <div class="p-rest">
+      <div class="p-restbtn">Rest <span>1:30</span></div>
+      <div class="p-restbtn hint">Rest <span>3:00</span><span class="p-resttag">back squat rests long</span></div>
+    </div>
+
+    <div class="p-slot done">
+      <div class="p-slothead"><div class="p-ring"></div><div class="dimwrap p-slotname">Warm-up</div><div class="dimwrap p-slottarget">~5 min</div></div>
+    </div>
+
+    <div class="p-slot">
+      <div class="p-slothead"><div class="p-ring"></div><div class="p-slotname">Back squat</div><div class="p-slottarget">4×8–12 · RIR 2–3</div></div>
+      <div class="p-cue">Reps first — build to 12s, then add weight and drop back to 8s</div>
+      <div class="p-warm"><span class="p-warmtag">Warm-up</span>Empty bar first — feet, breath, easy depth</div>
+      <div class="p-foot">
+        <div class="p-chip"><span class="p-chipnum">75</span><span class="p-chipunit">lb</span><span class="p-chipreps">×10</span><span class="p-caret">▾</span></div>
+        <div class="p-note">✎ note</div>
+      </div>
+    </div>
+
+    <div class="p-slot">
+      <div class="p-slothead"><div class="p-ring"></div><div class="p-slotname">Push-up progression</div><div class="p-slottarget">3×5–8</div></div>
+      <div class="p-cue">3×8 crisp at one height → move down a notch</div>
+      <div class="p-rungs">
+        <div class="p-rung">High incline</div>
+        <div class="p-rung now">Low incline</div>
+        <div class="p-rung">Eccentrics</div>
+        <div class="p-rung">Kneeling</div>
+      </div>
+      <div class="p-foot"><div class="p-note" style="margin-left:0">✎ note</div></div>
+    </div>
+
+    <div class="p-fade">
+      <div class="p-slot">
+        <div class="p-slothead"><div class="p-ring"></div><div class="p-slotname">One-arm DB row</div><div class="p-slottarget">3×8–10 /side</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="notes">
+    <div class="optlabel">Moment 2 · Mid-workout</div>
+    <h2>A sense of place, no logging tax</h2>
+    <p>The day screen looks identical at minute 0 and minute 50 — the biggest single thing keeping it from feeling alive. One tap fixes it:</p>
+    <ul>
+      <li class="good"><b>A ring on each card.</b> Tap it when the exercise is done: the card settles back (dims), a petal fills on the trail under the title. Ephemeral state — it lives in the active session, never gets logged, and Finish works fine if she ignores rings entirely.</li>
+      <li class="good"><b>The rest dock gets smart for free.</b> Each exercise already declares its rest tier in the data (<code>rest: 'heavy'</code>) — the UI just never used it. With rings, the app knows the current lift, so the tier it wants takes the rose and says why.</li>
+      <li class="good"><b>Menu bullets become rung pills.</b> Tap the variant you did today. It reads as "where am I on the ladder," takes the same space, and quietly feeds the Progresso ladder in Moment 4.</li>
+      <li class="good">Done cards collapse to one line — the list gets shorter as she works, which is the feeling of progress.</li>
+      <li class="flag">One extra tap per exercise. Optional by design, but worth watching whether she actually uses it.</li>
+    </ul>
+    <span class="buildtag">Build: medium — the heart of the pass</span>
+  </div>
+</div>
+
+<!-- ============ MOMENT 3 · FINISH ============ -->
+<div class="opt">
+  <div class="phone">
+    <div class="p-topbar"><div class="p-back">‹ Back</div></div>
+    <div class="p-bloomwrap">
+      <svg class="p-bloom" viewBox="0 0 88 88" aria-hidden="true">
+        <g fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round">
+          <ellipse class="petal" cx="44" cy="23" rx="12" ry="17" fill="currentColor" fill-opacity=".16"/>
+          <ellipse class="petal" cx="44" cy="23" rx="12" ry="17" fill="currentColor" fill-opacity=".16" transform="rotate(72 44 44)"/>
+          <ellipse class="petal" cx="44" cy="23" rx="12" ry="17" fill="currentColor" fill-opacity=".16" transform="rotate(144 44 44)"/>
+          <ellipse class="petal" cx="44" cy="23" rx="12" ry="17" fill="currentColor" fill-opacity=".16" transform="rotate(216 44 44)"/>
+          <ellipse class="petal" cx="44" cy="23" rx="12" ry="17" fill="currentColor" fill-opacity=".16" transform="rotate(288 44 44)"/>
+          <circle cx="44" cy="44" r="4.5" fill="currentColor" stroke="none" opacity=".55"/>
+        </g>
+      </svg>
+    </div>
+    <div class="p-boa">Boa, Carolina!</div>
+    <div class="p-fsub">Terra · 7 of 7 · 48 min</div>
+
+    <div class="p-recap">
+      <div class="p-rrow"><span class="p-rname">Back squat</span><span class="p-rnum"><b>75 lb</b> ×10</span></div>
+      <div class="p-rrow"><span class="p-rname">One-arm DB row</span><span class="p-rnum"><b>25 lb</b> ×10</span></div>
+      <div class="p-rrow"><span class="p-rname">Hip thrust (Smith)</span><span class="p-rnum"><b>90 lb</b> ×12</span></div>
+      <div class="p-rrow"><span class="p-rname">Suitcase carry</span><span class="p-rnum"><b>35 lb</b></span></div>
+      <div class="p-rrow"><span class="p-rname">Pallof press</span><span class="p-rnum"><b>20 lb</b> ×12</span></div>
+      <div class="p-rmenu">Push-up — low incline · Hang — offset grip</div>
+    </div>
+
+    <div class="p-notes-in">Session note (optional)</div>
+    <div class="p-save">Save session</div>
+  </div>
+
+  <div class="notes">
+    <div class="optlabel">Moment 3 · Finish</div>
+    <h2>Finishing earns a bloom</h2>
+    <p>Right now the finish screen is a sentence, a textarea, and a button — and the reward for 48 minutes of work is a toast. This merges confirm + recap + celebration into one closing card:</p>
+    <ul>
+      <li class="good"><b>The recap shows exactly what will save.</b> Today that promise is abstract ("saves every tracked lift at the weight shown on its chip"); here she can read it — and a wrong prefill jumps out before it's in the log.</li>
+      <li class="good"><b>The sprig blooms here and only here.</b> The bloom-when-done idea lost as a persistent ornament — as a once-per-session moment it's exactly right. Petals open one by one (skipped under reduced motion).</li>
+      <li class="good"><b>Duration and count</b> make the session feel like a finished object, not a form submission.</li>
+      <li class="good">Rung picks and menu notes land in the recap's last line, so "menu" exercises finally show up at the finish too.</li>
+      <li class="flag">Praise sits above a not-yet-tapped Save — deliberate: the workout is the achievement, saving is bookkeeping. Save stays one tap.</li>
+    </ul>
+    <span class="buildtag">Build: small — mostly layout</span>
+  </div>
+</div>
+
+<!-- ============ MOMENT 4 · PROGRESSO ============ -->
+<div class="opt">
+  <div class="phone">
+    <div class="p-topbar"><div class="p-back">‹ Back</div><div class="p-wordmark" style="font-size:17px">Progresso</div></div>
+
+    <div class="p-eyebrow" style="margin-top:4px">The road to your first push-up</div>
+    <div class="p-ladder">
+      <div class="p-lrow future">
+        <div class="p-lrail"><div class="p-ldot next"></div><div class="p-lline"></div></div>
+        <div class="p-lbody"><div class="p-lname">First full push-up
+          <svg class="p-goalmark" viewBox="0 0 88 88" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round"><ellipse cx="44" cy="23" rx="12" ry="17" fill="currentColor" fill-opacity=".16"/><ellipse cx="44" cy="23" rx="12" ry="17" fill="currentColor" fill-opacity=".16" transform="rotate(72 44 44)"/><ellipse cx="44" cy="23" rx="12" ry="17" fill="currentColor" fill-opacity=".16" transform="rotate(144 44 44)"/><ellipse cx="44" cy="23" rx="12" ry="17" fill="currentColor" fill-opacity=".16" transform="rotate(216 44 44)"/><ellipse cx="44" cy="23" rx="12" ry="17" fill="currentColor" fill-opacity=".16" transform="rotate(288 44 44)"/></g></svg></div>
+          <div class="p-ldesc">The goal — it'll bloom</div></div>
+      </div>
+      <div class="p-lrow future">
+        <div class="p-lrail"><div class="p-ldot next"></div><div class="p-lline"></div></div>
+        <div class="p-lbody"><div class="p-lname">Full singles</div><div class="p-ldesc">From the floor, one crisp rep at a time</div></div>
+      </div>
+      <div class="p-lrow future">
+        <div class="p-lrail"><div class="p-ldot next"></div><div class="p-lline"></div></div>
+        <div class="p-lbody"><div class="p-lname">Kneeling + eccentrics</div><div class="p-ldesc">Volume from the knees, slow lowers from the floor</div></div>
+      </div>
+      <div class="p-lrow">
+        <div class="p-lrail"><div class="p-ldot now"></div><div class="p-lline"></div></div>
+        <div class="p-lbody"><div class="p-lwhen">Now</div><div class="p-lname">Low incline</div><div class="p-ldesc">3×8 crisp at this height → down a notch</div></div>
+      </div>
+      <div class="p-lrow">
+        <div class="p-lrail"><div class="p-ldot"></div></div>
+        <div class="p-lbody" style="padding-bottom:10px"><div class="p-lwhen">Jul 7</div><div class="p-lname">High incline</div><div class="p-ldesc">Where the ladder started</div></div>
+      </div>
+      <div class="p-lcap">Moves when she moves a rung pill on Terra or Voo — no separate upkeep.</div>
+    </div>
+
+    <div class="p-eyebrow">In the gym</div>
+    <div class="p-trend">
+      <div class="p-tinfo">
+        <div class="p-tname2">Back squat</div>
+        <div class="p-tline">65 → <b>75 lb</b> · +10 in July</div>
+      </div>
+      <svg class="p-spark" width="120" height="38" viewBox="0 0 120 38" aria-hidden="true">
+        <polyline points="4,30 30,27 56,24 84,17 116,9" fill="none" stroke="var(--rose)" stroke-width="2.4" stroke-linecap="round"/>
+        <circle cx="116" cy="9" r="3.6" fill="var(--rose)"/>
+      </svg>
+    </div>
+    <div class="p-trend">
+      <div class="p-tinfo">
+        <div class="p-tname2">Chin-up assist</div>
+        <div class="p-tline">60 → <b>50 lb</b> · less help = stronger</div>
+      </div>
+      <svg class="p-spark" width="120" height="38" viewBox="0 0 120 38" aria-hidden="true">
+        <polyline points="4,9 30,13 56,17 84,23 116,29" fill="none" stroke="var(--rose)" stroke-width="2.4" stroke-linecap="round"/>
+        <circle cx="116" cy="29" r="3.6" fill="var(--rose)"/>
+      </svg>
+    </div>
+
+    <div class="p-eyebrow">Rhythm</div>
+    <div class="p-trend" style="display:block">
+      <div class="p-rhythm">
+        <div class="p-week"><div class="dots"><div class="p-wdot"></div><div class="p-wdot"></div></div><div class="wl">Jul 6</div></div>
+        <div class="p-week"><div class="dots"><div class="p-wdot"></div><div class="p-wdot"></div></div><div class="wl">Jul 13</div></div>
+        <div class="p-week"><div class="dots"><div class="p-wdot"></div><div class="p-wdot"></div></div><div class="wl">Jul 20</div></div>
+        <div class="p-week"><div class="dots"><div class="p-wdot"></div><div class="p-wdot"></div></div><div class="wl">Jul 27</div></div>
+        <div class="p-week"><div class="dots"><div class="p-wdot"></div><div class="p-wdot" style="opacity:.25"></div></div><div class="wl">Aug 3</div></div>
+      </div>
+      <div class="p-tline" style="margin-top:10px">Two a week, five weeks straight</div>
+    </div>
+  </div>
+
+  <div class="notes">
+    <div class="optlabel">Moment 4 · Progresso</div>
+    <h2>Progress she can see</h2>
+    <p>The view you've been holding off on — here's the shape I'd give it. Not a targets ledger: three ways of seeing that it's working, hero first.</p>
+    <ul>
+      <li class="good"><b>The push-up ladder is the hero.</b> It's the goal she named, so it goes on top: rungs from the seed program's own menu, current rung marked, the first full push-up waiting at the top with a bloom. Fed by the rung pills from Moment 2 — zero extra input.</li>
+      <li class="good"><b>Trends are one sparkline and one sentence.</b> Working weight over time, computed from the sessions log that already exists. No goals, no grades, no red.</li>
+      <li class="good"><b>Chin-up celebrates the falling number.</b> Assistance trending down reads as loss unless the copy flips it — "less help = stronger."</li>
+      <li class="good"><b>Rhythm over records.</b> At two sessions a week, consistency is the real stat. Week dots say "you keep showing up," which is the thing worth saying.</li>
+      <li class="flag">Needs a few logged sessions before it's interesting — the empty state should invite, not apologize: "two more sessions and the lines appear."</li>
+    </ul>
+    <span class="buildtag">Build: medium — all computed from existing data</span>
+  </div>
+</div>
+
+<!-- ============ SMALL FIXES ============ -->
+<div class="fixes">
+  <h2>Small fixes, no wireframe needed</h2>
+  <ol>
+    <li><b>Empty chips read as broken.</b> A fresh install shows "— lb ×— ▾" on every card. Until a weight exists, the chip should invite: <em>"add weight"</em>. <span class="why">First-run is the one session where the app has to sell itself.</span></li>
+    <li><b>"‹ Back" is a small target.</b> Give it real padding (44 pt). <span class="why">It's tapped with chalky thumbs between sets.</span></li>
+    <li><b>First-run day cards say "Not yet logged."</b> Bookkeeping voice. Say <em>"First one's waiting"</em> — an invitation instead of an empty ledger. <span class="why">Same slot, same size, warmer app.</span></li>
+    <li><b>Note placeholder "What happened?"</b> reads like an incident report. <em>"How did it go?"</em> matches the app's voice. <span class="why">One string.</span></li>
+  </ol>
+</div>
+
+<p class="leftout"><b>Left out on purpose:</b> the feedback floater — you asked for an options rundown before anything gets built, so it's not wireframed here. And nothing above touches the engine: rings and rung picks live in the active session, Progresso is computed from the sessions array, and the seed program stays untouched.</p>
+
+</div>
+</body>
+</html>
