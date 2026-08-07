@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Progression page — mock-up</title>
+<title>Progression page — mock-up, round 2</title>
 <style>
   @font-face { font-family:'Barlow Condensed'; font-weight:500; src:url('../fonts/barlow-condensed-500.woff2') format('woff2'); }
   @font-face { font-family:'Barlow Condensed'; font-weight:600; src:url('../fonts/barlow-condensed-600.woff2') format('woff2'); }
@@ -36,36 +36,30 @@
   }
 
   /* ---------- app chrome ---------- */
-  .topbar { display:flex; align-items:baseline; justify-content:space-between; margin-bottom:14px; gap:10px; }
+  .topbar { display:flex; align-items:baseline; justify-content:space-between; margin-bottom:12px; gap:10px; }
   .backlink { font-family:var(--display); font-weight:600; font-size:15px; letter-spacing:.08em; text-transform:uppercase; color:var(--dim); }
   .dayhead-name { font-family:var(--display); font-weight:600; font-size:26px; letter-spacing:.05em; text-transform:uppercase; }
-  .dayhead-sub { color:var(--dim); font-size:16px; font-weight:500; }
+  .dayhead-sub { color:var(--dim); font-size:15px; font-weight:500; }
   .eyebrow { font-family:var(--display); font-weight:600; font-size:13px; letter-spacing:.14em;
-    text-transform:uppercase; color:var(--dim); margin:18px 0 8px; }
+    text-transform:uppercase; color:var(--dim); margin:16px 0 4px; }
 
-  /* ---------- arcs (ladder rail, ported from Forte's Progresso) ---------- */
-  .ladder { background:var(--card); border:1px solid var(--line); border-radius:var(--petal); padding:15px 15px 10px; margin-bottom:10px; }
-  .lrow { display:flex; gap:12px; }
-  .lrail { width:16px; flex:none; display:flex; flex-direction:column; align-items:center; }
-  .ldot { width:11px; height:11px; border-radius:50%; background:var(--brass); flex:none; margin-top:5px; }
-  .ldot.now { width:15px; height:15px; box-shadow:0 0 0 4px var(--brass-wash); }
-  .ldot.next { background:var(--card); border:2px solid var(--dim); }
-  .ldot.goal { background:var(--card); border:2px solid var(--brass); }
-  .lline { width:2px; flex:1; background:var(--line); }
-  .lbody { padding-bottom:13px; min-width:0; }
-  .lwhen { font-family:var(--display); font-weight:600; font-size:12px; letter-spacing:.1em; text-transform:uppercase; color:var(--brass); }
-  .lrow.future .lwhen { color:var(--dim); }
-  .lname { font-family:var(--display); font-weight:600; font-size:17px; letter-spacing:.04em; text-transform:uppercase; margin:1px 0; }
-  .lrow.future .lname { color:var(--dim); font-weight:500; }
-  .ldesc { color:var(--dim); font-size:13px; }
-  .lcap { color:var(--dim); font-size:13px; border-top:1px solid var(--line); padding-top:8px; margin-top:1px; }
+  /* ---------- the ledger: every line is a row; a row opens into a card ---------- */
+  .mlist { border-top:1px solid var(--line); }
+  .mrow { display:flex; align-items:center; gap:10px; padding:9px 2px; border-bottom:1px solid var(--line); }
+  .mname { font-family:var(--display); font-weight:600; font-size:16px; letter-spacing:.04em;
+    text-transform:uppercase; flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .mnum { color:var(--dim); font-size:13.5px; font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .mnum b { color:var(--ink); font-weight:600; }
+  .mnum .up { color:var(--brass); font-weight:700; }
+  .chev { color:var(--dim); font-size:14px; opacity:.6; }
+  .minispark { flex:none; color:var(--dim); opacity:.65; }
 
-  /* ---------- trend cards ---------- */
-  .tcard { background:var(--card); border:1px solid var(--line); border-radius:var(--petal); padding:13px 14px 12px; margin-bottom:10px; }
+  /* ---------- expanded card (one open at a time) ---------- */
+  .tcard { background:var(--card); border:1px solid var(--line); border-radius:var(--petal); padding:13px 14px 12px; margin:8px 0; }
   .thead { display:flex; justify-content:space-between; align-items:baseline; gap:10px; }
   .tname { font-family:var(--display); font-weight:600; font-size:19px; letter-spacing:.05em; text-transform:uppercase; }
   .tdelta { font-family:var(--display); font-weight:600; font-size:16px; color:var(--dim); font-variant-numeric:tabular-nums; }
-  .tspark { display:block; width:100%; height:46px; margin:8px 0 6px; }
+  .tspark { display:block; width:100%; height:46px; margin:8px 0 6px; color:var(--brass); }
   .tline { color:var(--dim); font-size:14px; font-variant-numeric:tabular-nums; }
   .tline b { color:var(--ink); font-weight:600; }
   .tnext { color:var(--dim); font-size:13.5px; margin-top:5px; }
@@ -73,190 +67,69 @@
     border-radius:8px 8px 8px 3px; padding:4px 9px; font-weight:600;
     font-family:var(--display); font-size:14px; letter-spacing:.05em; text-transform:uppercase; }
 
-  /* ---------- assistance rows ---------- */
-  .tlist { background:var(--card); border:1px solid var(--line); border-radius:var(--petal); padding:3px 14px; margin-bottom:10px; }
-  .titem { display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid var(--line); }
-  .titem:last-child { border-bottom:none; }
-  .tliname { font-family:var(--display); font-weight:600; font-size:16px; letter-spacing:.04em; text-transform:uppercase; flex:1; min-width:0; }
-  .tlinum { color:var(--dim); font-size:13.5px; font-variant-numeric:tabular-nums; white-space:nowrap; }
-  .tlinum b { color:var(--ink); font-weight:600; }
-  .tlinum .up { color:var(--brass); font-weight:700; }
-  .minispark { flex:none; }
+  /* ---------- expanded arc: uniform rungs, phase tags on the rail ---------- */
+  .ladder { background:var(--card); border:1px solid var(--line); border-radius:var(--petal); padding:15px 15px 10px; margin:8px 0; }
+  .phase { font-family:var(--display); font-weight:600; font-size:11px; letter-spacing:.16em;
+    text-transform:uppercase; color:var(--dim); margin:2px 0 6px 28px; }
+  .lrow { display:flex; gap:12px; align-items:baseline; }
+  .lrail { width:16px; flex:none; display:flex; flex-direction:column; align-items:center; align-self:stretch; }
+  .ldot { width:10px; height:10px; border-radius:50%; background:var(--brass); flex:none; margin-top:6px; }
+  .ldot.now { width:14px; height:14px; box-shadow:0 0 0 4px var(--brass-wash); }
+  .ldot.next { background:var(--card); border:2px solid var(--dim); }
+  .ldot.goal { background:var(--card); border:2px solid var(--brass); }
+  .lline { width:2px; flex:1; background:var(--line); }
+  .lbody { display:flex; justify-content:space-between; align-items:baseline; gap:10px; flex:1; min-width:0; padding-bottom:11px; }
+  .lname { font-family:var(--display); font-weight:600; font-size:16px; letter-spacing:.04em; text-transform:uppercase; }
+  .lrow.future .lname { color:var(--dim); font-weight:500; }
+  .lmeta { font-family:var(--display); font-weight:500; font-size:12.5px; letter-spacing:.08em;
+    text-transform:uppercase; color:var(--dim); white-space:nowrap; font-variant-numeric:tabular-nums; }
+  .lrow .lmeta.live { color:var(--brass); font-weight:600; }
+  .lcap { color:var(--dim); font-size:13px; border-top:1px solid var(--line); padding-top:8px; margin-top:1px; }
 
-  /* ---------- rhythm ---------- */
-  .rhythm-card { background:var(--card); border:1px solid var(--line); border-radius:var(--petal); padding:14px 15px 12px; }
-  .rhythm { display:flex; gap:20px; align-items:flex-end; padding:2px 2px 0; }
-  .week { text-align:center; }
-  .wdots { display:flex; gap:5px; justify-content:center; }
-  .wdot { width:11px; height:11px; border-radius:4px 4px 4px 1.5px; background:var(--brass); }
-  .wdot.zero { background:transparent; border:1.6px solid var(--dim); opacity:.45; }
-  .wdot.faded { opacity:.25; }
-  .wl { font-size:11px; color:var(--dim); margin-top:5px; font-variant-numeric:tabular-nums; }
-  .rhythm-line { color:var(--dim); font-size:13.5px; margin-top:10px; }
-  .recal { color:var(--dim); font-size:13px; text-align:center; margin-top:14px; }
-  .recal b { color:var(--brass); font-weight:600; }
-
-  /* ---------- pressed barley ---------- */
-  .barley { color:var(--brass); opacity:.5; pointer-events:none; }
-  .fieldmark { display:flex; justify-content:flex-end; margin-top:18px; padding-right:8px; }
-  .fieldmark .barley { width:56px; height:112px; }
-
-  /* ---------- home entry ---------- */
-  .ledger { margin-top:16px; padding-top:12px; border-top:2px solid var(--brass); }
-  .ledger-head { display:flex; justify-content:space-between; align-items:center; gap:10px; }
-  .ledger-title { font-family:var(--display); font-weight:600; font-size:14px; letter-spacing:.16em;
-    text-transform:uppercase; color:var(--brass); padding:4px 0; }
-  .ledger-title .caret { margin-left:7px; font-size:11px; color:var(--dim); }
-  .ledger-check { font-family:var(--display); font-weight:500; font-size:13px; letter-spacing:.09em;
-    text-transform:uppercase; color:var(--dim); }
-  .eq { display:flex; gap:5px; align-items:flex-end; height:26px; margin-top:10px; }
-  .eq-col { flex:1; background:var(--raised); border-radius:2px 2px 0 0; position:relative; height:100%; overflow:hidden; }
-  .eq-col.off { opacity:.35; }
-  .eq-fill { position:absolute; left:0; right:0; bottom:0; background:var(--brass); }
-  .eq-labels { display:flex; gap:5px; margin-top:3px; }
-  .eq-labels span { flex:1; text-align:center; font-family:var(--display); font-weight:600; font-size:10px;
-    letter-spacing:.05em; text-transform:uppercase; color:var(--dim); }
-
-  .prow { display:flex; align-items:center; gap:12px; background:var(--card); border:1px solid var(--line);
-    border-radius:var(--petal); padding:12px 14px; margin-top:14px; }
-  .prow-mark { width:38px; height:38px; flex:none; display:grid; place-items:center;
-    background:var(--brass-wash); border-radius:10px 10px 10px 3px; color:var(--brass); }
-  .prow-t { font-family:var(--display); font-weight:600; font-size:17px; letter-spacing:.06em; text-transform:uppercase; }
-  .prow-s { color:var(--dim); font-size:13px; margin-top:1px; font-variant-numeric:tabular-nums; }
-  .prow-chev { margin-left:auto; color:var(--dim); font-size:18px; }
-
-  .daycard { background:var(--card); border:1px solid var(--line); border-radius:var(--petal); padding:14px 16px 4px;
-    overflow:hidden; max-height:56px; position:relative; }
-  .daycard::after { content:''; position:absolute; left:0; right:0; bottom:0; height:34px;
-    background:linear-gradient(transparent, var(--bg)); }
-  .daycard-name { font-family:var(--display); font-weight:600; font-size:30px; letter-spacing:.05em; text-transform:uppercase; line-height:1.1; }
+  /* ---------- footer ---------- */
+  .pagefoot { display:flex; justify-content:space-between; align-items:flex-end; margin-top:14px; }
+  .recal { color:var(--dim); font-size:13px; }
+  .barley { color:var(--brass); opacity:.5; pointer-events:none; width:40px; height:80px; flex:none; }
 </style>
 </head>
 <body>
 <div class="page">
-  <h1>Progression page</h1>
-  <p class="sub">Forte's Progresso, translated back into Strength Rebuild. Same three moments — arcs, trends, rhythm —
-  but where Forte draws the line, SR also reads the dial: every card ends with what the progression scheme says to do
-  next session, computed from the chip's weight&nbsp;+&nbsp;reps against the slot's range. Route: <code>#/progression</code>,
-  entered from a quiet row under the Targets board.</p>
+  <h1>Progression page — round 2</h1>
+  <p class="sub">The busy-ness fix: round 1 stacked five surfaces (rails, hero cards, a list, rhythm, recal).
+  Now the whole page is <b>one ledger</b> — every arc and lift is a hairline row, and tapping a row opens the one
+  card you asked about. Same collapsed→expanded pattern the Targets board already taught. Plus a granular,
+  editable muscle-up ladder.</p>
 
   <div class="row">
     <div>
-      <div class="statelabel">The page — top</div>
+      <div class="statelabel">Resting state — one screen, no scroll</div>
       <div class="phone">
         <div class="topbar"><span class="backlink">← Home</span></div>
         <div class="dayhead-name">Progression</div>
-        <div class="dayhead-sub">Jun 15 → Aug 5 · 14 sessions</div>
+        <div class="dayhead-sub">Jun 15 → Aug 5 · 14 sessions · about 2 a week</div>
 
         <div class="eyebrow">Arcs</div>
-        <div class="ladder">
-          <div class="lrow future">
-            <div class="lrail"><div class="ldot goal"></div><div class="lline"></div></div>
-            <div class="lbody"><div class="lname">Ring muscle-up</div><div class="ldesc">The gate at the top</div></div>
-          </div>
-          <div class="lrow future">
-            <div class="lrail"><div class="ldot next"></div><div class="lline"></div></div>
-            <div class="lbody"><div class="lname">Dips ×10</div></div>
-          </div>
-          <div class="lrow future">
-            <div class="lrail"><div class="ldot next"></div><div class="lline"></div></div>
-            <div class="lbody"><div class="lname">+40 lb chin</div></div>
-          </div>
-          <div class="lrow">
-            <div class="lrail"><div class="ldot now"></div><div class="lline"></div></div>
-            <div class="lbody"><div class="lwhen">Now — 8 / 12</div><div class="lname">12 strict chins</div>
-              <div class="ldesc">Live from the chin-up chip</div></div>
-          </div>
-          <div class="lrow">
-            <div class="lrail"><div class="ldot"></div></div>
-            <div class="lbody"><div class="lwhen">Jul 9</div><div class="lname">Baseline — 5 chins</div></div>
-          </div>
-          <div class="lcap">Counts up on the Day B chip — the arc moves itself.</div>
-        </div>
-        <div class="ladder">
-          <div class="lrow future">
-            <div class="lrail"><div class="ldot goal"></div><div class="lline"></div></div>
-            <div class="lbody"><div class="lname">Nordic — 5 reps · R = L</div><div class="ldesc">The board's gate</div></div>
-          </div>
-          <div class="lrow">
-            <div class="lrail"><div class="ldot now"></div><div class="lline"></div></div>
-            <div class="lbody"><div class="lwhen">Now — since Jul 25</div><div class="lname">Nordic negatives</div></div>
-          </div>
-          <div class="lrow">
-            <div class="lrail"><div class="ldot"></div><div class="lline"></div></div>
-            <div class="lbody"><div class="lwhen">Jul 11</div><div class="lname">Single-leg (R leads)</div></div>
-          </div>
-          <div class="lrow">
-            <div class="lrail"><div class="ldot"></div><div class="lline"></div></div>
-            <div class="lbody"><div class="lwhen">Jun 27</div><div class="lname">Slow / paused</div></div>
-          </div>
-          <div class="lrow">
-            <div class="lrail"><div class="ldot"></div></div>
-            <div class="lbody"><div class="lwhen">Jun 15</div><div class="lname">Bilateral</div></div>
-          </div>
-          <div class="lcap">Moves when you tap a rung on the Day A card.</div>
+        <div class="mlist">
+          <div class="mrow"><span class="mname">Muscle-up</span><span class="mnum">12 chins · <b>8 / 12</b></span><span class="chev">›</span></div>
+          <div class="mrow"><span class="mname">Nordic</span><span class="mnum">negatives · rung <b>4</b> / 5</span><span class="chev">›</span></div>
         </div>
 
         <div class="eyebrow">In the gym</div>
-        <div class="tcard">
-          <div class="thead"><span class="tname">Back squat</span><span class="tdelta">+30</span></div>
-          <svg class="tspark" data-pts="165,170,175,175,180,185,190,195" data-goal="230"></svg>
-          <div class="tline">165 → <b>195 lb</b> · 4×5</div>
-          <div class="tnext">Bumps every ~2 sessions · last Aug 2</div>
-        </div>
-        <div class="tcard">
-          <div class="thead"><span class="tname">DB bench press</span><span class="tdelta">+10</span></div>
-          <svg class="tspark" data-pts="50,50,55,55,55,60,60,60"></svg>
-          <div class="tline">50 → <b>60 lb ×8</b> · 3×6–8</div>
-          <div class="tnext ready">At ×8 — load 65 next session</div>
-        </div>
-      </div>
-    </div>
-
-    <div>
-      <div class="statelabel">The page — scrolled</div>
-      <div class="phone">
-        <div class="tcard">
-          <div class="thead"><span class="tname">Chin-up, strict</span><span class="tdelta">+3</span></div>
-          <svg class="tspark" data-pts="5,5,6,6,7,7,8"></svg>
-          <div class="tline">5 → <b>8 reps</b> · 3×5–12</div>
-          <div class="tnext">Reps are the number here — the arc's first gate is 12</div>
-        </div>
-        <div class="tcard">
-          <div class="thead"><span class="tname">One-arm DB row</span><span class="tdelta">+10</span></div>
-          <svg class="tspark" data-pts="55,55,60,60,60,65,65"></svg>
-          <div class="tline">55 → <b>65 lb ×9</b> · 3×8–10</div>
-          <div class="tnext">Build reps — 9 → 10, then +5</div>
-        </div>
-        <div class="tcard">
-          <div class="thead"><span class="tname">DB overhead press</span><span class="tdelta">+5</span></div>
-          <svg class="tspark" data-pts="30,30,35,35,35,35,35"></svg>
-          <div class="tline">30 → <b>35 lb ×6</b> · 3×6–8</div>
-          <div class="tnext">×6 for 5 sessions — vary the tempo or the attention</div>
+        <div class="mlist">
+          <div class="mrow"><span class="mname">Back squat</span><svg class="minispark" data-pts="165,170,175,175,180,185,190,195"></svg><span class="mnum"><b>195</b> · +30</span><span class="chev">›</span></div>
+          <div class="mrow"><span class="mname">DB bench press</span><svg class="minispark" data-pts="50,50,55,55,55,60,60,60"></svg><span class="mnum"><b>60</b> ×8 <span class="up">▲</span></span><span class="chev">›</span></div>
+          <div class="mrow"><span class="mname">One-arm DB row</span><svg class="minispark" data-pts="55,55,60,60,60,65,65"></svg><span class="mnum"><b>65</b> ×9</span><span class="chev">›</span></div>
+          <div class="mrow"><span class="mname">DB overhead press</span><svg class="minispark" data-pts="30,30,35,35,35,35,35"></svg><span class="mnum"><b>35</b> ×6</span><span class="chev">›</span></div>
+          <div class="mrow"><span class="mname">DB RDL</span><svg class="minispark" data-pts="70,75,75,80,80,85,85"></svg><span class="mnum"><b>85</b> ×7</span><span class="chev">›</span></div>
+          <div class="mrow"><span class="mname">KB swing</span><svg class="minispark" data-pts="35,35,44,44,44,53,53"></svg><span class="mnum"><b>53</b> · +18</span><span class="chev">›</span></div>
+          <div class="mrow"><span class="mname">Suitcase carry</span><svg class="minispark" data-pts="50,55,60,60,65,65,70,70"></svg><span class="mnum"><b>70</b> · +20</span><span class="chev">›</span></div>
+          <div class="mrow"><span class="mname">Stork squat</span><svg class="minispark" data-pts="15,20,20,20,25,25,25,25"></svg><span class="mnum"><b>25</b> ×9</span><span class="chev">›</span></div>
+          <div class="mrow"><span class="mname">Pallof press</span><svg class="minispark" data-pts="20,20,25,25,25,30,30,30"></svg><span class="mnum"><b>30</b> ×10</span><span class="chev">›</span></div>
+          <div class="mrow"><span class="mname">Calf, single-leg</span><svg class="minispark" data-pts="25,25,25,30,30,30,30"></svg><span class="mnum"><b>30</b> ×15 <span class="up">▲</span></span><span class="chev">›</span></div>
         </div>
 
-        <div class="tlist">
-          <div class="titem"><span class="tliname">DB RDL</span><span class="tlinum">70 → <b>85</b></span><svg class="minispark" data-pts="70,75,75,80,80,85,85"></svg></div>
-          <div class="titem"><span class="tliname">KB swing</span><span class="tlinum">35 → <b>53</b></span><svg class="minispark" data-pts="35,35,44,44,44,53,53"></svg></div>
-          <div class="titem"><span class="tliname">Suitcase carry</span><span class="tlinum">50 → <b>70</b> · goal 80</span><svg class="minispark" data-pts="50,55,60,60,65,65,70,70"></svg></div>
-          <div class="titem"><span class="tliname">Stork squat</span><span class="tlinum">15 → <b>25</b></span><svg class="minispark" data-pts="15,20,20,20,25,25,25,25"></svg></div>
-          <div class="titem"><span class="tliname">Pallof press</span><span class="tlinum">20 → <b>30</b></span><svg class="minispark" data-pts="20,20,25,25,25,30,30,30"></svg></div>
-          <div class="titem"><span class="tliname">Calf, single-leg</span><span class="tlinum">25 → <b>30</b> <span class="up">▲</span></span><svg class="minispark" data-pts="25,25,25,30,30,30,30"></svg></div>
-        </div>
-
-        <div class="eyebrow">Rhythm</div>
-        <div class="rhythm-card">
-          <div class="rhythm">
-            <div class="week"><div class="wdots"><div class="wdot"></div><div class="wdot"></div></div><div class="wl">Jul 6</div></div>
-            <div class="week"><div class="wdots"><div class="wdot"></div><div class="wdot"></div></div><div class="wl">Jul 13</div></div>
-            <div class="week"><div class="wdots"><div class="wdot"></div></div><div class="wl">Jul 20</div></div>
-            <div class="week"><div class="wdots"><div class="wdot"></div><div class="wdot"></div></div><div class="wl">Jul 27</div></div>
-            <div class="week"><div class="wdots"><div class="wdot"></div><div class="wdot faded"></div></div><div class="wl">Aug 3</div></div>
-          </div>
-          <div class="rhythm-line">14 sessions since Jun 15 · about 2 a week</div>
-        </div>
-        <div class="recal">Export → <b>recalibrate Aug 29</b> — these trends feed the redesign</div>
-        <div class="fieldmark">
+        <div class="pagefoot">
+          <span class="recal">Export → recalibrate Aug 29</span>
           <svg class="barley" viewBox="0 0 90 132" aria-hidden="true">
             <g stroke-linecap="round">
               <path d="M46 130 C 48 106 48 88 45 66" fill="none" stroke="currentColor" stroke-width="2"/>
@@ -282,77 +155,105 @@
         </div>
       </div>
     </div>
-  </div>
 
-  <div class="row">
     <div>
-      <div class="statelabel">Entry — home, under the board</div>
+      <div class="statelabel">Tapped open — arc · goal lift · ready lift</div>
       <div class="phone">
-        <div class="daycard"><div class="daycard-name">Day B</div></div>
-        <div class="ledger">
-          <div class="ledger-head">
-            <span class="ledger-title">Targets<span class="caret">▾</span></span>
-            <span class="ledger-check">Export → recal Aug 29</span>
+        <div class="mrow" style="border-top:1px solid var(--line)"><span class="mname">Muscle-up</span><span class="mnum">12 chins · <b>8 / 12</b></span><span class="chev" style="transform:rotate(90deg)">›</span></div>
+        <div class="ladder">
+          <div class="lrow future">
+            <div class="lrail"><div class="ldot goal"></div><div class="lline"></div></div>
+            <div class="lbody"><span class="lname">Strict ring muscle-up</span><span class="lmeta">the gate</span></div>
           </div>
-          <div class="eq">
-            <div class="eq-col"><i class="eq-fill" style="height:85%"></i></div>
-            <div class="eq-col"><i class="eq-fill" style="height:86%"></i></div>
-            <div class="eq-col off"></div>
-            <div class="eq-col"><i class="eq-fill" style="height:67%"></i></div>
-            <div class="eq-col"><i class="eq-fill" style="height:87%"></i></div>
-            <div class="eq-col"><i class="eq-fill" style="height:50%"></i></div>
-            <div class="eq-col"><i class="eq-fill" style="height:88%"></i></div>
+          <div class="phase">Transition</div>
+          <div class="lrow future">
+            <div class="lrail"><div class="ldot next"></div><div class="lline"></div></div>
+            <div class="lbody"><span class="lname">Low-ring transitions</span><span class="lmeta">×3 · feet down</span></div>
           </div>
-          <div class="eq-labels"><span>Sqt</span><span>Bch</span><span>DL</span><span>MU</span><span>Row</span><span>Nrd</span><span>Cry</span></div>
+          <div class="lrow future">
+            <div class="lrail"><div class="ldot next"></div><div class="lline"></div></div>
+            <div class="lbody"><span class="lname">False-grip high pull</span><span class="lmeta">to sternum</span></div>
+          </div>
+          <div class="phase">Rings</div>
+          <div class="lrow future">
+            <div class="lrail"><div class="ldot next"></div><div class="lline"></div></div>
+            <div class="lbody"><span class="lname">Ring dips</span><span class="lmeta">×10</span></div>
+          </div>
+          <div class="lrow future">
+            <div class="lrail"><div class="ldot next"></div><div class="lline"></div></div>
+            <div class="lbody"><span class="lname">Ring support, turned out</span><span class="lmeta">30 s</span></div>
+          </div>
+          <div class="phase">Grip</div>
+          <div class="lrow future">
+            <div class="lrail"><div class="ldot next"></div><div class="lline"></div></div>
+            <div class="lbody"><span class="lname">False-grip rows</span><span class="lmeta">×8</span></div>
+          </div>
+          <div class="lrow future">
+            <div class="lrail"><div class="ldot next"></div><div class="lline"></div></div>
+            <div class="lbody"><span class="lname">False-grip hang</span><span class="lmeta">20 s</span></div>
+          </div>
+          <div class="phase">Pull</div>
+          <div class="lrow future">
+            <div class="lrail"><div class="ldot next"></div><div class="lline"></div></div>
+            <div class="lbody"><span class="lname">Weighted chin +40</span><span class="lmeta">×3</span></div>
+          </div>
+          <div class="lrow">
+            <div class="lrail"><div class="ldot now"></div><div class="lline"></div></div>
+            <div class="lbody"><span class="lname">12 strict chins</span><span class="lmeta live">now · 8 / 12</span></div>
+          </div>
+          <div class="lrow">
+            <div class="lrail"><div class="ldot"></div></div>
+            <div class="lbody"><span class="lname">Baseline — 5 chins</span><span class="lmeta">Jul 9</span></div>
+          </div>
+          <div class="lcap">Rungs live in the program editor — rename, insert, reorder. Chins count up from the Day B chip.</div>
         </div>
-        <div class="prow">
-          <div class="prow-mark">
-            <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
-              <path d="M2 16 H7 V11 H12 V6 H17" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-              <circle cx="17" cy="6" r="2.4" fill="currentColor"/>
-            </svg>
-          </div>
-          <div>
-            <div class="prow-t">Progression</div>
-            <div class="prow-s">Squat +30 · chins 8 / 12 · 2 a week</div>
-          </div>
-          <div class="prow-chev">›</div>
+
+        <div class="mrow"><span class="mname">Back squat</span><span class="mnum"><b>195</b> · +30</span><span class="chev" style="transform:rotate(90deg)">›</span></div>
+        <div class="tcard">
+          <svg class="tspark" data-pts="165,170,175,175,180,185,190,195" data-goal="230"></svg>
+          <div class="tline">165 → <b>195 lb</b> · 4×5 · goal 230</div>
+          <div class="tnext">Bumps every ~2 sessions · last Aug 2</div>
+        </div>
+
+        <div class="mrow"><span class="mname">DB bench press</span><span class="mnum"><b>60</b> ×8 <span class="up">▲</span></span><span class="chev" style="transform:rotate(90deg)">›</span></div>
+        <div class="tcard">
+          <svg class="tspark" data-pts="50,50,55,55,55,60,60,60"></svg>
+          <div class="tline">50 → <b>60 lb ×8</b> · 3×6–8</div>
+          <div class="tnext ready">At ×8 — load 65 next session</div>
         </div>
       </div>
     </div>
 
     <div class="notes">
-      <p><b>Kept from Forte's Progresso:</b></p>
+      <p><b>The calm pass:</b></p>
       <ul>
-        <li class="good">The three moments in the same order — arcs, then the gym trends, then rhythm — and the quiet entry row on home with a live one-line pulse.</li>
-        <li class="good">Ladder rail with dates earned, one <i>now</i> dot, goal on top. SR has two arcs ready-made: the muscle-up pips and the Nordic rungs — both already live data, no new upkeep.</li>
-        <li class="good">Trend card = "first → <b>last</b> · delta" + a bare sparkline. No axes, no grid — the two numbers are the axis.</li>
+        <li class="good"><b>One surface, one pattern.</b> Arcs and lifts are all hairline rows — the exact collapsed→expanded move the Targets board already taught. Resting state fits one screen, no scroll.</li>
+        <li class="good"><b>Brass budget.</b> Collapsed, brass appears only as ▲ (at top of range — loads next). Sparks sit dim until a row opens; then the one open card gets the brass line, the goal tick, and the mechanism verdict.</li>
+        <li class="good"><b>Every row still answers the question</b> — current number, reps position or delta, and the tiny trace — without asking to be read.</li>
       </ul>
-      <p><b>SR-native (what Forte can't say):</b></p>
+      <p><b>Cut from round 1:</b></p>
       <ul>
-        <li class="good"><b>Step lines, not slopes.</b> A working weight holds, then jumps 5. The plateau <i>is</i> the double-progression stair — a smooth slope would be a lie.</li>
-        <li class="good"><b>The mechanism line.</b> Each card ends with the scheme's verdict, computed from chip weight + reps vs the slot's range: <i>at ×8 — load 65 next</i> (brass = act now) · <i>build reps 9 → 10</i> · fixed-rep lifts get cadence (<i>bumps every ~2 sessions</i>) · stalls echo the slot's own cue.</li>
-        <li class="good"><b>Goal ticks from the board.</b> Squat's chart runs to 230 — the headroom is drawn, not implied. Only board lifts get one.</li>
-        <li class="good"><b>Two tiers.</b> Board lifts get full cards; assistance folds to hairline rows with mini-sparks. ▲ = at top of range, loads next. Eleven lifts don't deserve eleven hero cards.</li>
-        <li class="good"><b>Counts, not streaks.</b> "14 sessions · about 2 a week" — facts, no chains to break (the Still Water rule). Week pips reuse the trail's tucked-corner pip.</li>
-        <li class="good">One barley per surface — it closes the page; goal rungs get a plain brass ring instead of Forte's bloom.</li>
+        <li class="cut">The rhythm card — folded to five words in the header sub.</li>
+        <li class="cut">The hero-card tier and the two-tier split — no lift outranks another until you tap it.</li>
+        <li class="cut">Rail captions, baseline descriptions, the duplicate chin-up trend card (the arc owns chins).</li>
       </ul>
-      <p><b>Deliberately out:</b></p>
-      <ul>
-        <li class="cut">Volume, tonnage, e1RM, muscle heat-maps — there is no per-set data, and fake precision would poison the instrument.</li>
-        <li class="cut">Per-lift history screens — deep analysis belongs to the export at recalibration time.</li>
-      </ul>
-      <p>The board stays the <i>where you stand</i> instrument; this page is <i>how it's moving</i>. They share data, goals, and the recal date — the page just gives the board's numbers their time axis.</p>
+      <p><b>Muscle-up arc, granular:</b> ten rungs instead of four stations, grouped by phase tags on the rail —
+      Pull → Grip → Rings → Transition → the gate. Uniform one-line rungs: name left, target or date right;
+      only the live rung speaks. The three real lanes (pull strength, false grip, ring strength) are deliberately
+      flattened into one editable column so the rail stays quiet — and like the Nordic ladder, <b>the rungs are
+      program data, not code</b>: these ten are a strawman for you to rename, insert between, or reorder in the editor.</p>
+      <p>Entry row on home is unchanged from round 1.</p>
     </div>
   </div>
 </div>
 
 <script>
   // Step-after sparklines: a working weight holds until the session it changes.
+  // Collapsed rows draw in the dim token; the open card's spark is brass (currentColor).
   function drawSpark(svg, opts) {
     const pts = svg.dataset.pts.split(',').map(Number);
     const goal = svg.dataset.goal ? Number(svg.dataset.goal) : null;
-    const w = opts.w, h = opts.h, padX = 4, padT = opts.labels ? 6 : 4, padB = 4;
+    const w = opts.w, h = opts.h, padX = 4, padT = 5, padB = 4;
     svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
     svg.setAttribute('width', w); svg.setAttribute('height', h);
     let min = Math.min(...pts), max = Math.max(...pts);
@@ -369,12 +270,12 @@
         <text x="${w - padX}" y="${(y(goal) + 3.5).toFixed(1)}" text-anchor="end" fill="var(--dim)"
         font-size="10.5" font-family="var(--display)" style="font-variant-numeric:tabular-nums">${goal}</text>`;
     }
-    inner += `<path d="${d}" fill="none" stroke="var(--brass)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-      <circle cx="${x(pts.length - 1).toFixed(1)}" cy="${y(pts[pts.length - 1]).toFixed(1)}" r="4" fill="var(--brass)"/>`;
+    inner += `<path d="${d}" fill="none" stroke="currentColor" stroke-width="${opts.stroke}" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="${x(pts.length - 1).toFixed(1)}" cy="${y(pts[pts.length - 1]).toFixed(1)}" r="${opts.dot}" fill="currentColor"/>`;
     svg.innerHTML = inner;
   }
-  document.querySelectorAll('.tspark').forEach((s) => drawSpark(s, { w: 330, h: 46, labels: true }));
-  document.querySelectorAll('.minispark').forEach((s) => drawSpark(s, { w: 92, h: 26 }));
+  document.querySelectorAll('.tspark').forEach((s) => drawSpark(s, { w: 330, h: 46, stroke: 2.5, dot: 4 }));
+  document.querySelectorAll('.minispark').forEach((s) => drawSpark(s, { w: 64, h: 20, stroke: 1.8, dot: 2.5 }));
 </script>
 </body>
 </html>
