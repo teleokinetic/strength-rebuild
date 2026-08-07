@@ -8,7 +8,7 @@
 
 const STORE_KEY = 'sr-state-v2';
 const V1_KEY = 'sr-state-v1';        // read-only: migration source, never written
-const APP_VERSION = '2.9.0';
+const APP_VERSION = '2.10.0';
 
 let state = null;
 
@@ -128,7 +128,7 @@ function patchProgram() {
   const p = state.program;
   if (!p) return;
   const v = parseFloat(p.specVersion) || 0;
-  if (v >= 1.4) return;
+  if (v >= 1.5) return;
 
   // 0.4: Bulgarian split squat becomes Stork squat; both days open
   // with a no-weight Prep slot (wrist prep + passive/active hangs).
@@ -310,7 +310,48 @@ function patchProgram() {
     }
   }
 
-  p.specVersion = '1.4';
+  // 1.5: the anti-extension package (his call, 2026-08-07). The Pallof after
+  // bench was pressing on spent muscles — four buffer slots didn't save it,
+  // so it moves to the bench-free day: Day B, after the transitional squats
+  // and BEFORE the walkout ladder (the light press-out goes first, walkouts
+  // would wreck it in return). Hollow body folds in as the ladder's floor
+  // rung; the hanging leg raise returns as a hang-slot option — its limits
+  // are grip and hip flexors, so it lives with the hangs, not the ladder.
+  if (v < 1.5) {
+    const dayA = p.days.find((d) => d.id === 'dayA');
+    const dayB = p.days.find((d) => d.id === 'dayB');
+    if (dayA && dayB) {
+      const i = dayA.slots.findIndex((s) => slug(s.name) === 'pallof-press');
+      if (i !== -1 && !dayB.slots.some((s) => slug(s.name) === 'pallof-press')) {
+        const pallof = dayA.slots.splice(i, 1)[0];
+        pallof.cue = "Resist rotation, don't create it — moved off bench day, fresh shoulders";
+        const j = dayB.slots.findIndex((s) => slug(s.name) === 'transitional-squats');
+        dayB.slots.splice(j === -1 ? dayB.slots.length : j + 1, 0, pallof);
+      }
+    }
+    const hb = dayB && dayB.slots.find((s) => slug(s.name) === 'hollow-body');
+    if (hb && !hb.rungs) {
+      hb.name = 'Anti-extension ladder';
+      hb.target = '1–2×5–8';
+      delete hb.menu;
+      hb.rungs = [
+        'Hollow body — 45 s',
+        'All-fours → plank',
+        'Accordion walk — down dog → plank',
+        'Elbow accordion — knees ↔ elbows',
+        'Kneeling walkout — reach is the dial',
+        'Kneeling rollout — wheel or sliders',
+        'Standing rollout',
+      ];
+      hb.cue = 'Pass a rung: full reps, no low-back sag, breath never stops — then reach further';
+    }
+    const hang = dayA && dayA.slots.find((s) => slug(s.name) === 'hang-grip');
+    if (hang && hang.menu && !hang.menu.some((m) => /leg raise/i.test(m))) {
+      hang.menu.splice(4, 0, 'Hanging leg raise — knees or toes-to-bar; curl the pelvis first, no swing');
+    }
+  }
+
+  p.specVersion = '1.5';
   save();
 }
 

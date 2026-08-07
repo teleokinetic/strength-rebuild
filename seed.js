@@ -9,7 +9,7 @@
 // rest: 'normal' | 'heavy' picks which rest-button tier the slot suggests.
 
 const SEED_PROGRAM = {
-  specVersion: '1.4',
+  specVersion: '1.5',
   days: [
     {
       id: 'dayA',
@@ -73,15 +73,11 @@ const SEED_PROGRAM = {
           cue: "Ribcage stacked, don't tip",
         },
         {
-          id: 'a8', name: 'Pallof press', target: '2×10–12 /side',
-          track: true, reps: true, rest: 'normal',
-          cue: "Resist rotation, don't create it",
-        },
-        {
           id: 'a9', name: 'Hang / grip', target: '2×30–45 s',
           track: false, rest: 'normal',
           menu: [
             'Active→passive hang', 'Offset grip', 'Single-arm assisted', 'Traverse the bar',
+            'Hanging leg raise — knees or toes-to-bar; curl the pelvis first, no swing',
             'Dead-hang max — occasional test: 60 s solid · 90 s strong (log it in a note)',
           ],
           cue: 'Active shoulders',
@@ -131,15 +127,23 @@ const SEED_PROGRAM = {
           cue: 'Light and smooth — own each shape',
         },
         {
-          id: 'b6', name: 'Hollow body', target: '3×20–30 s',
+          id: 'b9', name: 'Pallof press', target: '2×10–12 /side',
+          track: true, reps: true, rest: 'normal',
+          cue: "Resist rotation, don't create it — moved off bench day, fresh shoulders",
+        },
+        {
+          id: 'b6', name: 'Anti-extension ladder', target: '1–2×5–8',
           track: false, rest: 'normal',
-          menu: [
-            'Tuck hollow — low back pressed into the floor',
-            'One leg extended',
-            'Full hollow — arms overhead last',
-            'Rocking hollow — once the shape is solid',
+          rungs: [
+            'Hollow body — 45 s',
+            'All-fours → plank',
+            'Accordion walk — down dog → plank',
+            'Elbow accordion — knees ↔ elbows',
+            'Kneeling walkout — reach is the dial',
+            'Kneeling rollout — wheel or sliders',
+            'Standing rollout',
           ],
-          cue: 'Low back glued down — shrink the shape before it breaks',
+          cue: 'Pass a rung: full reps, no low-back sag, breath never stops — then reach further',
         },
         {
           id: 'b7', name: 'Heel-to-butt curl', target: '2×5–8 /side',
