@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Progression page — mock-up, round 2</title>
+<title>Progression page — mock-up, round 3</title>
 <style>
   @font-face { font-family:'Barlow Condensed'; font-weight:500; src:url('../fonts/barlow-condensed-500.woff2') format('woff2'); }
   @font-face { font-family:'Barlow Condensed'; font-weight:600; src:url('../fonts/barlow-condensed-600.woff2') format('woff2'); }
@@ -40,8 +40,10 @@
   .backlink { font-family:var(--display); font-weight:600; font-size:15px; letter-spacing:.08em; text-transform:uppercase; color:var(--dim); }
   .dayhead-name { font-family:var(--display); font-weight:600; font-size:26px; letter-spacing:.05em; text-transform:uppercase; }
   .dayhead-sub { color:var(--dim); font-size:15px; font-weight:500; }
-  .eyebrow { font-family:var(--display); font-weight:600; font-size:13px; letter-spacing:.14em;
-    text-transform:uppercase; color:var(--dim); margin:16px 0 4px; }
+  .eyebrow { display:flex; justify-content:space-between; align-items:baseline; gap:10px; margin:16px 0 4px; }
+  .eyebrow .word { font-family:var(--display); font-weight:600; font-size:13px; letter-spacing:.14em;
+    text-transform:uppercase; color:var(--dim); }
+  .eyebrow .why { color:var(--dim); font-size:12px; opacity:.75; }
 
   /* ---------- the ledger: every line is a row; a row opens into a card ---------- */
   .mlist { border-top:1px solid var(--line); }
@@ -50,20 +52,26 @@
     text-transform:uppercase; flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .mnum { color:var(--dim); font-size:13.5px; font-variant-numeric:tabular-nums; white-space:nowrap; }
   .mnum b { color:var(--ink); font-weight:600; }
-  .mnum .up { color:var(--brass); font-weight:700; }
   .chev { color:var(--dim); font-size:14px; opacity:.6; }
   .minispark { flex:none; color:var(--dim); opacity:.65; }
+
+  /* the one brass thing on the resting page: a load goes up next session */
+  .vpill { font-family:var(--display); font-weight:600; font-size:14px; letter-spacing:.05em;
+    text-transform:uppercase; color:var(--brass); background:var(--brass-wash);
+    border-radius:8px 8px 8px 3px; padding:2px 9px; white-space:nowrap; font-variant-numeric:tabular-nums; }
 
   /* ---------- expanded card (one open at a time) ---------- */
   .tcard { background:var(--card); border:1px solid var(--line); border-radius:var(--petal); padding:13px 14px 12px; margin:8px 0; }
   .thead { display:flex; justify-content:space-between; align-items:baseline; gap:10px; }
   .tname { font-family:var(--display); font-weight:600; font-size:19px; letter-spacing:.05em; text-transform:uppercase; }
-  .tdelta { font-family:var(--display); font-weight:600; font-size:16px; color:var(--dim); font-variant-numeric:tabular-nums; }
   .tspark { display:block; width:100%; height:46px; margin:8px 0 6px; color:var(--brass); }
   .tline { color:var(--dim); font-size:14px; font-variant-numeric:tabular-nums; }
   .tline b { color:var(--ink); font-weight:600; }
   .tnext { color:var(--dim); font-size:13.5px; margin-top:5px; }
   .tnext.ready { display:inline-block; color:var(--brass); background:var(--brass-wash);
+    border-radius:8px 8px 8px 3px; padding:4px 9px; font-weight:600;
+    font-family:var(--display); font-size:14px; letter-spacing:.05em; text-transform:uppercase; }
+  .tnext.flag { display:inline-block; color:var(--dim); border:1px solid var(--line);
     border-radius:8px 8px 8px 3px; padding:4px 9px; font-weight:600;
     font-family:var(--display); font-size:14px; letter-spacing:.05em; text-transform:uppercase; }
 
@@ -94,38 +102,43 @@
 </head>
 <body>
 <div class="page">
-  <h1>Progression page — round 2</h1>
-  <p class="sub">The busy-ness fix: round 1 stacked five surfaces (rails, hero cards, a list, rhythm, recal).
-  Now the whole page is <b>one ledger</b> — every arc and lift is a hairline row, and tapping a row opens the one
-  card you asked about. Same collapsed→expanded pattern the Targets board already taught. Plus a granular,
-  editable muscle-up ladder.</p>
+  <h1>Progression page — round 3</h1>
+  <p class="sub">Round 2 was calm, but it answered the board's question again — <i>where am I?</i> — so the resting
+  state read as a second targets ledger. Round 3 gives the page its own question: <b>what's moving?</b> The board
+  owns position; this page owns motion. One taxonomy sorts everything you train — arcs and lifts together — by
+  whether it's moving: <b>next session · climbing · holding</b>. The verdicts round 2 hid behind ▲ chips now lead
+  the page, and every opened row ends in one: the load, the pace, or a reset.</p>
 
   <div class="row">
     <div>
-      <div class="statelabel">Resting state — one screen, no scroll</div>
+      <div class="statelabel">Resting state — sorted by motion, one screen</div>
       <div class="phone">
         <div class="topbar"><span class="backlink">← Home</span></div>
         <div class="dayhead-name">Progression</div>
         <div class="dayhead-sub">Jun 15 → Aug 5 · 14 sessions · about 2 a week</div>
 
-        <div class="eyebrow">Arcs</div>
+        <div class="eyebrow"><span class="word">Next session</span><span class="why">at the top of their range</span></div>
         <div class="mlist">
-          <div class="mrow"><span class="mname">Muscle-up</span><span class="mnum">12 chins · <b>8 / 12</b></span><span class="chev">›</span></div>
-          <div class="mrow"><span class="mname">Nordic</span><span class="mnum">negatives · rung <b>4</b> / 5</span><span class="chev">›</span></div>
+          <div class="mrow"><span class="mname">DB bench press</span><span class="mnum"><b>60</b> ×8</span><span class="vpill">→ 65</span><span class="chev">›</span></div>
+          <div class="mrow"><span class="mname">Calf, single-leg</span><span class="mnum"><b>30</b> ×15</span><span class="vpill">→ 35</span><span class="chev">›</span></div>
         </div>
 
-        <div class="eyebrow">In the gym</div>
+        <div class="eyebrow"><span class="word">Climbing</span><span class="why">last bump first</span></div>
         <div class="mlist">
-          <div class="mrow"><span class="mname">Back squat</span><svg class="minispark" data-pts="165,170,175,175,180,185,190,195"></svg><span class="mnum"><b>195</b> · +30</span><span class="chev">›</span></div>
-          <div class="mrow"><span class="mname">DB bench press</span><svg class="minispark" data-pts="50,50,55,55,55,60,60,60"></svg><span class="mnum"><b>60</b> ×8 <span class="up">▲</span></span><span class="chev">›</span></div>
-          <div class="mrow"><span class="mname">One-arm DB row</span><svg class="minispark" data-pts="55,55,60,60,60,65,65"></svg><span class="mnum"><b>65</b> ×9</span><span class="chev">›</span></div>
-          <div class="mrow"><span class="mname">DB overhead press</span><svg class="minispark" data-pts="30,30,35,35,35,35,35"></svg><span class="mnum"><b>35</b> ×6</span><span class="chev">›</span></div>
-          <div class="mrow"><span class="mname">DB RDL</span><svg class="minispark" data-pts="70,75,75,80,80,85,85"></svg><span class="mnum"><b>85</b> ×7</span><span class="chev">›</span></div>
-          <div class="mrow"><span class="mname">KB swing</span><svg class="minispark" data-pts="35,35,44,44,44,53,53"></svg><span class="mnum"><b>53</b> · +18</span><span class="chev">›</span></div>
-          <div class="mrow"><span class="mname">Suitcase carry</span><svg class="minispark" data-pts="50,55,60,60,65,65,70,70"></svg><span class="mnum"><b>70</b> · +20</span><span class="chev">›</span></div>
-          <div class="mrow"><span class="mname">Stork squat</span><svg class="minispark" data-pts="15,20,20,20,25,25,25,25"></svg><span class="mnum"><b>25</b> ×9</span><span class="chev">›</span></div>
-          <div class="mrow"><span class="mname">Pallof press</span><svg class="minispark" data-pts="20,20,25,25,25,30,30,30"></svg><span class="mnum"><b>30</b> ×10</span><span class="chev">›</span></div>
-          <div class="mrow"><span class="mname">Calf, single-leg</span><svg class="minispark" data-pts="25,25,25,30,30,30,30"></svg><span class="mnum"><b>30</b> ×15 <span class="up">▲</span></span><span class="chev">›</span></div>
+          <div class="mrow"><span class="mname">Back squat</span><svg class="minispark" data-pts="165,170,175,175,180,185,190,195"></svg><span class="mnum">165 → <b>195</b> · 8 wks</span><span class="chev">›</span></div>
+          <div class="mrow"><span class="mname">Muscle-up</span><svg class="minispark" data-pts="5,5,6,6,7,7,8,8"></svg><span class="mnum">chins 5 → <b>8</b> · 4 wks</span><span class="chev">›</span></div>
+          <div class="mrow"><span class="mname">One-arm DB row</span><svg class="minispark" data-pts="55,55,60,60,60,65,65"></svg><span class="mnum">55 → <b>65</b> · ×9</span><span class="chev">›</span></div>
+          <div class="mrow"><span class="mname">DB RDL</span><svg class="minispark" data-pts="70,75,75,80,80,85,85"></svg><span class="mnum">70 → <b>85</b> · ×7</span><span class="chev">›</span></div>
+          <div class="mrow"><span class="mname">KB swing</span><svg class="minispark" data-pts="35,35,44,44,44,53,53"></svg><span class="mnum">35 → <b>53</b> · 6 wks</span><span class="chev">›</span></div>
+          <div class="mrow"><span class="mname">Suitcase carry</span><svg class="minispark" data-pts="50,55,60,60,65,65,70,70"></svg><span class="mnum">50 → <b>70</b> · 7 wks</span><span class="chev">›</span></div>
+          <div class="mrow"><span class="mname">Pallof press</span><svg class="minispark" data-pts="20,20,25,25,25,30,30,30"></svg><span class="mnum">20 → <b>30</b> · ×10</span><span class="chev">›</span></div>
+          <div class="mrow"><span class="mname">Stork squat</span><svg class="minispark" data-pts="15,20,20,20,25,25,25,25"></svg><span class="mnum">15 → <b>25</b> · ×9</span><span class="chev">›</span></div>
+        </div>
+
+        <div class="eyebrow"><span class="word">Holding</span><span class="why">three sessions without a change</span></div>
+        <div class="mlist">
+          <div class="mrow"><span class="mname">DB overhead press</span><svg class="minispark" data-pts="30,30,35,35,35,35,35"></svg><span class="mnum"><b>35</b> ×6 · 5 sessions</span><span class="chev">›</span></div>
+          <div class="mrow"><span class="mname">Nordic</span><svg class="minispark" data-pts="1,2,3,4,4,4,4"></svg><span class="mnum">rung <b>4</b> / 5 · 3 wks</span><span class="chev">›</span></div>
         </div>
 
         <div class="pagefoot">
@@ -157,9 +170,9 @@
     </div>
 
     <div>
-      <div class="statelabel">Tapped open — arc · goal lift · ready lift</div>
+      <div class="statelabel">Tapped open — an arc · a climber · a stall</div>
       <div class="phone">
-        <div class="mrow" style="border-top:1px solid var(--line)"><span class="mname">Muscle-up</span><span class="mnum">12 chins · <b>8 / 12</b></span><span class="chev" style="transform:rotate(90deg)">›</span></div>
+        <div class="mrow" style="border-top:1px solid var(--line)"><span class="mname">Muscle-up</span><span class="mnum">chins 5 → <b>8</b> · 4 wks</span><span class="chev" style="transform:rotate(90deg)">›</span></div>
         <div class="ladder">
           <div class="lrow future">
             <div class="lrail"><div class="ldot goal"></div><div class="lline"></div></div>
@@ -205,44 +218,50 @@
             <div class="lrail"><div class="ldot"></div></div>
             <div class="lbody"><span class="lname">Baseline — 5 chins</span><span class="lmeta">Jul 9</span></div>
           </div>
-          <div class="lcap">Rungs live in the program editor — rename, insert, reorder. Chins count up from the Day B chip.</div>
+          <div class="lcap">+3 chins in 4 weeks · on this rung since Jul 9. Rungs live in the program editor — rename, insert, reorder.</div>
         </div>
 
-        <div class="mrow"><span class="mname">Back squat</span><span class="mnum"><b>195</b> · +30</span><span class="chev" style="transform:rotate(90deg)">›</span></div>
+        <div class="mrow"><span class="mname">Back squat</span><span class="mnum">165 → <b>195</b> · 8 wks</span><span class="chev" style="transform:rotate(90deg)">›</span></div>
         <div class="tcard">
           <svg class="tspark" data-pts="165,170,175,175,180,185,190,195" data-goal="230"></svg>
           <div class="tline">165 → <b>195 lb</b> · 4×5 · goal 230</div>
-          <div class="tnext">Bumps every ~2 sessions · last Aug 2</div>
+          <div class="tnext">+30 in 8 wks, bumps every ~2 sessions · at this pace 230 lands mid-Oct</div>
         </div>
 
-        <div class="mrow"><span class="mname">DB bench press</span><span class="mnum"><b>60</b> ×8 <span class="up">▲</span></span><span class="chev" style="transform:rotate(90deg)">›</span></div>
+        <div class="mrow"><span class="mname">DB overhead press</span><span class="mnum"><b>35</b> ×6 · 5 sessions</span><span class="chev" style="transform:rotate(90deg)">›</span></div>
         <div class="tcard">
-          <svg class="tspark" data-pts="50,50,55,55,55,60,60,60"></svg>
-          <div class="tline">50 → <b>60 lb ×8</b> · 3×6–8</div>
-          <div class="tnext ready">At ×8 — load 65 next session</div>
+          <svg class="tspark" data-pts="30,30,35,35,35,35,35"></svg>
+          <div class="tline">30 → <b>35 lb</b> · 3×6–8 · reps flat at 6</div>
+          <div class="tnext flag">Flat 5 sessions — reset 30 ×8, or hold</div>
         </div>
       </div>
     </div>
 
     <div class="notes">
-      <p><b>The calm pass:</b></p>
+      <p><b>What round 3 changes:</b></p>
       <ul>
-        <li class="good"><b>One surface, one pattern.</b> Arcs and lifts are all hairline rows — the exact collapsed→expanded move the Targets board already taught. Resting state fits one screen, no scroll.</li>
-        <li class="good"><b>Brass budget.</b> Collapsed, brass appears only as ▲ (at top of range — loads next). Sparks sit dim until a row opens; then the one open card gets the brass line, the goal tick, and the mechanism verdict.</li>
-        <li class="good"><b>Every row still answers the question</b> — current number, reps position or delta, and the tiny trace — without asking to be read.</li>
+        <li class="good"><b>The board owns position; this page owns motion.</b> The same seven names can appear on
+        both — different question. Everything here carries time: a journey (165 → 195), a window (8 wks), a tenure
+        (5 sessions), a pace.</li>
+        <li class="good"><b>One taxonomy: motion.</b> Next session / climbing / holding — arcs and lifts sort
+        together, and the grouping is the reading. Nordic sitting in Holding isn't a failure banner; it's the page
+        noticing three weeks on rung 4 so you don't have to.</li>
+        <li class="good"><b>Verdicts lead.</b> Round 2's ▲ chips become the top section — the only brass on the
+        resting page. Ready rows drop their spark; the pill <i>is</i> the row's point.</li>
+        <li class="good"><b>Every open card ends in a verdict.</b> Ready → the load. Climbing → pace and a soft ETA
+        in dim ink (straight-line guess; recalibration corrects it). Holding → a reset option, hairline not brass —
+        it's a suggestion, not a command.</li>
       </ul>
-      <p><b>Cut from round 1:</b></p>
+      <p><b>Cut from round 2:</b></p>
       <ul>
-        <li class="cut">The rhythm card — folded to five words in the header sub.</li>
-        <li class="cut">The hero-card tier and the two-tier split — no lift outranks another until you tap it.</li>
-        <li class="cut">Rail captions, baseline descriptions, the duplicate chin-up trend card (the arc owns chins).</li>
+        <li class="cut">The Arcs / In-the-gym split — that's a kind split, position thinking.</li>
+        <li class="cut">Current-number rows (<b>195</b> · +30) — journeys instead: 165 → 195.</li>
+        <li class="cut">The ▲ chip — promoted from footnote to the first section.</li>
       </ul>
-      <p><b>Muscle-up arc, granular:</b> ten rungs instead of four stations, grouped by phase tags on the rail —
-      Pull → Grip → Rings → Transition → the gate. Uniform one-line rungs: name left, target or date right;
-      only the live rung speaks. The three real lanes (pull strength, false grip, ring strength) are deliberately
-      flattened into one editable column so the rail stays quiet — and like the Nordic ladder, <b>the rungs are
-      program data, not code</b>: these ten are a strawman for you to rename, insert between, or reorder in the editor.</p>
-      <p>Entry row on home is unchanged from round 1.</p>
+      <p><b>The sections are data, not curation:</b> ready = logged at the top of the rep range; holding = three
+      sessions without a weight, rep, or rung change; everything else is climbing, sorted by last bump. Rows move
+      between sections on their own as sessions land.</p>
+      <p>Entry row on home unchanged. Ladder rungs are still program data — the ten here remain the strawman.</p>
     </div>
   </div>
 </div>
