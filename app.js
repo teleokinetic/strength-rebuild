@@ -8,7 +8,7 @@
 
 const STORE_KEY = 'sr-state-v2';
 const V1_KEY = 'sr-state-v1';        // read-only: migration source, never written
-const APP_VERSION = '2.10.0';
+const APP_VERSION = '2.11.0';
 
 let state = null;
 
@@ -589,6 +589,187 @@ function ledgerHTML() {
     </div>`;
 }
 
+/* ==================== progression (motion ledger) ====================
+   The board answers "where am I" — this page answers "what's moving".
+   One taxonomy, computed from the log alone: ready = last logged reps at
+   the top of the slot's rep range (a load goes up next session); holding
+   = HOLDING_AFTER sessions of that exercise without a weight, rep, or
+   rung change; everything else is climbing. Arcs (rung slots) sort in
+   with the lifts — the grouping is the reading. */
+
+const HOLDING_AFTER = 3;
+const LOAD_STEP = 5;               // mirrors the chip's ±5 steppers
+const WEEK_MS = 7 * 24 * 3600 * 1000;
+
+let progOpen = null;               // one open row; ephemeral like the rest hint
+
+function sessionTs(sess) { return sess.endedAt || sess.startedAt || 0; }
+
+// Top of the slot's rep range, parsed from its target ("3×6–8" → 8).
+// Only reps-tracked slots have the rep dial; null = no range to top out.
+function repRangeTop(slot) {
+  if (!slot.reps) return null;
+  const m = /(\d+)\s*[–—-]\s*(\d+)/.exec(slot.target || '');
+  return m ? parseInt(m[2], 10) : null;
+}
+
+// Every appearance of an exercise in the log, oldest first.
+function historyFor(exerciseId) {
+  const out = [];
+  for (const sess of state.sessions) {
+    const e = (sess.entries || []).find((x) => x.exerciseId === exerciseId);
+    if (!e) continue;
+    out.push({
+      t: sessionTs(sess),
+      w: Number.isFinite(e.weight) ? e.weight : null,
+      r: e.reps > 0 ? e.reps : null,
+      rung: e.rung || null,
+    });
+  }
+  return out;
+}
+
+// Step-after sparkline as a markup string, like every other view fragment.
+// A working number holds until the session it changes — the plateau IS the
+// double-progression stair; a smooth slope would be a lie.
+function sparkSVG(ptsIn, o) {
+  const pts = ptsIn.length === 1 ? [ptsIn[0], ptsIn[0]] : ptsIn;
+  const padX = 4, padT = 5, padB = 4;
+  let min = Math.min(...pts), max = Math.max(...pts);
+  if (o.goal != null) max = Math.max(max, o.goal);
+  const span = max - min || 1;
+  const X = (i) => padX + i * (o.w - 2 * padX) / Math.max(1, pts.length - 1);
+  const Y = (v) => o.h - padB - (v - min) * (o.h - padT - padB) / span;
+  let d = `M ${X(0).toFixed(1)} ${Y(pts[0]).toFixed(1)}`;
+  for (let i = 1; i < pts.length; i++) d += ` H ${X(i).toFixed(1)} V ${Y(pts[i]).toFixed(1)}`;
+  let inner = '';
+  if (o.goal != null) {
+    inner += `<line x1="${padX}" y1="${Y(o.goal).toFixed(1)}" x2="${o.w - padX - 26}" y2="${Y(o.goal).toFixed(1)}"
+      stroke="var(--dim)" stroke-width="1.3" stroke-dasharray="3 4" opacity="0.6"/>
+      <text x="${o.w - padX}" y="${(Y(o.goal) + 3.5).toFixed(1)}" text-anchor="end" fill="var(--dim)"
+      font-size="10.5" font-family="var(--display)">${o.goal}</text>`;
+  }
+  inner += `<path d="${d}" fill="none" stroke="currentColor" stroke-width="${o.stroke}"
+      stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="${X(pts.length - 1).toFixed(1)}" cy="${Y(pts[pts.length - 1]).toFixed(1)}" r="${o.dot}" fill="currentColor"/>`;
+  const size = o.cls === 'minispark' ? ` width="${o.w}" height="${o.h}"` : '';
+  return `<svg class="${o.cls}" viewBox="0 0 ${o.w} ${o.h}"${size} aria-hidden="true">${inner}</svg>`;
+}
+
+function liftItem(slot, ex, all) {
+  // A logged 0 is a mishap except on added-load slots, where +0 is bodyweight.
+  const wOk = (h) => h.w != null && (h.w > 0 || slot.added);
+  const hist = all.filter((h) => wOk(h) || (slot.reps && h.r != null));
+  if (!hist.length) return null;
+  const wHist = hist.filter(wOk);
+  const rHist = hist.filter((h) => h.r != null);
+  const cur = wHist.length ? wHist[wHist.length - 1].w : null;
+  const first = wHist.length ? wHist[0].w : null;
+  const curR = rHist.length ? rHist[rHist.length - 1].r : null;
+  const firstR = rHist.length ? rHist[0].r : null;
+  const top = repRangeTop(slot);
+  const ready = top != null && curR != null && curR >= top;
+
+  // Change streak: trailing sessions with the same working numbers.
+  const key = (h) => `${wOk(h) ? h.w : ''}|${slot.reps ? (h.r == null ? '' : h.r) : ''}`;
+  let streak = 1;
+  for (let i = hist.length - 2; i >= 0 && key(hist[i]) === key(hist[hist.length - 1]); i--) streak++;
+  const lastBumpT = streak < hist.length ? hist[hist.length - streak].t : hist[0].t;
+
+  // Spark: weights when they've moved; else reps (the chin-up case).
+  const wPts = wHist.map((h) => h.w);
+  const rPts = rHist.map((h) => h.r);
+  const wMoved = wPts.length >= 2 && Math.min(...wPts) !== Math.max(...wPts);
+  const rMoved = rPts.length >= 2 && Math.min(...rPts) !== Math.max(...rPts);
+  const mode = (!wMoved && rMoved) || !wPts.length ? 'r' : 'w';
+  const pts = mode === 'r' ? rPts : wPts;
+
+  const tgt = TARGETS.find((x) => x.ex === ex);
+  const goal = tgt && mode === 'w' ? tgt.goal : null;
+  const delta = cur != null && first != null ? cur - first : 0;
+  const weeks = Math.max(1, Math.round((hist[hist.length - 1].t - hist[0].t) / WEEK_MS));
+  const label = cur == null ? '' : (slot.added ? '+' : '') + cur;
+  const next = (cur == null ? 0 : cur) + LOAD_STEP;
+  const nextLabel = (slot.added ? '+' : '') + next;
+
+  let bumps = 0;
+  for (let i = 1; i < wHist.length; i++) if (wHist[i].w !== wHist[i - 1].w) bumps++;
+
+  const motion = ready ? 'ready'
+    : hist.length >= HOLDING_AFTER && streak >= HOLDING_AFTER ? 'holding' : 'climbing';
+
+  // Collapsed phrase: a journey with a window, never a bare position.
+  const reps = curR == null ? '' : ` ×${curR}`;
+  let phrase;
+  if (motion === 'ready') phrase = (label ? `<b>${label}</b>` : '') + reps.replace(' ', label ? ' ' : '');
+  else if (motion === 'holding') phrase = `<b>${label || '×' + curR}</b>${label ? reps : ''} · ${streak} sessions`;
+  else if (mode === 'w' && delta !== 0) phrase = `${first} → <b>${label}</b> · ${slot.reps && curR != null ? '×' + curR : weeks + ' wks'}`;
+  else if (mode === 'r' && rMoved) phrase = `×${firstR} → <b>×${curR}</b> · ${weeks} wks`;
+  else phrase = `<b>${label || '×' + curR}</b>${label ? reps : ''}`;
+
+  return {
+    kind: 'lift', ex, slot, motion, phrase, pts, goal, streak, lastBumpT,
+    mode, cur, curR, first, firstR, top, delta, weeks, label, nextLabel, bumps,
+    histLen: hist.length, tFirst: hist[0].t, tLast: hist[hist.length - 1].t,
+  };
+}
+
+function arcItem(slot, ex, hist) {
+  const ladder = slot.rungs;
+  const curRung = hist[hist.length - 1].rung;
+  const idx = ladder.indexOf(curRung);
+  let streak = 1;
+  for (let i = hist.length - 2; i >= 0 && hist[i].rung === curRung; i--) streak++;
+  const lastBumpT = streak < hist.length ? hist[hist.length - streak].t : hist[0].t;
+  const motion = hist.length >= HOLDING_AFTER && streak >= HOLDING_AFTER ? 'holding' : 'climbing';
+  const pts = hist.map((h) => ladder.indexOf(h.rung)).filter((i) => i !== -1).map((i) => i + 1);
+
+  // Last different rung before the current one, for the journey phrase.
+  let prevIdx = -1;
+  for (let i = hist.length - 1 - streak; i >= 0 && prevIdx === -1; i--) prevIdx = ladder.indexOf(hist[i].rung);
+
+  let phrase;
+  if (idx === -1) phrase = `<b>${esc(curRung)}</b>`;   // rung renamed since logging
+  else if (motion === 'holding') phrase = `rung <b>${idx + 1}</b> / ${ladder.length} · ${streak} sessions`;
+  else if (prevIdx !== -1 && prevIdx !== idx) phrase = `rung ${prevIdx + 1} → <b>${idx + 1}</b> / ${ladder.length}`;
+  else phrase = `rung <b>${idx + 1}</b> / ${ladder.length}`;
+
+  return { kind: 'arc', ex, slot, motion, phrase, pts, streak, lastBumpT, idx, ladder, hist, goal: null };
+}
+
+function progressionData() {
+  const items = [];
+  const seen = {};
+  for (const day of state.program.days) {
+    for (const slot of day.slots) {
+      const ex = slug(slot.name);
+      if (seen[ex]) continue;
+      seen[ex] = true;
+      if (Array.isArray(slot.rungs) && slot.rungs.length) {
+        const hist = historyFor(ex).filter((h) => h.rung);
+        if (hist.length) items.push(arcItem(slot, ex, hist));
+      } else if (slot.track) {
+        const it = liftItem(slot, ex, historyFor(ex));
+        if (it) items.push(it);
+      }
+    }
+  }
+  return items;
+}
+
+function trainStats() {
+  const n = state.sessions.length;
+  if (!n) return { line: 'No sessions yet', perTxt: '' };
+  const t0 = sessionTs(state.sessions[0]);
+  const t1 = sessionTs(state.sessions[n - 1]);
+  const span = `${fmtDate(t0)} → ${fmtDate(t1)}`;
+  if (n < 4) return { line: `${span} · ${n} session${n === 1 ? '' : 's'}`, perTxt: '' };
+  const wks = Math.max(1, (t1 - t0) / WEEK_MS);
+  const per = Math.round((n / wks) * 2) / 2;
+  const perTxt = per >= 1 ? `about ${per} a week` : 'under 1 a week';
+  return { line: `${span} · ${n} sessions · ${perTxt}`, perTxt };
+}
+
 /* ============================ session core ============================ */
 
 // A session begins lazily: the first weight tweak or note creates it. Finishing
@@ -826,7 +1007,160 @@ function viewHome() {
         <div class="daycard-last">${esc(when)}</div>
       </a>`;
   }).join('');
-  return `${topbar()}<div class="daygrid">${cards}</div>${ledgerHTML()}<div class="fieldmark">${barleyHTML()}</div>`;
+  return `${topbar()}<div class="daygrid">${cards}</div>${ledgerHTML()}${progRowHTML()}<div class="fieldmark">${barleyHTML()}</div>`;
+}
+
+/* ---- progression: home entry row + the page ---- */
+
+// The quiet entry under the board: a live one-line pulse, not a preview.
+function progRowHTML() {
+  const items = progressionData();
+  const readyCt = items.filter((i) => i.motion === 'ready').length;
+  let best = null;
+  for (const it of items) {
+    if (it.kind === 'lift' && it.mode === 'w' && it.delta > 0 && (!best || it.delta > best.delta)) best = it;
+  }
+  const bits = [];
+  if (readyCt) bits.push(`${readyCt} ready`);
+  if (best) bits.push(`${best.slot.name.split(',')[0]} +${best.delta}`);
+  const stats = trainStats();
+  if (stats.perTxt) bits.push(stats.perTxt.replace('about ', ''));
+  const sub = bits.length ? bits.join(' · ') : 'Fills in as sessions land';
+  return `
+    <a class="prow" href="#/progression">
+      <div class="prow-mark">
+        <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
+          <path d="M2 16 H7 V11 H12 V6 H17" fill="none" stroke="currentColor"
+            stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="17" cy="6" r="2.4" fill="currentColor"/>
+        </svg>
+      </div>
+      <div class="prow-body">
+        <div class="prow-t">Progression</div>
+        <div class="prow-s">${esc(sub)}</div>
+      </div>
+      <div class="prow-chev">›</div>
+    </a>`;
+}
+
+// The open card's closing line — every open row ends in a verdict:
+// the load, the pace, or a reset. Suggestions stay hairline, never brass.
+function liftVerdictHTML(it) {
+  if (it.motion === 'ready') {
+    return `<div class="tnext ready">At ×${it.curR} — load ${esc(it.nextLabel)} next session</div>`;
+  }
+  if (it.motion === 'holding') {
+    const reset = it.top != null && it.cur != null && it.cur - LOAD_STEP > 0
+      ? `reset ${it.cur - LOAD_STEP} ×${it.top}, or hold` : 'nudge it, or hold';
+    return `<div class="tnext flag">Flat ${it.streak} sessions — ${reset}</div>`;
+  }
+  if (it.mode === 'r') {
+    const trigger = it.top != null ? ` · ×${it.top} triggers the load` : '';
+    return `<div class="tnext">Building reps ×${it.firstR} → ×${it.curR}${trigger}</div>`;
+  }
+  if (it.delta > 0) {
+    const cad = it.bumps ? Math.max(1, Math.round(it.histLen / it.bumps)) : 0;
+    let line = `+${it.delta} in ${it.weeks} wks`;
+    if (cad) line += cad === 1 ? ', bumps most sessions' : `, bumps every ~${cad} sessions`;
+    if (it.goal != null && it.cur < it.goal) {
+      // Straight-line guess in dim ink; recalibration corrects it.
+      const rate = it.delta / Math.max(1, it.tLast - it.tFirst);
+      const msLeft = (it.goal - it.cur) / rate;
+      if (msLeft > 0 && msLeft < 400 * 24 * 3600 * 1000) {
+        line += ` · at this pace ${it.goal} lands ~${new Date(it.tLast + msLeft).toLocaleDateString(undefined, { month: 'short' })}`;
+      }
+    } else if (it.goal != null && it.cur >= it.goal) {
+      line += ` · goal ${it.goal} met`;
+    }
+    return `<div class="tnext">${line}</div>`;
+  }
+  return `<div class="tnext">Early days — ${it.histLen} session${it.histLen === 1 ? '' : 's'} logged</div>`;
+}
+
+function liftCardHTML(it) {
+  const spark = it.pts.length
+    ? sparkSVG(it.pts, { w: 330, h: 46, stroke: 2.5, dot: 4, goal: it.goal, cls: 'tspark' }) : '';
+  const scheme = (it.slot.target || '').split('·')[0].trim();
+  let tline;
+  if (it.mode === 'w' && it.first !== it.cur) tline = `${it.first} → <b>${esc(it.label)} ${esc(state.settings.unit)}</b>`;
+  else if (it.mode === 'r' && it.firstR !== it.curR) tline = `×${it.firstR} → <b>×${it.curR}</b>`;
+  else tline = `<b>${it.label ? esc(it.label) + ' ' + esc(state.settings.unit) : '×' + it.curR}</b>`;
+  if (scheme) tline += ` · ${esc(scheme)}`;
+  if (it.goal != null) tline += ` · goal ${it.goal}`;
+  return `<div class="tcard">${spark}<div class="tline">${tline}</div>${liftVerdictHTML(it)}</div>`;
+}
+
+// Expanded arc: the slot's rungs as a vertical rail, read top-down —
+// the last rung is the gate, dates mark the rungs already earned.
+function arcCardHTML(it) {
+  const { ladder, idx, hist } = it;
+  const firstAt = (name) => {
+    for (const h of hist) if (h.rung === name) return h.t;
+    return null;
+  };
+  const rows = [];
+  for (let i = ladder.length - 1; i >= 0; i--) {
+    const line = i === 0 ? '' : '<div class="lad-line"></div>';
+    let cls = '', dot = '', meta = '';
+    if (idx === -1 || i > idx) {
+      cls = 'future';
+      dot = i === ladder.length - 1 ? ' goal' : ' next';
+      if (i === ladder.length - 1) meta = '<span class="lad-meta">goal</span>';
+    } else if (i === idx) {
+      dot = ' now';
+      meta = `<span class="lad-meta live">now · since ${esc(fmtDate(it.lastBumpT))}</span>`;
+    } else {
+      const t = firstAt(ladder[i]);
+      if (t) meta = `<span class="lad-meta">${esc(fmtDate(t))}</span>`;
+    }
+    rows.push(`
+      <div class="lad-row ${cls}">
+        <div class="lad-rail"><div class="lad-dot${dot}"></div>${line}</div>
+        <div class="lad-body"><span class="lad-name">${esc(ladder[i])}</span>${meta}</div>
+      </div>`);
+  }
+  const cap = it.motion === 'holding'
+    ? `${it.streak} sessions on this rung. Rungs are program data — Settings → Program.`
+    : 'Rungs are program data — rename, insert, reorder in Settings → Program.';
+  return `<div class="lad">${rows.join('')}<div class="lad-cap">${cap}</div></div>`;
+}
+
+function progRowItemHTML(it) {
+  const open = progOpen === it.ex;
+  const spark = it.motion === 'ready' || !it.pts.length ? ''
+    : sparkSVG(it.pts, { w: 64, h: 20, stroke: 1.8, dot: 2.5, cls: 'minispark' });
+  const pill = it.motion === 'ready' ? `<span class="vpill">→ ${esc(it.nextLabel)}</span>` : '';
+  const card = open ? (it.kind === 'arc' ? arcCardHTML(it) : liftCardHTML(it)) : '';
+  return `
+    <button class="mrow ${open ? 'open' : ''}" data-action="prog-toggle" data-key="${esc(it.ex)}">
+      <span class="mname">${esc(it.slot.name)}</span>${spark}
+      <span class="mnum">${it.phrase}</span>${pill}<span class="mchev">›</span>
+    </button>${card}`;
+}
+
+function viewProgression() {
+  const items = progressionData();
+  const ready = items.filter((i) => i.motion === 'ready');
+  const climbing = items.filter((i) => i.motion === 'climbing').sort((a, b) => b.lastBumpT - a.lastBumpT);
+  const holding = items.filter((i) => i.motion === 'holding').sort((a, b) => b.streak - a.streak);
+  const section = (word, why, list) => (list.length ? `
+    <div class="peyebrow"><span class="peyebrow-word">${word}</span><span class="peyebrow-why">${why}</span></div>
+    <div class="mlist">${list.map(progRowItemHTML).join('')}</div>` : '');
+  const ts = recalTs();
+  const empty = items.length ? ''
+    : '<p class="finish-hint">The page fills in as sessions land — log a session and come back.</p>';
+  return `
+    ${topbar('#/')}
+    <div class="dayhead-name">Progression</div>
+    <div class="dayhead-sub">${esc(trainStats().line)}</div>
+    ${empty}
+    ${section('Next session', 'at the top of their range', ready)}
+    ${section('Climbing', 'last bump first', climbing)}
+    ${section('Holding', HOLDING_AFTER + '+ sessions without a change', holding)}
+    <div class="progfoot">
+      <a class="ledger-check" href="#/settings">Export → recal ${ts != null ? esc(fmtDate(ts)) : '—'}</a>
+      ${barleyHTML()}
+    </div>`;
 }
 
 // Chip face, rebuilt from effective values on every change — a fresh slot
@@ -1183,6 +1517,7 @@ function render() {
   let html = '';
   if (parts[0] === 'day' && parts[1]) html = viewDay(parts[1]);
   else if (parts[0] === 'finish' && parts[1]) html = viewFinish(parts[1]);
+  else if (parts[0] === 'progression') html = viewProgression();
   else if (parts[0] === 'settings') html = viewSettings();
   else if (parts[0] === 'import') html = viewImport();
   else if (parts[0] === 'program' && parts[1] && parts[2]) html = viewSlotEdit(parts[1], parts[2]);
@@ -1223,6 +1558,15 @@ document.addEventListener('click', (ev) => {
   if (action === 'rest-cancel') { restCancel(); return; }
   if (action === 'rest-ack') { rest.done = false; renderRestDock(); return; }
 
+  if (action === 'prog-toggle') {
+    const k = t.getAttribute('data-key');
+    progOpen = progOpen === k ? null : k;
+    // re-render in place: render() homes the scroll, so put it back
+    const y = window.scrollY;
+    render();
+    window.scrollTo(0, y);
+    return;
+  }
   if (action === 'targets-toggle') {
     state.settings.targetsOpen = !state.settings.targetsOpen;
     save();

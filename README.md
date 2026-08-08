@@ -8,6 +8,7 @@ v2 model: anchors + task menus, one-press rest. No per-set logging.
 - **Log**: tracked slots capture one working weight, prefilled from the last session by movement-name slug — a session with nothing changed is zero taps. Menu slots (jumps, transitional squats, hangs) list their task variations and take a note instead.
 - **Finish**: records every tracked lift at its chip weight plus any notes. A session left open past 12 h auto-saves on next launch — adjusted weights are never lost.
 - **Program**: edited in-app (Settings → Program): name, target, cue, warm-up line, task menu, tracked/added-load flags, rest tier, reorder.
+- **Progression**: home → the row under Targets. Everything you train sorted by motion, computed from the log alone: *next session* (logged at the top of the rep range — a load goes up), *climbing*, *holding* (3+ sessions without a change). Tap a row for the trend line, pace, and verdict; rung slots open into their ladder. The targets board answers "where am I" — this page answers "what's moving".
 - **Data**: lives in `localStorage` (`sr-state-v2`) on the device; export / copy / import as JSON from Settings. v1 per-set history migrates automatically — each old entry collapses to its top working weight with the raw sets preserved underneath.
 
 ## Develop
