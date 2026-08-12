@@ -345,6 +345,27 @@ body::before {
   font-variant-numeric: tabular-nums;
 }
 .slot-cue { color: var(--dim); font-size: 14px; margin-top: 3px; }
+.pair-note {
+  font-family: var(--display); font-weight: 600; font-size: 12.5px;
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--brass);
+  margin-top: 4px;
+}
+
+/* The pair mat — consecutive pair members share one washed mat. The
+   grouping reads by geometry (inset cards, tucked corner, one tag) —
+   never by tint alone. */
+.pairmat {
+  background: var(--brass-wash); border: 1px solid var(--line);
+  border-radius: var(--petal); padding: 7px; display: grid; gap: 7px;
+}
+.pairtag {
+  display: flex; align-items: center; gap: 7px; padding: 4px 8px 3px;
+  font-family: var(--display); font-weight: 600; font-size: 13px;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--brass);
+  font-variant-numeric: tabular-nums;
+}
+.pairtag svg { width: 14px; height: 14px; flex: none; }
+.pairmat.done .pairtag { display: none; }
 
 /* The ring: tap when the exercise is done. Visual is 25px; an invisible
    inset extends the hit area to ~45pt. */
@@ -360,12 +381,42 @@ body::before {
   color: var(--on-brass); font-size: 13px; font-weight: 700;
 }
 
+/* Counting ring — the done ring grown into a set counter. Each tap banks
+   one set and draws an arc of brass; the last tap is the old check. The
+   SVG replaces the button's own circle — same 25px visual, same hit pad
+   (the inherited ::before) — and the full ring reads by fill + check,
+   never tint alone. */
+.ring.counting, .ring.counting.on { background: transparent; border: none; }
+.ring.counting.on::after { content: none; }
+.ring.counting svg { position: absolute; inset: 0; width: 25px; height: 25px; }
+.ring-track { fill: none; stroke: var(--line); stroke-width: 2.5; }
+.ring-arc {
+  fill: none; stroke: var(--brass); stroke-width: 3; stroke-linecap: round;
+  transform: rotate(-90deg); transform-origin: center;
+  transition: stroke-dashoffset 0.2s ease;
+}
+.ring.counting.on .ring-track { fill: var(--brass); stroke: var(--brass); }
+.ring-count {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  font-family: var(--display); font-weight: 600; font-size: 12.5px;
+  color: var(--brass); font-variant-numeric: tabular-nums;
+}
+.ring.counting.on .ring-count { color: var(--on-brass); font-size: 13px; font-weight: 700; }
+
+/* "Set 2 of 4 down" — appears after the first tap, quiet before it. */
+.setline {
+  font-family: var(--display); font-weight: 600; font-size: 13.5px;
+  letter-spacing: 0.07em; text-transform: uppercase; color: var(--brass);
+  margin-top: 7px; font-variant-numeric: tabular-nums;
+}
+
 /* Done cards settle: everything but the head folds away and the line dims —
    the list gets shorter as the session moves. Ephemeral (active session only). */
 .slot.done { padding-top: 10px; padding-bottom: 10px; }
 .slot.done .slot-name, .slot.done .slot-target { opacity: 0.45; }
 .slot.done .slot-cue, .slot.done .warmup, .slot.done .menu, .slot.done .rungs,
-.slot.done .slot-foot, .slot.done .chip-edit, .slot.done .note-edit { display: none; }
+.slot.done .slot-foot, .slot.done .chip-edit, .slot.done .note-edit,
+.slot.done .pair-note, .slot.done .setline { display: none; }
 
 .warmup {
   margin-top: 8px; padding: 7px 10px; border-radius: 9px;

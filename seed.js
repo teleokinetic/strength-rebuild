@@ -1,4 +1,4 @@
-// Strength Rebuild — program seed (v1.4)
+// Strength Rebuild — program seed (v1.6)
 // This is only the FIRST-RUN seed. After first launch the program lives in
 // localStorage and is edited in-app; changes here won't overwrite it.
 //
@@ -7,9 +7,12 @@
 //   menu: [...]   → task menu (ecological variation), note instead of numbers
 //   rungs: [...]  → ordered ladder; tap today's rung, the targets board reads it
 // rest: 'normal' | 'heavy' picks which rest-button tier the slot suggests.
+// pair: slots sharing a key within a day are done together, alternating sets —
+//   short: the name partners use when pointing at this slot.
+//   pairRest: optional rest (seconds) the group takes instead of the normal tier.
 
 const SEED_PROGRAM = {
-  specVersion: '1.5',
+  specVersion: '1.6',
   days: [
     {
       id: 'dayA',
@@ -45,12 +48,12 @@ const SEED_PROGRAM = {
         },
         {
           id: 'a3', name: 'DB bench press', target: '3×6–8 · RIR 2–3',
-          track: true, reps: true, rest: 'normal',
+          track: true, reps: true, rest: 'normal', pair: 'a', short: 'the bench',
           cue: 'Free the scapula',
         },
         {
           id: 'a4', name: 'One-arm DB row', target: '3×8–10 /side',
-          track: true, reps: true, rest: 'normal',
+          track: true, reps: true, rest: 'normal', pair: 'a', short: 'the row',
           cue: 'Reps first — build to 3×8–10, then +5 · bench support, lead with the shoulder blade',
         },
         {
@@ -60,7 +63,7 @@ const SEED_PROGRAM = {
         },
         {
           id: 'a6', name: 'Nordic ladder', target: '3×4–8',
-          track: false, rest: 'normal',
+          track: false, rest: 'normal', pair: 'b', short: 'Nordics',
           rungs: [
             'Bilateral slider', 'Single-leg slider', 'Shallow negative',
             'Full negative', 'Band assist', 'Full Nordic',
@@ -69,7 +72,7 @@ const SEED_PROGRAM = {
         },
         {
           id: 'a7', name: 'Suitcase carry', target: '3×30–40 m /side',
-          track: true, rest: 'normal',
+          track: true, rest: 'normal', pair: 'b', short: 'the carry',
           cue: "Ribcage stacked, don't tip",
         },
         {
@@ -112,12 +115,12 @@ const SEED_PROGRAM = {
         },
         {
           id: 'b3', name: 'DB standing overhead press', target: '3×6–8 · RIR 2–3',
-          track: true, reps: true, rest: 'normal',
+          track: true, reps: true, rest: 'normal', pair: 'a', short: 'the press', pairRest: 90,
           cue: 'Ribs down; vary the tempo or the attention',
         },
         {
           id: 'b4', name: 'Chin-up, strict', target: '3×5–12',
-          track: true, added: true, reps: true, rest: 'normal',
+          track: true, added: true, reps: true, rest: 'normal', pair: 'a', short: 'chins', pairRest: 90,
           cue: 'Dead hang, chin over; rotate grips freely',
         },
         {
@@ -133,7 +136,7 @@ const SEED_PROGRAM = {
         },
         {
           id: 'b6', name: 'Anti-extension ladder', target: '1–2×5–8',
-          track: false, rest: 'normal',
+          track: false, rest: 'normal', pair: 'b', short: 'the ladder', pairRest: 60,
           rungs: [
             'Hollow body — 45 s',
             'All-fours → plank',
@@ -147,7 +150,7 @@ const SEED_PROGRAM = {
         },
         {
           id: 'b7', name: 'Heel-to-butt curl', target: '2×5–8 /side',
-          track: false, rest: 'normal',
+          track: false, rest: 'normal', pair: 'b', short: 'heel curls', pairRest: 60,
           menu: [
             'Prone curl — pause 3–5 s at max closure',
             'Standing pull — hip extended, no back arch',
@@ -158,7 +161,7 @@ const SEED_PROGRAM = {
         },
         {
           id: 'b8', name: 'Calf, single-leg', target: '2×8–15 /side',
-          track: true, reps: true, rest: 'normal',
+          track: true, reps: true, rest: 'normal', pair: 'b', short: 'calves', pairRest: 60,
           menu: [
             'Split Squat Iso w Calf Raise — front foot off a box edge, nothing moves but the heel',
             '3D Calf Raise — drive the roller into the wall, find the angles',
