@@ -12,7 +12,7 @@
 //   pairRest: optional rest (seconds) the group takes instead of the normal tier.
 
 const SEED_PROGRAM = {
-  specVersion: '1.6',
+  specVersion: '1.7',
   days: [
     {
       id: 'dayA',
@@ -114,7 +114,7 @@ const SEED_PROGRAM = {
           cue: 'Long hamstrings, neutral spine',
         },
         {
-          id: 'b3', name: 'DB standing overhead press', target: '3×6–8 · RIR 2–3',
+          id: 'b3', name: 'DB standing overhead press', target: '3×6–10 · RIR 2–3',
           track: true, reps: true, rest: 'normal', pair: 'a', short: 'the press', pairRest: 90,
           cue: 'Ribs down; vary the tempo or the attention',
         },

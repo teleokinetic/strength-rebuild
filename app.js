@@ -130,7 +130,7 @@ function patchProgram() {
   const p = state.program;
   if (!p) return;
   const v = parseFloat(p.specVersion) || 0;
-  if (v >= 1.6) return;
+  if (v >= 1.7) return;
 
   // 0.4: Bulgarian split squat becomes Stork squat; both days open
   // with a no-weight Prep slot (wrist prep + passive/active hangs).
@@ -375,7 +375,15 @@ function patchProgram() {
     set(dayB, 'calf-single-leg', { pair: 'b', short: 'calves', pairRest: 60 });
   }
 
-  p.specVersion = '1.6';
+  // 1.7: press range widens to 6–10 (his 8/15 call) — a little joint room;
+  // he waves load up and down inside the range rather than riding the top.
+  if (v < 1.7) {
+    const dayB = p.days.find((d) => d.id === 'dayB');
+    const press = dayB && dayB.slots.find((s) => slug(s.name) === 'db-standing-overhead-press');
+    if (press) press.target = '3×6–10 · RIR 2–3';
+  }
+
+  p.specVersion = '1.7';
   save();
 }
 
