@@ -357,6 +357,8 @@ body::before {
 .pairmat {
   background: var(--brass-wash); border: 1px solid var(--line);
   border-radius: var(--petal); padding: 7px; display: grid; gap: 7px;
+  /* minmax(0,1fr): a number input's intrinsic width must never size the track */
+  grid-template-columns: minmax(0, 1fr);
 }
 .pairtag {
   display: flex; align-items: center; gap: 7px; padding: 4px 8px 3px;
