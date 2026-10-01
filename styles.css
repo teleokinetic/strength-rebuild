@@ -575,6 +575,10 @@ body::before {
 }
 .notebtn .ico { width: 16px; height: 16px; }
 .notebtn.has-note { color: var(--brass-ink); }
+.slot-head .notebtn { margin: -8px -8px -8px -2px; padding: 8px; align-self: flex-start; }
+.slot-head .notebtn .ico { width: 18px; height: 18px; }
+.slot-head .notebtn-t { display: none; }
+.slot.done .slot-head .notebtn { display: none; }
 
 /* Opening an editor eases it in rather than snapping. */
 .chip-edit:not(.hidden), .note-edit:not(.hidden) { animation: reveal 0.22s var(--ease); }

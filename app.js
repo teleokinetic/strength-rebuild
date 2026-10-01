@@ -10,7 +10,7 @@
 
 const STORE_KEY = 'sr-state-v2';
 const V1_KEY = 'sr-state-v1';        // read-only: migration source, never written
-const APP_VERSION = '2.13.0';
+const APP_VERSION = '2.13.1';
 
 let state = null;
 
@@ -130,7 +130,7 @@ function patchProgram() {
   const p = state.program;
   if (!p) return;
   const v = parseFloat(p.specVersion) || 0;
-  if (v >= 1.7) return;
+  if (v >= 1.8) return;
 
   // 0.4: Bulgarian split squat becomes Stork squat; both days open
   // with a no-weight Prep slot (wrist prep + passive/active hangs).
@@ -383,7 +383,55 @@ function patchProgram() {
     if (press) press.target = '3×6–10 · RIR 2–3';
   }
 
-  p.specVersion = '1.7';
+  // 1.8: the quiet program (his 9/30 call). He knows the work now, so the
+  // cues and warm-up lines come off everything but the hang, the prep and
+  // jump menus go, and the Day B finishers read in short names. Ladder
+  // rungs are renamed in the logged history too so the rail and the board
+  // keep their place. Transitional squats get a set count so the ring
+  // counts them like the other lifts.
+  if (v < 1.8) {
+    const RUNGS = {
+      'Hollow body — 45 s': 'Hollow body',
+      'All-fours → plank': 'All-fours to plank',
+      'Accordion walk — down dog → plank': 'Accordion walk',
+      'Elbow accordion — knees ↔ elbows': 'Elbow accordion',
+      'Kneeling walkout — reach is the dial': 'Kneeling walkout',
+      'Kneeling rollout — wheel or sliders': 'Kneeling rollout',
+    };
+    const MENUS = {
+      'Prone curl — pause 3–5 s at max closure': 'Prone curl',
+      'Standing pull — hip extended, no back arch': 'Standing pull',
+      'Assisted overpressure — hand or strap closes the last bit, hold against it': 'Assisted overpressure',
+      'Any of these with toes turned in — medial-hamstring bias': 'Toes turned in',
+      'Split Squat Iso w Calf Raise — front foot off a box edge, nothing moves but the heel': 'Split squat iso + calf raise',
+      '3D Calf Raise — drive the roller into the wall, find the angles': '3D calf raise',
+    };
+    for (const day of p.days) {
+      for (const s of day.slots) {
+        const k = slug(s.name);
+        if (k !== 'hang-grip') { delete s.cue; delete s.warmup; }
+        if (k === 'prep' || k === 'jump-to-targets') delete s.menu;
+        if (k === 'transitional-squats' && /shapes/.test(s.target || '')) s.target = '3 sets · one per shape';
+        if (k === 'anti-extension-ladder' && Array.isArray(s.rungs)) s.rungs = s.rungs.map((r) => RUNGS[r] || r);
+        if ((k === 'heel-to-butt-curl' || k === 'calf-single-leg') && Array.isArray(s.menu)) {
+          s.menu = s.menu.map((m) => MENUS[m] || m);
+        }
+      }
+    }
+    for (const sess of state.sessions) {
+      for (const e of sess.entries || []) {
+        if (e.exerciseId === 'anti-extension-ladder' && RUNGS[e.rung]) e.rung = RUNGS[e.rung];
+      }
+    }
+    if (state.active && state.active.entries) {
+      for (const id in state.active.entries) {
+        const e = state.active.entries[id];
+        if (e && RUNGS[e.rung]) e.rung = RUNGS[e.rung];
+      }
+    }
+  }
+
+  p.specVersion = '1.8';
   save();
 }
 
@@ -1375,6 +1423,8 @@ function slotCardHTML(day, slot, onMat) {
         `<button class="rung ${rn === effRung ? 'now' : ''}" data-action="rung" data-slot="${slot.id}" data-rung="${esc(rn)}">${esc(rn)}</button>`).join('')}</div>` : '';
   const warmup = slot.warmup
     ? `<div class="warmup"><span class="warmup-tag">Warm-up</span> ${esc(slot.warmup)}</div>` : '';
+  // Cards with no weight to log keep Note in the head, so they stay one line.
+  const noteBtn = `<button class="notebtn ${note ? 'has-note' : ''}" data-action="note" data-slot="${slot.id}" aria-label="Note">${icon('note', 1.9)}<span class="notebtn-t">Note</span></button>`;
   let chip = '', chipEdit = '';
   if (slot.track) {
     const w = effectiveWeight(day.id, slot);
@@ -1408,15 +1458,13 @@ function slotCardHTML(day, slot, onMat) {
         ${ringHTML(slot, a)}
         <div class="slot-name">${esc(slot.name)}</div>
         <div class="slot-target">${esc(slot.target || '')}</div>
+        ${slot.track ? '' : noteBtn}
       </div>
       ${pairNote}
       ${slot.cue ? `<div class="slot-cue">${esc(slot.cue)}</div>` : ''}
       ${setlineHTML(slot, a)}
       ${warmup}${menu}${rungs}
-      <div class="slot-foot">
-        ${chip}
-        <button class="notebtn ${note ? 'has-note' : ''}" data-action="note" data-slot="${slot.id}">${icon('note', 1.9)}Note</button>
-      </div>
+      ${slot.track ? `<div class="slot-foot">${chip}${noteBtn}</div>` : ''}
       ${chipEdit}
       <div class="note-edit hidden" data-noteedit="${slot.id}">
         <textarea rows="2" data-action="notetext" data-slot="${slot.id}"
