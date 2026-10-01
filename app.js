@@ -10,7 +10,7 @@
 
 const STORE_KEY = 'sr-state-v2';
 const V1_KEY = 'sr-state-v1';        // read-only: migration source, never written
-const APP_VERSION = '2.14.0';
+const APP_VERSION = '2.15.0';
 
 let state = null;
 
@@ -471,6 +471,40 @@ function fmtMMSS(sec) {
 
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
 
+function greeting() {
+  const h = new Date().getHours();
+  if (h >= 5 && h < 12) return 'Good morning';
+  if (h >= 12 && h < 17) return 'Good afternoon';
+  return 'Good evening';
+}
+
+function startOfDay(ts) {
+  const d = new Date(ts);
+  d.setHours(0, 0, 0, 0);
+  return d.getTime();
+}
+
+function relPhrase(ts) {
+  const days = Math.round((startOfDay(Date.now()) - startOfDay(ts)) / 86400000);
+  if (days <= 0) return 'today';
+  if (days === 1) return 'yesterday';
+  if (days < 7) return `${days} days ago`;
+  if (days < 11) return 'a week ago';
+  return `${Math.round(days / 7)} weeks ago`;
+}
+
+// Training weeks start Monday.
+function weekStart(ts) {
+  const d = new Date(ts);
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() - (d.getDay() + 6) % 7);
+  return d.getTime();
+}
+
+function cap(s) { s = String(s); return s.charAt(0).toUpperCase() + s.slice(1); }
+
+const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+
 function findDay(dayId) { return state.program.days.find((d) => d.id === dayId); }
 function findSlot(day, slotId) { return day ? day.slots.find((s) => s.id === slotId) : null; }
 
@@ -535,6 +569,21 @@ function lastRungFor(exerciseId) {
 function lastSessionFor(dayId) {
   for (let i = state.sessions.length - 1; i >= 0; i--) {
     if (state.sessions[i].dayId === dayId) return state.sessions[i];
+  }
+  return null;
+}
+
+// Sessions banked automatically (left open, or replaced by the other day)
+// carry this note. They still feed prefill, but home's "up next" and the
+// week strip only count sessions he actually finished. Read from the note,
+// so the stored shape never changes.
+const AUTO_NOTE = '(auto-saved — session left open)';
+function isAutoSession(s) { return s.note === AUTO_NOTE; }
+function realSessions() { return state.sessions.filter((s) => !isAutoSession(s)); }
+function lastRealSessionFor(dayId) {
+  for (let i = state.sessions.length - 1; i >= 0; i--) {
+    const s = state.sessions[i];
+    if (s.dayId === dayId && !isAutoSession(s)) return s;
   }
   return null;
 }
@@ -1046,31 +1095,41 @@ document.addEventListener('visibilitychange', () => {
 /* ============================== views ============================== */
 
 // Pressed barley — the one ornament (companion to Forte's rose sprig).
-// Tall and narrow so it hugs an edge without spreading into content.
-function barleyHTML() {
+// Tall and narrow so it hugs an edge without spreading into content. Its
+// parts are classed so it can draw itself at launch and grow on the save
+// screen: stem, awns, kernels (listed bottom to top), leaves.
+const KERNELS = [
+  [41, 62, 3.4, 7, 24], [49, 60, 3.4, 7, -20], [40, 50, 3.4, 7, 22], [48, 48, 3.4, 7, -22],
+  [39, 38, 3.3, 6.6, 20], [47, 36, 3.3, 6.6, -24], [40, 27, 3, 6, 16], [46, 25, 3, 6, -18],
+  [43, 17, 2.8, 5.6, -2],
+];
+function barleySVG(cls) {
+  const kern = KERNELS.map(([cx, cy, rx, ry, r], i) =>
+    `<g class="kern" style="--i:${i}"><ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" transform="rotate(${r} ${cx} ${cy})"/></g>`).join('');
   return `
-    <svg class="barley" viewBox="0 0 90 132" aria-hidden="true">
+    <svg class="${cls}" viewBox="0 0 90 132" aria-hidden="true">
       <g stroke-linecap="round">
-        <path d="M46 130 C 48 106 48 88 45 66" fill="none" stroke="currentColor" stroke-width="2"/>
-        <g stroke="currentColor" stroke-width="1.1" opacity="0.5" fill="none">
-          <path d="M42 58 L 30 8"/><path d="M45 54 L 40 4"/><path d="M48 56 L 50 2"/>
-          <path d="M51 60 L 60 10"/><path d="M40 64 L 26 22"/>
+        <path class="stem" pathLength="1" d="M46 130 C 48 106 48 88 45 66" fill="none" stroke="currentColor" stroke-width="2"/>
+        <g class="awns" stroke="currentColor" stroke-width="1.1" opacity="0.5" fill="none">
+          <path pathLength="1" d="M42 58 L 30 8"/><path pathLength="1" d="M45 54 L 40 4"/><path pathLength="1" d="M48 56 L 50 2"/>
+          <path pathLength="1" d="M51 60 L 60 10"/><path pathLength="1" d="M40 64 L 26 22"/>
         </g>
-        <g fill="currentColor" opacity="0.45">
-          <ellipse cx="41" cy="62" rx="3.4" ry="7" transform="rotate(24 41 62)"/>
-          <ellipse cx="49" cy="60" rx="3.4" ry="7" transform="rotate(-20 49 60)"/>
-          <ellipse cx="40" cy="50" rx="3.4" ry="7" transform="rotate(22 40 50)"/>
-          <ellipse cx="48" cy="48" rx="3.4" ry="7" transform="rotate(-22 48 48)"/>
-          <ellipse cx="39" cy="38" rx="3.3" ry="6.6" transform="rotate(20 39 38)"/>
-          <ellipse cx="47" cy="36" rx="3.3" ry="6.6" transform="rotate(-24 47 36)"/>
-          <ellipse cx="40" cy="27" rx="3" ry="6" transform="rotate(16 40 27)"/>
-          <ellipse cx="46" cy="25" rx="3" ry="6" transform="rotate(-18 46 25)"/>
-          <ellipse cx="43" cy="17" rx="2.8" ry="5.6" transform="rotate(-2 43 17)"/>
-        </g>
-        <path d="M46 100 C 35 97 27 90 24 79 C 31 83 40 90 46 95 Z" fill="currentColor" opacity="0.3"/>
-        <path d="M47 112 C 55 109 60 104 62 97 C 57 100 51 105 47 109 Z" fill="currentColor" opacity="0.3"/>
+        <g class="kerns" fill="currentColor" opacity="0.45">${kern}</g>
+        <path class="leaf" d="M46 100 C 35 97 27 90 24 79 C 31 83 40 90 46 95 Z" fill="currentColor" opacity="0.3"/>
+        <path class="leaf r" d="M47 112 C 55 109 60 104 62 97 C 57 100 51 105 47 109 Z" fill="currentColor" opacity="0.3"/>
       </g>
     </svg>`;
+}
+function barleyHTML() { return barleySVG('barley'); }
+
+// A small ear for "done" marks: a stem and four kernels, drawn at icon size.
+function earMini() {
+  return `<svg class="ear-mini" viewBox="0 0 16 16" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round">
+    <path d="M8 15.2V7.4"/><path d="M6.4 3.6 5 .9M9.6 3.6 11 .9" stroke-width="1"/></g>
+    <g fill="currentColor"><ellipse cx="6.6" cy="9.4" rx="1.5" ry="2.7" transform="rotate(26 6.6 9.4)"/>
+    <ellipse cx="9.4" cy="8.6" rx="1.5" ry="2.7" transform="rotate(-24 9.4 8.6)"/>
+    <ellipse cx="6.8" cy="5.4" rx="1.4" ry="2.5" transform="rotate(22 6.8 5.4)"/>
+    <ellipse cx="9.3" cy="4.7" rx="1.4" ry="2.5" transform="rotate(-22 9.3 4.7)"/></g></svg>`;
 }
 
 // One small stroke-icon set (24-grid, round caps) so every glyph in the
@@ -1098,27 +1157,220 @@ function topbar(backTo) {
     ? `<a class="backlink" href="${backTo}">${icon('back', 2.4)}Back</a>`
     : `<div class="wordmark">Strength <span class="half">Rebuild</span></div>`;
   const right = backTo ? '' : `<a class="gear" href="#/settings" aria-label="Settings">${icon('gear', 1.8)}</a>`;
-  return `<div class="topbar">${left}${right}</div>`;
+  return `<div class="topbar ${backTo ? '' : 'home'}">${left}${right}</div>`;
+}
+
+/* ---- home ----
+   Up next: one decisive card for the day he's on, the other day as a row,
+   the Progression strip (with the targets drawn small), and this week at
+   the foot. Opens with the greeting, which first plays as its own brief
+   screen at launch and then settles into place. Sized to fit one screen. */
+
+function greetingHTML() {
+  const now = new Date();
+  const weekday = now.toLocaleDateString(undefined, { weekday: 'long' });
+  return `
+    <div class="greet">
+      <h1 class="greet-hi">${esc(greeting())}, Tanner</h1>
+      <div class="greet-date">${esc(weekday)} · ${esc(fmtDate(now.getTime()))}</div>
+    </div>`;
+}
+
+// The day's letter as a stamped mark ("Day A" → A).
+function dayLetter(day) {
+  const m = /([A-Z0-9])\s*$/i.exec(String(day.name || '').trim());
+  return m ? m[1].toUpperCase() : String(day.name || '?').charAt(0).toUpperCase();
+}
+function dayMarkHTML(day, cls) {
+  return `<span class="daymark ${cls || ''}">${esc(dayLetter(day))}</span>`;
+}
+
+// The day he's on: an open session wins; otherwise the day finished least
+// recently (never-trained first), so A and B alternate on their own.
+function suggestedDay() {
+  if (state.active && findDay(state.active.dayId)) return findDay(state.active.dayId);
+  let best = null;
+  let bestT = Infinity;
+  for (const day of state.program.days) {
+    const last = lastRealSessionFor(day.id);
+    const t = last ? sessionTs(last) : -Infinity;
+    if (t < bestT) { best = day; bestT = t; }
+  }
+  return best;
+}
+
+// A day's usual length from his last few finished sessions, to 5 minutes.
+function typicalMinutes(dayId) {
+  const mins = realSessions().filter((s) => s.dayId === dayId).slice(-6)
+    .map((s) => (s.endedAt - s.startedAt) / 60000).filter((m) => m >= 10 && m <= 180);
+  if (!mins.length) return null;
+  return Math.round(mins.reduce((a, b) => a + b, 0) / mins.length / 5) * 5;
+}
+
+function dayStatusHTML(day) {
+  if (state.active && state.active.dayId === day.id) return '<span class="daycard-live">In progress</span>';
+  const last = lastRealSessionFor(day.id);
+  if (last && startOfDay(sessionTs(last)) === startOfDay(Date.now())) {
+    return `<span class="day-done">${earMini()}Done today</span>`;
+  }
+  return `<span>${last ? esc(cap(relPhrase(sessionTs(last)))) : 'Not yet'}</span>`;
 }
 
 function viewHome() {
-  const cards = state.program.days.map((day) => {
-    const last = lastSessionFor(day.id);
-    const when = last ? `Last ${fmtDate(last.endedAt)}` : 'Not yet logged';
-    const live = state.active && state.active.dayId === day.id;
-    return `
-      <a class="daycard" href="#/day/${day.id}">
-        <div class="daycard-name">${esc(day.name)}</div>
-        <div class="daycard-sub">${esc(day.subtitle)}</div>
-        <div class="daycard-last">${live ? '<span class="daycard-live">In progress</span>' : `<span>${esc(when)}</span>`}${icon('chev', 2.2)}</div>
-      </a>`;
+  const next = suggestedDay();
+  const st = rhythmStats();
+  if (!next) return `${topbar()}${greetingHTML()}${progRowHTML()}${weekStripHTML(st)}`;
+  const live = !!(state.active && state.active.dayId === next.id);
+  const mins = typicalMinutes(next.id);
+  const last = lastRealSessionFor(next.id);
+  const meta = [`${next.slots.length} exercises`];
+  if (mins) meta.push(`about ${mins} min`);
+  if (!live && last) meta.push(`last ${relPhrase(sessionTs(last))}`);
+  const others = state.program.days.filter((d) => d.id !== next.id).map((d) => `
+    <a class="dayrow" href="#/day/${d.id}">
+      ${dayMarkHTML(d)}
+      <span class="dr-body"><span class="dr-name">${esc(d.name)}</span><span class="dr-sub">${esc(d.subtitle)}</span></span>
+      <span class="dr-when">${dayStatusHTML(d)}</span>${icon('chev', 2.2)}
+    </a>`).join('');
+  return `
+    ${topbar()}
+    ${greetingHTML()}
+    <a class="upnext" href="#/day/${next.id}">
+      <span class="upnext-top">${dayMarkHTML(next, 'lg')}
+        <span class="upnext-k ${live ? 'live' : ''}">${live ? 'In progress' : 'Up next'}</span></span>
+      <span class="upnext-name">${esc(next.name)}</span>
+      <span class="upnext-sub">${esc(next.subtitle)}</span>
+      <span class="upnext-meta">${esc(meta.join(' · '))}</span>
+      <span class="upnext-go">${live ? 'Pick up where you left off' : `Start ${esc(next.name)}`}${icon('chev', 2.4)}</span>
+    </a>
+    ${others ? `<div class="group dayrows">${others}</div>` : ''}
+    ${progRowHTML()}
+    ${weekStripHTML(st)}`;
+}
+
+/* ---- this week ---- */
+
+// Monday-first weeks: sessions per week and the two-a-week run.
+function rhythmStats() {
+  const real = realSessions();
+  if (!real.length) return null;
+  const firstW = weekStart(sessionTs(real[0]));
+  const nowW = weekStart(Date.now());
+  const weeks = [];
+  const d = new Date(nowW);
+  while (weeks.length < 12 && d.getTime() >= firstW) {
+    const ws = d.getTime();
+    weeks.unshift({ start: ws, count: real.filter((s) => weekStart(sessionTs(s)) === ws).length });
+    d.setDate(d.getDate() - 7);
+  }
+  let streak = 0;
+  for (let i = weeks.length - 1; i >= 0; i--) {
+    if (weeks[i].start === nowW) { if (weeks[i].count >= 2) streak++; continue; }
+    if (weeks[i].count >= 2) streak++; else break;
+  }
+  const thisWeek = weeks.length && weeks[weeks.length - 1].start === nowW ? weeks[weeks.length - 1].count : 0;
+  return { streak, thisWeek };
+}
+
+function weekLine(st) {
+  if (!st) return 'Two a week is the rhythm';
+  const run = st.streak >= 2 ? ` · ${st.streak} weeks running` : '';
+  if (st.thisWeek >= 2) return `${st.thisWeek === 2 ? 'Two' : st.thisWeek} this week${run}`;
+  return `${st.thisWeek} of 2 this week${run}`;
+}
+
+function weekDays() {
+  const ws = weekStart(Date.now());
+  const today = startOfDay(Date.now());
+  const real = realSessions();
+  const out = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(ws);
+    d.setDate(d.getDate() + i);
+    const t = startOfDay(d.getTime());
+    out.push({
+      num: d.getDate(),
+      letter: d.toLocaleDateString(undefined, { weekday: 'narrow' }),
+      days: real.filter((s) => startOfDay(sessionTs(s)) === t).map((s) => findDay(s.dayId)).filter(Boolean),
+      today: t === today, future: t > today,
+    });
+  }
+  return out;
+}
+
+// This week as seven days, each trained day stamped with that day's letter.
+function weekStripHTML(st) {
+  const days = weekDays().map((d) => {
+    const mark = d.days.length
+      ? `<span class="wk-mark">${esc(dayLetter(d.days[d.days.length - 1]))}</span>`
+      : '<span class="wk-mark empty"></span>';
+    return `<div class="wk-day ${d.today ? 'today' : ''} ${d.future ? 'future' : ''}">
+      <span class="wk-l">${esc(d.letter)}</span><span class="wk-n">${d.num}</span>${mark}</div>`;
   }).join('');
-  return `${topbar()}<div class="daygrid">${cards}</div>${ledgerHTML()}${progRowHTML()}<div class="fieldmark">${barleyHTML()}</div>`;
+  return `
+    <div class="weekcard">
+      <div class="wk-row">${days}</div>
+      <div class="wk-line">${esc(weekLine(st))}</div>
+    </div>`;
+}
+
+/* ---- greeting splash ----
+   At launch the greeting gets the whole screen for a moment: the barley
+   draws itself, the words rise, then they glide up into the home greeting
+   and the page settles in under them. Tap to skip. Once per launch, from
+   home only, never under reduced motion. */
+
+let splashTimer = null;
+function showSplash() {
+  if (reducedMotion()) return;
+  const target = $('.greet-hi');
+  if (!target) return;
+  const old = $('.splash');
+  if (old) old.remove();
+  const now = new Date();
+  const weekday = now.toLocaleDateString(undefined, { weekday: 'long' });
+  const el = document.createElement('div');
+  el.className = 'splash';
+  el.setAttribute('aria-hidden', 'true');
+  el.innerHTML = `
+    <div class="splash-inner">
+      ${barleySVG('barley grow')}
+      <div class="splash-hi">${esc(greeting())}, Tanner</div>
+      <div class="splash-date">${esc(weekday)} · ${esc(fmtDate(now.getTime()))}</div>
+    </div>`;
+  document.body.appendChild(el);
+  document.body.classList.add('splashing');
+  let settled = false;
+  const settle = () => {
+    if (settled) return;
+    settled = true;
+    clearTimeout(splashTimer);
+    const words = el.querySelector('.splash-hi');
+    const to = $('.greet-hi');
+    if (to) {
+      const a = words.getBoundingClientRect();
+      const b = to.getBoundingClientRect();
+      words.style.transform = `translate(${(b.left - a.left).toFixed(1)}px, ${(b.top - a.top).toFixed(1)}px)`;
+    }
+    el.classList.add('settling');
+    document.body.classList.remove('splashing');
+    document.body.classList.add('settle-in');
+    setTimeout(() => {
+      el.remove();
+      document.body.classList.remove('settle-in');
+    }, 760);
+  };
+  el.addEventListener('click', settle);
+  // Leaving home mid-splash (a tap can't, but a resume link could) settles too.
+  window.addEventListener('hashchange', settle, { once: true });
+  splashTimer = setTimeout(settle, 2100);
 }
 
 /* ---- progression: home entry row + the page ---- */
 
-// The quiet entry under the board: a live one-line pulse, not a preview.
+// The way into Progression: a tinted strip, not another card like the
+// days. One headline (what's ready, else the biggest gain), the recal
+// check under it, and the targets board drawn small on the right.
 function progRowHTML() {
   const items = progressionData();
   const readyCt = items.filter((i) => i.motion === 'ready').length;
@@ -1126,26 +1378,25 @@ function progRowHTML() {
   for (const it of items) {
     if (it.kind === 'lift' && it.mode === 'w' && it.delta > 0 && (!best || it.delta > best.delta)) best = it;
   }
-  const bits = [];
-  if (readyCt) bits.push(`${readyCt} ready`);
-  if (best) bits.push(`${best.slot.name.split(',')[0]} +${best.delta}`);
-  const stats = trainStats();
-  if (stats.perTxt) bits.push(stats.perTxt.replace('about ', ''));
-  const sub = bits.length ? bits.join(' · ') : 'Fills in as sessions land';
+  let main;
+  if (readyCt) main = `${readyCt} lift${readyCt === 1 ? '' : 's'} ready to move up`;
+  else if (best) main = `${best.slot.name.split(',')[0]} +${best.delta} ${state.settings.unit}`;
+  else main = 'Fills in as sessions land';
+  const ts = recalTs();
+  const due = ts != null && Date.now() >= ts;
+  const sub = ts == null ? '' : due ? 'Recalibration due — export first' : `Targets · recal ${fmtDate(ts)}`;
+  const eq = TARGETS.map((item) => {
+    const s = targetState(item);
+    return `<span class="mini-col ${item.locked ? 'off' : ''}"><i style="height:${s.pct}%"></i></span>`;
+  }).join('');
   return `
     <a class="prow" href="#/progression">
-      <div class="prow-mark">
-        <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
-          <path d="M2 16 H7 V11 H12 V6 H17" fill="none" stroke="currentColor"
-            stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-          <circle cx="17" cy="6" r="2.4" fill="currentColor"/>
-        </svg>
-      </div>
-      <div class="prow-body">
-        <div class="prow-t">Progression</div>
-        <div class="prow-s">${esc(sub)}</div>
-      </div>
-      <div class="prow-chev">${icon('chev', 2.2)}</div>
+      <span class="prow-body">
+        <span class="prow-k">Progression${icon('chev', 2.6)}</span>
+        <span class="prow-main">${esc(main)}</span>
+        ${sub ? `<span class="prow-s ${due ? 'due' : ''}">${esc(sub)}</span>` : ''}
+      </span>
+      <span class="mini-eq" aria-hidden="true">${eq}</span>
     </a>`;
 }
 
@@ -1252,21 +1503,20 @@ function viewProgression() {
   const section = (word, why, list) => (list.length ? `
     <div class="peyebrow"><span class="peyebrow-word">${word}</span><span class="peyebrow-why">${why}</span></div>
     <div class="mlist">${list.map(progRowItemHTML).join('')}</div>` : '');
-  const ts = recalTs();
   const empty = items.length ? ''
     : '<p class="finish-hint">The page fills in as sessions land — log a session and come back.</p>';
+  // Targets answer "where am I" at the top; the motion sections below
+  // answer "what's moving".
   return `
     ${topbar('#/')}
     <div class="dayhead-name">Progression</div>
     <div class="dayhead-sub">${esc(trainStats().line)}</div>
+    ${ledgerHTML()}
     ${empty}
     ${section('Next session', 'at the top of their range', ready)}
     ${section('Climbing', 'last bump first', climbing)}
     ${section('Holding', HOLDING_AFTER + '+ sessions without a change', holding)}
-    <div class="progfoot">
-      <a class="ledger-check" href="#/settings">Export → recal ${ts != null ? esc(fmtDate(ts)) : '—'}</a>
-      ${barleyHTML()}
-    </div>`;
+    <div class="fieldmark">${barleyHTML()}</div>`;
 }
 
 // Chip face, rebuilt from effective values on every change — a fresh slot
@@ -1295,13 +1545,26 @@ function trailHTML(day) {
     if (on) done++;
     return `<span class="trail-pip ${on ? 'on' : ''}"></span>`;
   }).join('');
-  return `<div class="trail" data-trail><div class="trail-bar">${pips}</div><span class="trail-count">${done} of ${day.slots.length}</span></div>`;
+  const all = done > 0 && done === day.slots.length;
+  return `<div class="trail ${all ? 'all' : ''}" data-trail><div class="trail-bar">${pips}</div><span class="trail-count">${done} of ${day.slots.length}</span></div>`;
 }
 
+// The last ring of the session sends a ripple down the trail and turns
+// Finish solid; unchecking one quietly undoes both.
 function updateTrail(dayId) {
   const el = $('[data-trail]');
   const day = findDay(dayId);
-  if (el && day) el.outerHTML = trailHTML(day);
+  if (!el || !day) return;
+  const wasAll = el.classList.contains('all');
+  el.outerHTML = trailHTML(day);
+  const now = $('[data-trail]');
+  const all = now.classList.contains('all');
+  if (all && !wasAll) now.classList.add('ripple');
+  const fin = $('.finishbtn[data-action="finish"]');
+  if (fin) {
+    fin.classList.toggle('ready', all);
+    fin.classList.toggle('just', all && !wasAll);
+  }
 }
 
 /* ---- pairs ---- */
@@ -1383,15 +1646,6 @@ function ringHTML(slot, e) {
       </svg>
       <span class="ring-count">${done ? icon('check', 3.2) : (n || '')}</span>
     </button>`;
-}
-
-// "Set 2 of 4 down" under the cue — hidden until the first tap so untouched
-// cards stay quiet (the target already says the plan).
-function setlineHTML(slot, e) {
-  const total = setTarget(slot);
-  if (!total) return '';
-  const n = (e && e.done) ? total : Math.min((e && e.sets) || 0, total - 1);
-  return `<div class="setline ${n ? '' : 'hidden'}" data-setline="${slot.id}">Set ${n} of ${total} down</div>`;
 }
 
 // One line per exercise: ring · name over target · today's number. Tapping
@@ -1558,10 +1812,14 @@ function slotsHTML(day) {
   return merged.map((g) => {
     if (g.solo) return `<div class="slotgroup">${g.slots.map((s) => slotCardHTML(day, s)).join('')}</div>`;
     const allDone = g.slots.every((s) => a && a.entries[s.id] && a.entries[s.id].done);
-    const word = g.slots.length > 2 ? 'Trio · cycle through' : 'Pair · alternate sets';
+    const trio = g.slots.length > 2;
+    const word = trio ? 'Trio · cycle through' : 'Pair · alternate sets';
     return `
       <div class="pairmat ${allDone ? 'done' : ''}">
-        <div class="pairtag">${tieSVG()}<span>${word}</span><span class="pairtag-rest">${fmtMMSS(pairRestSec(day, g.slots[0]))} rest</span></div>
+        <div class="pairtag">
+          <span class="pt-live">${tieSVG()}<span>${word}</span><span class="pairtag-rest">${fmtMMSS(pairRestSec(day, g.slots[0]))} rest</span></span>
+          <span class="pt-done">${earMini()}${trio ? 'Trio done' : 'Pair done'}</span>
+        </div>
         ${g.slots.map((s) => slotCardHTML(day, s, true)).join('')}
       </div>`;
   }).join('');
@@ -1574,6 +1832,8 @@ function tieSVG() {
 function viewDay(dayId) {
   const day = findDay(dayId);
   if (!day) { location.hash = '#/'; return ''; }
+  const a = state.active && state.active.dayId === dayId ? state.active : null;
+  const allDone = !!a && day.slots.every((s) => a.entries[s.id] && a.entries[s.id].done);
   return `
     ${topbar('#/')}
     <div class="dayhead">
@@ -1585,7 +1845,21 @@ function viewDay(dayId) {
       <div id="restdock" class="restdock">${restDockHTML()}</div>
     </div>
     <div class="slots">${slotsHTML(day)}</div>
-    <button class="finishbtn" data-action="finish" data-day="${day.id}">Finish session</button>`;
+    <button class="finishbtn ${allDone ? 'ready' : ''}" data-action="finish" data-day="${day.id}">Finish session</button>`;
+}
+
+// A few brass kernels scatter off a ring the moment its exercise is done.
+function kernelBurst(ringEl) {
+  if (!ringEl || reducedMotion()) return;
+  const row = ringEl.closest('.slot-row');
+  if (!row) return;
+  const b = document.createElement('span');
+  b.className = 'burst';
+  b.style.left = (ringEl.offsetLeft + ringEl.offsetWidth / 2) + 'px';
+  b.style.top = (ringEl.offsetTop + ringEl.offsetHeight / 2) + 'px';
+  b.innerHTML = [0, 1, 2, 3, 4, 5].map((i) => `<i style="--a:${i * 60 + 12}deg;--d:${i * 18}ms"></i>`).join('');
+  row.appendChild(b);
+  setTimeout(() => b.remove(), 1000);
 }
 
 // Confirm + recap in one card: the promise ("saves every tracked lift at the
@@ -1624,13 +1898,19 @@ function viewFinish(dayId) {
       extras.push(`${slot.name} · note`);
     }
   }
-  const meta = [];
+  const meta = [day.name];
   if (doneCt) meta.push(`${doneCt} of ${day.slots.length} done`);
   if (mins) meta.push(`${mins} min`);
+  // The ear grows on the way in: stem, kernels bottom to top, awns last,
+  // then a few loose kernels fall.
   return `
     ${topbar('#/day/' + dayId)}
     <div class="finish-wrap">
-      <div class="finish-line">${esc(day.name)}<span class="finish-meta">${esc(meta.length ? meta.join(' · ') : day.subtitle)}</span></div>
+      <div class="finish-hero">
+        <div class="earwrap">${barleySVG('barley grow ripen')}<span class="fall" aria-hidden="true"><i></i><i></i><i></i></span></div>
+        <div class="finish-line">Good work, Tanner</div>
+        <div class="finish-meta">${esc(meta.join(' · '))}</div>
+      </div>
       <div class="recap">
         <div class="recap-head">Will save</div>
         ${rows.join('')}
@@ -1785,7 +2065,9 @@ function render() {
   else if (parts[0] === 'program' && parts[1] && parts[2]) html = viewSlotEdit(parts[1], parts[2]);
   else if (parts[0] === 'program') html = viewProgram();
   else html = viewHome();
-  $('#app').innerHTML = html;
+  const app = $('#app');
+  app.setAttribute('data-view', parts[0] || 'home');
+  app.innerHTML = html;
   window.scrollTo(0, 0);
 }
 
@@ -1832,7 +2114,9 @@ document.addEventListener('click', (ev) => {
   if (action === 'targets-toggle') {
     state.settings.targetsOpen = !state.settings.targetsOpen;
     save();
+    const y = window.scrollY;
     render();
+    window.scrollTo(0, y);
     return;
   }
   if (action === 'expand') {
@@ -1921,18 +2205,15 @@ document.addEventListener('click', (ev) => {
     const mat = card && card.closest('.pairmat');
     if (mat) {
       const cards = [...mat.querySelectorAll('[data-slotcard]')];
-      mat.classList.toggle('done', cards.every((c) => c.classList.contains('done')));
+      const all = cards.every((c) => c.classList.contains('done'));
+      mat.classList.toggle('just', all && !mat.classList.contains('done'));
+      mat.classList.toggle('done', all);
     }
     t.outerHTML = ringHTML(slot, e);
     const fresh = $(`.ring[data-slot="${slotId}"]`);
-    if (fresh) fresh.classList.add('pop');
-    if (total) {
-      const line = $(`[data-setline="${slotId}"]`);
-      if (line) {
-        const n = e.done ? total : Math.min(e.sets || 0, total - 1);
-        line.textContent = `Set ${n} of ${total} down`;
-        line.classList.toggle('hidden', !n);
-      }
+    if (fresh) {
+      fresh.classList.add('pop');
+      if (e.done) kernelBurst(fresh);
     }
     updateTrail(dayId);
     touchSlot(slotId);
@@ -2173,19 +2454,24 @@ function exportJSON() {
    whole SW install. Check for an update on every resume, and when a new
    version takes control, reload into it — unless a rest is running. */
 
-let reloadOnControl = false;
+// Reload when a new worker takes over a page that already had one (an
+// update, never the first install). The launch itself often triggers the
+// update check before checkForUpdate runs, so this can't wait for that call.
+const hadController = 'serviceWorker' in navigator && !!navigator.serviceWorker.controller;
+let reloaded = false;
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (!reloadOnControl) return;
-    reloadOnControl = false;
+    if (!hadController || reloaded) return;
+    reloaded = true;
     if (rest.running) { toast('Update ready — lands on next open'); return; }
+    flushSave();
     location.reload();
   });
 }
 function checkForUpdate() {
   if (!('serviceWorker' in navigator)) return;
   navigator.serviceWorker.getRegistration()
-    .then((reg) => { if (reg) { reloadOnControl = true; reg.update(); } })
+    .then((reg) => { if (reg) reg.update(); })
     .catch(() => {});
 }
 document.addEventListener('visibilitychange', () => { if (!document.hidden) checkForUpdate(); });
@@ -2198,3 +2484,8 @@ patchProgram();
 applyTheme();
 autoFinishStale();
 render();
+// The greeting plays as its own screen once per launch, from home only.
+// sessionStorage survives the self-reload into an update, not a relaunch.
+let greeted = false;
+try { greeted = sessionStorage.getItem('sr-greeted') === '1'; sessionStorage.setItem('sr-greeted', '1'); } catch (e) {}
+if (!greeted && (location.hash || '#/') === '#/') showSplash();

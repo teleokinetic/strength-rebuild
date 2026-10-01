@@ -96,6 +96,7 @@
   --r-ctl: 12px;
   --r-sm: 9px;
   --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   --gutter: 16px;
 }
 
@@ -137,19 +138,20 @@ input:focus-visible, textarea:focus-visible { outline: none; }
 .ico { width: 20px; height: 20px; flex: none; }
 
 /* Press feedback: everything tappable gives a little under the thumb. */
-.daycard, .prow, .restbtn, .rest-mini, .rest-done, .ring, .rung, .chip, .notebtn,
+.upnext, .dayrow, .prow, .restbtn, .rest-mini, .rest-done, .ring, .rung, .chip,
 .step, .finishbtn, .seg, .setbtn, .progrow, .mrow, .ledger-title, .gear, .backlink,
 .switch, .grow-link {
   transition: transform 0.16s var(--ease), opacity 0.16s var(--ease),
               background-color 0.16s var(--ease), border-color 0.16s var(--ease),
               color 0.16s var(--ease);
 }
-.daycard:active, .prow:active, .finishbtn:active { transform: scale(0.982); }
+.upnext:active, .prow:active, .finishbtn:active { transform: scale(0.982); }
+.dayrow:active { background: var(--fill); }
 .restbtn:active, .rest-done:active, .chip:active, .rung:active,
 .seg:active, .setbtn:active { transform: scale(0.96); }
 .step:active, .rest-mini:active, .gear:active { transform: scale(0.92); background: var(--fill-2); }
 .ring:active { transform: scale(0.88); }
-.notebtn:active, .backlink:active, .ledger-title:active, .ledger-check:active { opacity: 0.55; }
+.backlink:active, .ledger-title:active, .ledger-check:active { opacity: 0.55; }
 .mrow:active, .progrow:active, .grow-link:active { background: var(--fill); }
 
 @media (prefers-reduced-motion: reduce) {
@@ -163,6 +165,8 @@ input:focus-visible, textarea:focus-visible { outline: none; }
   margin: 0 auto;
   padding: calc(env(safe-area-inset-top) + 6px) var(--gutter) calc(env(safe-area-inset-bottom) + 48px);
 }
+/* Home is one screen: no scroll room below the week strip. */
+#app[data-view="home"] { padding-bottom: calc(env(safe-area-inset-bottom) + 12px); }
 
 .topbar {
   display: flex; align-items: center; justify-content: space-between;
@@ -196,41 +200,176 @@ input:focus-visible, textarea:focus-visible { outline: none; }
 .eyebrow { margin: 22px 4px 8px; }
 
 /* ---------- pressed barley ----------
-   The one ornament, companion to Forte's rose sprig — a quiet sign-off
-   at the foot of the home and progression pages. */
+   The one ornament, companion to Forte's rose sprig. It draws itself in
+   the launch greeting, grows on the save screen, and signs off the
+   Progression page; a small ear marks a finished pair or day. */
 .barley { color: var(--brass); opacity: 0.32; pointer-events: none; }
 .fieldmark { display: flex; justify-content: center; margin-top: 34px; }
 .fieldmark .barley { width: 36px; height: 54px; }
+.ear-mini { width: 15px; height: 15px; color: var(--brass); flex: none; }
 
-/* ---------- home ---------- */
+/* ---------- home ----------
+   Up next: one decisive card, the other day as a row, the Progression
+   strip, this week at the foot. Sized to fit one standard iPhone screen. */
 
-.daygrid {
-  display: grid; gap: 12px; margin-top: 14px;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+.topbar.home { margin-bottom: 2px; }
+.topbar.home .wordmark { font-size: 17px; font-weight: 650; letter-spacing: -0.012em; padding-top: 0; }
+
+.greet { margin: 2px 0 14px; }
+.greet-hi { font-size: 30px; font-weight: 700; letter-spacing: -0.025em; line-height: 1.12; }
+.greet-date { color: var(--dim); font-size: 16px; margin-top: 3px; }
+
+/* The day's letter, stamped: a brass-washed tile in the numbers face. */
+.daymark {
+  width: 40px; height: 40px; flex: none; display: grid; place-items: center;
+  background: var(--brass-wash); color: var(--brass-ink); border-radius: 12px;
+  font-family: var(--num); font-weight: 600; font-size: 24px; line-height: 1;
 }
-.daycard {
-  position: relative; display: flex; flex-direction: column;
+.daymark.lg { width: 50px; height: 50px; border-radius: 15px; font-size: 31px; }
+
+.upnext {
+  display: flex; flex-direction: column;
   background: var(--surface); box-shadow: var(--card-shadow);
-  border-radius: var(--r-card); padding: 16px 16px 14px; min-height: 138px;
+  border-radius: var(--r-card); padding: 16px;
 }
-.daycard-name { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; }
-.daycard-sub { color: var(--dim); font-size: 15px; margin-top: 3px; line-height: 1.3; }
-.daycard-last {
-  margin-top: auto; padding-top: 14px;
-  display: flex; align-items: center; justify-content: space-between; gap: 6px;
-  font-size: 13px; color: var(--dim); font-variant-numeric: tabular-nums;
+.upnext-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.upnext-k {
+  font-size: 14px; font-weight: 600; color: var(--brass-ink);
+  background: var(--brass-wash); padding: 5px 11px; border-radius: 999px;
 }
-.daycard-last .ico { width: 16px; height: 16px; color: var(--faint); }
-.daycard-live { color: var(--brass-ink); font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
+.upnext-k.live { display: inline-flex; align-items: center; gap: 7px; }
+.upnext-k.live::before {
+  content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--brass);
+}
+.upnext-name { font-size: 40px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.05; }
+.upnext-sub { color: var(--dim); font-size: 17px; margin-top: 3px; }
+.upnext-meta { color: var(--dim); font-size: 14.5px; margin-top: 12px; font-variant-numeric: tabular-nums; }
+.upnext-go {
+  margin-top: 14px; height: 52px; border-radius: var(--r-ctl);
+  background: var(--brass); color: var(--on-brass);
+  display: flex; align-items: center; justify-content: center; gap: 2px;
+  font-size: 17px; font-weight: 600;
+}
+.upnext-go .ico { width: 18px; height: 18px; }
+
+.dayrows { margin-top: 12px; }
+.dayrow {
+  display: flex; align-items: center; gap: 12px; min-height: 66px;
+  padding: 12px 12px 12px 14px; position: relative;
+}
+.dayrow + .dayrow::before {
+  content: ''; position: absolute; top: 0; left: 66px; right: 0;
+  border-top: 0.5px solid var(--sep);
+}
+.dr-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.dr-name { font-size: 18px; font-weight: 600; letter-spacing: -0.012em; }
+.dr-sub { color: var(--dim); font-size: 14.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dr-when { color: var(--dim); font-size: 13.5px; white-space: nowrap; }
+.dayrow > .ico { width: 16px; height: 16px; color: var(--faint); }
+.daycard-live, .day-done {
+  color: var(--brass-ink); font-weight: 600; display: inline-flex; align-items: center; gap: 6px;
+}
 .daycard-live::before {
   content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--brass);
   box-shadow: 0 0 0 3px var(--brass-wash);
 }
 
-/* ---------- targets (home) ---------- */
+/* Progression: a tinted strip, so it never reads as a third day. The
+   targets ride along small on the right — seven brass columns. */
+.prow {
+  display: flex; align-items: center; gap: 14px;
+  background: var(--brass-wash); border-radius: var(--r-card);
+  padding: 12px 16px 13px; margin-top: 12px;
+}
+.prow-body { min-width: 0; flex: 1; display: flex; flex-direction: column; }
+.prow-k {
+  display: inline-flex; align-items: center; gap: 1px;
+  font-size: 13.5px; font-weight: 600; color: var(--brass-ink);
+}
+.prow-k .ico { width: 14px; height: 14px; }
+.prow-main { font-size: 17px; font-weight: 600; letter-spacing: -0.01em; margin-top: 2px; }
+.prow-s {
+  color: var(--dim); font-size: 14px; margin-top: 1px; font-variant-numeric: tabular-nums;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.prow-s.due { color: var(--brass-ink); font-weight: 600; }
+.mini-eq { display: flex; gap: 3px; align-items: flex-end; height: 34px; flex: none; }
+.mini-col { width: 6px; height: 100%; border-radius: 2px; background: var(--fill-2); position: relative; overflow: hidden; }
+.mini-col i { position: absolute; left: 0; right: 0; bottom: 0; background: var(--brass); }
+.mini-col.off { opacity: 0.45; }
+
+/* This week: seven days, the day's letter stamped on each day trained. */
+.weekcard {
+  background: var(--surface); box-shadow: var(--card-shadow); border-radius: var(--r-card);
+  padding: 8px 8px 11px; margin-top: 12px;
+}
+.wk-row { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; }
+.wk-day { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 6px 0 7px; border-radius: 12px; }
+.wk-l { font-size: 12px; font-weight: 600; color: var(--dim); }
+.wk-n { font-family: var(--num); font-weight: 600; font-size: 18px; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.wk-day.today { background: var(--brass-wash); }
+.wk-day.today .wk-n, .wk-day.today .wk-l { color: var(--brass-ink); }
+.wk-day.future { opacity: 0.45; }
+.wk-mark {
+  width: 28px; height: 28px; border-radius: 9px; margin-top: 5px;
+  display: grid; place-items: center; background: var(--brass); color: var(--on-brass);
+  font-family: var(--num); font-weight: 600; font-size: 17px; line-height: 1;
+}
+.wk-mark.empty { background: transparent; box-shadow: inset 0 0 0 1.5px var(--fill-2); }
+.wk-line { color: var(--dim); font-size: 14.5px; text-align: center; margin: 9px 6px 0; font-variant-numeric: tabular-nums; }
+
+/* ---------- greeting splash ----------
+   The barley draws itself — stem, then kernels bottom to top, then awns —
+   the words rise, then glide up into the home greeting while the page
+   settles in beneath them. */
+.splash {
+  position: fixed; inset: 0; z-index: 60; background: var(--bg);
+  display: grid; place-items: center; padding: 0 var(--gutter);
+  transition: background-color 0.45s var(--ease) 0.15s;
+}
+.splash-inner { display: flex; flex-direction: column; align-items: center; transform: translateY(-5vh); }
+.splash .barley { width: 62px; height: 91px; opacity: 0.85; margin-bottom: 18px; transition: opacity 0.25s; }
+.splash-hi {
+  font-size: 30px; font-weight: 700; letter-spacing: -0.025em; line-height: 1.12;
+  white-space: nowrap; opacity: 0;
+  animation: wordsin 0.7s var(--ease) 0.55s forwards;
+  transition: transform 0.62s var(--ease);
+}
+.splash-date { color: var(--dim); font-size: 16px; margin-top: 6px; opacity: 0; animation: wordsin 0.7s var(--ease) 0.8s forwards; transition: opacity 0.2s; }
+@keyframes wordsin { from { opacity: 0; translate: 0 10px; } to { opacity: 1; translate: 0 0; } }
+.splash.settling { background-color: transparent; pointer-events: none; }
+.splash.settling .barley, .splash.settling .splash-date { opacity: 0 !important; animation: none; }
+body.splashing #app .greet-hi, body.settle-in #app .greet-hi { opacity: 0; }
+body.settle-in #app > :not(.greet), body.settle-in #app .greet-date { animation: rise 0.55s var(--ease) both; }
+body.settle-in #app > :nth-child(3) { animation-delay: 0.08s; }
+body.settle-in #app > :nth-child(4) { animation-delay: 0.14s; }
+body.settle-in #app > :nth-child(5) { animation-delay: 0.2s; }
+body.settle-in #app > :nth-child(n+6) { animation-delay: 0.26s; }
+@keyframes rise { from { opacity: 0; transform: translateY(6px); } }
+
+/* Growing barley (splash and save screen): the parts arrive in order. */
+.barley.grow .stem, .barley.grow .awns path { stroke-dasharray: 1; stroke-dashoffset: 1; }
+.barley.grow .stem { animation: draw 0.55s var(--ease) 0.05s forwards; }
+.barley.grow .awns path { animation: draw 0.5s var(--ease) forwards; animation-delay: 0.95s; }
+.barley.grow .awns path:nth-child(2) { animation-delay: 1.02s; }
+.barley.grow .awns path:nth-child(3) { animation-delay: 1.08s; }
+.barley.grow .awns path:nth-child(4) { animation-delay: 1.0s; }
+.barley.grow .awns path:nth-child(5) { animation-delay: 0.9s; }
+.barley.grow .kern {
+  transform-box: fill-box; transform-origin: 50% 90%;
+  animation: kernin 0.42s var(--spring) both; animation-delay: calc(0.35s + var(--i) * 55ms);
+}
+.barley.grow .leaf { transform-box: fill-box; animation: leafin 0.5s var(--ease) both 0.3s; }
+.barley.grow .leaf.r { transform-origin: 0% 100%; animation-delay: 0.22s; }
+.barley.grow .leaf:not(.r) { transform-origin: 100% 100%; }
+@keyframes draw { to { stroke-dashoffset: 0; } }
+@keyframes kernin { from { transform: scale(0); opacity: 0; } }
+@keyframes leafin { from { transform: scale(0.2); opacity: 0; } }
+
+/* ---------- targets (top of Progression) ---------- */
 
 .ledger {
-  margin-top: 12px; background: var(--surface); box-shadow: var(--card-shadow);
+  margin-top: 14px; background: var(--surface); box-shadow: var(--card-shadow);
   border-radius: var(--r-card); padding: 6px 16px 14px;
 }
 .ledger-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; min-height: 40px; }
@@ -318,6 +457,19 @@ input:focus-visible, textarea:focus-visible { outline: none; }
   transition: background-color 0.3s var(--ease);
 }
 .trail-pip.on { background: var(--brass); }
+.trail.all .trail-count { color: var(--brass-ink); }
+/* The last ring of the session sends a ripple down the bar. */
+.trail.ripple .trail-pip { animation: pipwave 0.6s var(--ease) backwards; }
+.trail.ripple .trail-pip:nth-child(2) { animation-delay: 40ms; }
+.trail.ripple .trail-pip:nth-child(3) { animation-delay: 80ms; }
+.trail.ripple .trail-pip:nth-child(4) { animation-delay: 120ms; }
+.trail.ripple .trail-pip:nth-child(5) { animation-delay: 160ms; }
+.trail.ripple .trail-pip:nth-child(6) { animation-delay: 200ms; }
+.trail.ripple .trail-pip:nth-child(7) { animation-delay: 240ms; }
+.trail.ripple .trail-pip:nth-child(8) { animation-delay: 280ms; }
+.trail.ripple .trail-pip:nth-child(9) { animation-delay: 320ms; }
+.trail.ripple .trail-pip:nth-child(n+10) { animation-delay: 360ms; }
+@keyframes pipwave { 40% { transform: scaleY(2.4); } }
 .trail-count {
   font-family: var(--num); font-weight: 600; font-size: 15px;
   color: var(--dim); font-variant-numeric: tabular-nums; white-space: nowrap;
@@ -425,7 +577,7 @@ body::before {
    trios get their own card with a header. Rows are split by hairlines. */
 .slotgroup {
   background: var(--surface); box-shadow: var(--card-shadow);
-  border-radius: var(--r-card); overflow: hidden;
+  border-radius: var(--r-card);
   display: grid; grid-template-columns: minmax(0, 1fr);
 }
 .slot { position: relative; padding: 0 14px; }
@@ -465,19 +617,29 @@ body::before {
    and hairlines between. Grouping reads by geometry, never tint alone. */
 .pairmat {
   background: var(--surface); box-shadow: var(--card-shadow);
-  border-radius: var(--r-card); overflow: hidden;
+  border-radius: var(--r-card);
   display: grid; grid-template-columns: minmax(0, 1fr);
 }
 .pairtag {
-  display: flex; align-items: center; gap: 7px;
-  padding: 10px 16px 9px 14px;
+  display: flex; align-items: center; min-height: 37px;
+  padding: 9px 16px 8px 14px;
   font-size: 13px; font-weight: 600; color: var(--brass-ink);
-  background: var(--brass-wash);
+  background: var(--brass-wash); border-radius: var(--r-card) var(--r-card) 0 0;
   font-variant-numeric: tabular-nums;
+  transition: background-color 0.3s var(--ease);
 }
+.pt-live, .pt-done { display: flex; align-items: center; gap: 7px; flex: 1; min-width: 0; }
 .pairtag svg { width: 15px; height: 15px; flex: none; }
 .pairtag-rest { margin-left: auto; font-weight: 500; color: var(--dim); }
-.pairmat.done .pairtag { display: none; }
+/* When the last member finishes, the tag turns into a small ear. */
+.pt-done { display: none; }
+.pairmat.done .pt-live { display: none; }
+.pairmat.done .pt-done { display: flex; }
+.pairmat.done .pairtag { background: transparent; }
+.pairmat.just .pt-done { animation: tagin 0.5s var(--spring); }
+.pairmat.just .pt-done .ear-mini { animation: earin 0.7s var(--spring); }
+@keyframes tagin { from { opacity: 0; transform: translateY(4px); } }
+@keyframes earin { from { transform: rotate(-60deg) scale(0.2); } }
 
 /* The ring: tap when the exercise is done. Visual is 28px; an invisible
    inset extends the hit area to ~48pt. */
@@ -518,10 +680,19 @@ body::before {
 .ring.counting .ring-count svg { position: static; width: 15px; height: 15px; }
 .ring.counting.on .ring-count { color: var(--on-brass); }
 
-/* "Set 2 of 4 down" — appears after the first tap, quiet before it. */
-.setline {
-  font-size: 13px; font-weight: 600; color: var(--brass-ink);
-  margin-top: 6px; font-variant-numeric: tabular-nums;
+/* Kernel burst — a few brass kernels scatter off a ring as an exercise
+   finishes. The cards don't clip, so they can fly past the edge. */
+.burst { position: absolute; width: 0; height: 0; pointer-events: none; z-index: 2; }
+.burst i {
+  position: absolute; left: -2.5px; top: -5px; width: 5px; height: 10px;
+  background: var(--brass); border-radius: 50%;
+  transform: rotate(var(--a)) translateY(-10px) scale(0.6); opacity: 0;
+  animation: kernfly 0.75s var(--ease) var(--d) forwards;
+}
+@keyframes kernfly {
+  0% { opacity: 0.95; transform: rotate(var(--a)) translateY(-10px) scale(0.6); }
+  60% { opacity: 0.8; }
+  100% { opacity: 0; transform: rotate(calc(var(--a) + 24deg)) translateY(-32px) scale(1); }
 }
 
 /* Done rows settle: the line dims and any open drawer folds away. */
@@ -574,19 +745,6 @@ body::before {
 }
 .slot.open .chip-reps { color: var(--ink); }
 
-.notebtn {
-  margin-left: auto; display: inline-flex; align-items: center; gap: 5px;
-  color: var(--dim); font-size: 14.5px; font-weight: 500;
-  padding: 10px 2px 10px 10px; margin-right: -2px;
-  transition: opacity 0.16s, color 0.2s;
-}
-.notebtn .ico { width: 16px; height: 16px; }
-.notebtn.has-note { color: var(--brass-ink); }
-.slot-head .notebtn { margin: -8px -8px -8px -2px; padding: 8px; align-self: flex-start; }
-.slot-head .notebtn .ico { width: 18px; height: 18px; }
-.slot-head .notebtn-t { display: none; }
-.slot.done .slot-head .notebtn { display: none; }
-
 /* Opening an editor eases it in rather than snapping. */
 
 @keyframes reveal { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
@@ -635,14 +793,35 @@ body::before {
   background: var(--surface); color: var(--ink); box-shadow: var(--card-shadow);
   border-radius: 16px; font-size: 17px; font-weight: 600; letter-spacing: -0.01em;
 }
-.finishbtn.solid { background: var(--brass); color: var(--on-brass); margin-top: 4px; box-shadow: none; }
+.finishbtn.solid, .finishbtn.ready { background: var(--brass); color: var(--on-brass); box-shadow: none; }
+.finishbtn.solid { margin-top: 4px; }
+.finishbtn.just { animation: readyin 0.5s var(--spring); }
+@keyframes readyin { from { transform: scale(0.96); } }
 .finish-wrap { display: grid; gap: 12px; }
 .finish-hint { color: var(--dim); font-size: 15px; }
 
 /* The closing card: what will save, as readable rows — the session as a
    finished object, not a form submission. */
-.finish-line { font-size: 30px; font-weight: 700; letter-spacing: -0.025em; line-height: 1.12; margin-top: 4px; }
-.finish-meta { display: block; font-size: 16px; font-weight: 400; color: var(--dim); letter-spacing: -0.005em; margin-top: 2px; }
+.finish-hero { text-align: center; padding: 2px 0 4px; }
+.finish-line { font-size: 30px; font-weight: 700; letter-spacing: -0.025em; line-height: 1.12; animation: rise 0.6s var(--ease) 0.9s both; }
+.finish-meta { display: block; font-size: 16px; font-weight: 400; color: var(--dim); letter-spacing: -0.005em; margin-top: 2px; animation: rise 0.6s var(--ease) 1.05s both; }
+/* The save screen: an ear grows and ripens, then a few kernels fall. */
+.earwrap { position: relative; width: 120px; height: 112px; margin: 0 auto 4px; }
+.earwrap .barley { width: 76px; height: 112px; opacity: 0.9; margin: 0 auto; }
+.barley.ripen .kerns { animation: ripen 0.6s ease 1.5s both; }
+@keyframes ripen { from { opacity: 0.45; } to { opacity: 0.8; } }
+.fall { position: absolute; inset: 0; pointer-events: none; }
+.fall i {
+  position: absolute; top: 30%; left: 50%; width: 6px; height: 11px; opacity: 0;
+  background: var(--brass); border-radius: 50%;
+  animation: fall 2.2s ease-in 1.7s forwards;
+}
+.fall i:nth-child(2) { animation-delay: 2s; --dx: -40px; --r: -150deg; }
+.fall i:nth-child(3) { animation-delay: 2.3s; --dx: 28px; --r: 110deg; width: 5px; height: 9px; }
+@keyframes fall {
+  0% { opacity: 0.85; transform: translate(0, 0) rotate(0); }
+  100% { opacity: 0; transform: translate(var(--dx, 38px), 90px) rotate(var(--r, 190deg)); }
+}
 .recap {
   background: var(--surface); box-shadow: var(--card-shadow);
   border-radius: var(--r-card); padding: 12px 16px 4px;
@@ -669,26 +848,6 @@ body::before {
 /* ---------- progression (motion ledger) ----------
    The board owns position; this page owns motion. Brass appears collapsed
    only as the ready-to-load pill — the one act-now signal. */
-
-/* Entry on home: one quiet card below the board with a live pulse line. */
-.prow {
-  display: flex; align-items: center; gap: 12px;
-  background: var(--surface); box-shadow: var(--card-shadow);
-  border-radius: var(--r-card); padding: 13px 14px 13px 13px; margin-top: 12px;
-}
-.prow-mark {
-  width: 40px; height: 40px; flex: none; display: grid; place-items: center;
-  background: var(--brass-wash); border-radius: 11px; color: var(--brass);
-}
-.prow-body { min-width: 0; flex: 1; }
-.prow-t { font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
-.prow-s {
-  color: var(--dim); font-size: 13.5px; margin-top: 1px;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.prow-chev { color: var(--faint); display: flex; }
-.prow-chev .ico { width: 18px; height: 18px; }
 
 .peyebrow {
   display: flex; justify-content: space-between; align-items: baseline;
@@ -770,9 +929,6 @@ body::before {
 }
 .lad-meta.live { color: var(--brass-ink); font-weight: 600; }
 .lad-cap { color: var(--dim); font-size: 12.5px; border-top: 0.5px solid var(--sep); padding-top: 9px; margin-top: 2px; }
-
-.progfoot { display: flex; justify-content: space-between; align-items: flex-end; margin: 22px 4px 0; }
-.progfoot .barley { width: 30px; height: 46px; }
 
 /* ---------- settings & editor: inset-grouped lists ---------- */
 
