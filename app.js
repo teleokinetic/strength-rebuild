@@ -10,7 +10,7 @@
 
 const STORE_KEY = 'sr-state-v2';
 const V1_KEY = 'sr-state-v1';        // read-only: migration source, never written
-const APP_VERSION = '2.12.2';
+const APP_VERSION = '2.13.0';
 
 let state = null;
 
@@ -614,7 +614,7 @@ function ledgerHTML() {
   return `
     <div class="ledger">
       <div class="ledger-head">
-        <button class="ledger-title" data-action="targets-toggle">Targets<span class="caret ${open ? 'up' : ''}">▾</span></button>
+        <button class="ledger-title" data-action="targets-toggle" aria-expanded="${open}">Targets<span class="caret ${open ? 'up' : ''}">${icon('down', 2.4)}</span></button>
         ${check}
       </div>
       ${body}
@@ -1025,23 +1025,44 @@ function barleyHTML() {
     </svg>`;
 }
 
+// One small stroke-icon set (24-grid, round caps) so every glyph in the
+// app is drawn the same way instead of borrowed from whatever font is around.
+const ICON_PATHS = {
+  back: '<path d="M15 5l-7 7 7 7"/>',
+  chev: '<path d="M9 5l7 7-7 7"/>',
+  down: '<path d="M6 9l6 6 6-6"/>',
+  check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+  close: '<path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/>',
+  again: '<path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3"/><path d="M4.5 4.5v4h4"/>',
+  note: '<path d="M14.5 5.5l4 4"/><path d="M4.5 19.5l1-4.5L16 4.5a1.4 1.4 0 0 1 2 0l1.5 1.5a1.4 1.4 0 0 1 0 2L9 18.5z"/>',
+  gear: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1.08-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1.08 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  up: '<path d="M12 19V5M6 11l6-6 6 6"/>',
+  dn: '<path d="M12 5v14M6 13l6 6 6-6"/>',
+};
+function icon(name, sw) {
+  return `<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw || 2}"
+    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON_PATHS[name]}</svg>`;
+}
+
 function topbar(backTo) {
   const left = backTo
-    ? `<a class="backlink" href="${backTo}">‹ Back</a>`
+    ? `<a class="backlink" href="${backTo}">${icon('back', 2.4)}Back</a>`
     : `<div class="wordmark">Strength <span class="half">Rebuild</span></div>`;
-  const right = backTo ? '' : `<a class="gear" href="#/settings" aria-label="Settings">⚙</a>`;
+  const right = backTo ? '' : `<a class="gear" href="#/settings" aria-label="Settings">${icon('gear', 1.8)}</a>`;
   return `<div class="topbar">${left}${right}</div>`;
 }
 
 function viewHome() {
   const cards = state.program.days.map((day) => {
     const last = lastSessionFor(day.id);
-    const when = last ? `Last: ${fmtDate(last.endedAt)}` : 'Not yet logged';
+    const when = last ? `Last ${fmtDate(last.endedAt)}` : 'Not yet logged';
+    const live = state.active && state.active.dayId === day.id;
     return `
       <a class="daycard" href="#/day/${day.id}">
         <div class="daycard-name">${esc(day.name)}</div>
         <div class="daycard-sub">${esc(day.subtitle)}</div>
-        <div class="daycard-last">${esc(when)}</div>
+        <div class="daycard-last">${live ? '<span class="daycard-live">In progress</span>' : `<span>${esc(when)}</span>`}${icon('chev', 2.2)}</div>
       </a>`;
   }).join('');
   return `${topbar()}<div class="daygrid">${cards}</div>${ledgerHTML()}${progRowHTML()}<div class="fieldmark">${barleyHTML()}</div>`;
@@ -1076,7 +1097,7 @@ function progRowHTML() {
         <div class="prow-t">Progression</div>
         <div class="prow-s">${esc(sub)}</div>
       </div>
-      <div class="prow-chev">›</div>
+      <div class="prow-chev">${icon('chev', 2.2)}</div>
     </a>`;
 }
 
@@ -1171,7 +1192,7 @@ function progRowItemHTML(it) {
   return `
     <button class="mrow ${open ? 'open' : ''}" data-action="prog-toggle" data-key="${esc(it.ex)}">
       <span class="mname">${esc(it.slot.name)}</span>${spark}
-      <span class="mnum">${it.phrase}</span>${pill}<span class="mchev">›</span>
+      <span class="mnum">${it.phrase}</span>${pill}<span class="mchev">${icon('chev', 2.4)}</span>
     </button>${card}`;
 }
 
@@ -1208,12 +1229,12 @@ function chipInnerHTML(dayId, slot) {
   if (w === '' || w == null) {
     // keep already-entered reps visible even before a weight exists
     const reps = r === '' || r == null ? '' : `<span class="chip-reps">×${esc(String(r))}</span>`;
-    return `<span class="chip-add">Add weight</span>${reps}<span class="chip-caret">▾</span>`;
+    return `<span class="chip-add">Add weight</span>${reps}<span class="chip-caret">${icon('down', 2.6)}</span>`;
   }
   const label = (slot.added ? '+' : '') + w;
   const repsChip = slot.reps
     ? `<span class="chip-reps">×${r === '' || r == null ? '—' : esc(String(r))}</span>` : '';
-  return `<span class="chip-num">${esc(String(label))}</span><span class="chip-unit">${esc(state.settings.unit)}</span>${repsChip}<span class="chip-caret">▾</span>`;
+  return `<span class="chip-num">${esc(String(label))}</span><span class="chip-unit">${esc(state.settings.unit)}</span>${repsChip}<span class="chip-caret">${icon('down', 2.6)}</span>`;
 }
 
 function refreshChip(dayId, slot) {
@@ -1231,7 +1252,7 @@ function trailHTML(day) {
     if (on) done++;
     return `<span class="trail-pip ${on ? 'on' : ''}"></span>`;
   }).join('');
-  return `<div class="trail" data-trail>${pips}<span class="trail-count">${done} of ${day.slots.length}</span></div>`;
+  return `<div class="trail" data-trail><div class="trail-bar">${pips}</div><span class="trail-count">${done} of ${day.slots.length}</span></div>`;
 }
 
 function updateTrail(dayId) {
@@ -1303,7 +1324,7 @@ function restLabelFor(n, total) {
   return w.charAt(0).toUpperCase() + w.slice(1) + ` down, ${NUMWORD[total - n] || total - n} to go — breathe easy`;
 }
 
-const RING_CIRC = 2 * Math.PI * 10.5;
+const RING_CIRC = 2 * Math.PI * 12;
 
 function ringHTML(slot, e) {
   const done = !!(e && e.done);
@@ -1317,12 +1338,12 @@ function ringHTML(slot, e) {
   return `
     <button class="ring counting ${done ? 'on' : ''}" data-action="ring" data-slot="${slot.id}"
       aria-label="${done ? 'Reset sets' : 'Count one set'}">
-      <svg viewBox="0 0 25 25" aria-hidden="true">
-        <circle class="ring-track" cx="12.5" cy="12.5" r="10.5"></circle>
-        <circle class="ring-arc" cx="12.5" cy="12.5" r="10.5"
+      <svg viewBox="0 0 28 28" aria-hidden="true">
+        <circle class="ring-track" cx="14" cy="14" r="12"></circle>
+        <circle class="ring-arc" cx="14" cy="14" r="12"
           style="stroke-dasharray:${RING_CIRC.toFixed(2)};stroke-dashoffset:${off.toFixed(2)}"></circle>
       </svg>
-      <span class="ring-count">${done ? '✓' : (n || '')}</span>
+      <span class="ring-count">${done ? icon('check', 3.2) : (n || '')}</span>
     </button>`;
 }
 
@@ -1394,7 +1415,7 @@ function slotCardHTML(day, slot, onMat) {
       ${warmup}${menu}${rungs}
       <div class="slot-foot">
         ${chip}
-        <button class="notebtn ${note ? 'has-note' : ''}" data-action="note" data-slot="${slot.id}">✎ note</button>
+        <button class="notebtn ${note ? 'has-note' : ''}" data-action="note" data-slot="${slot.id}">${icon('note', 1.9)}Note</button>
       </div>
       ${chipEdit}
       <div class="note-edit hidden" data-noteedit="${slot.id}">
@@ -1435,8 +1456,8 @@ function restDockHTML() {
         <div class="rest-row">
           <div class="rest-time" data-rest-time>${fmtMMSS(left)}</div>
           <span class="rest-label">${esc(rest.label || 'Resting')}</span>
-          <button class="rest-mini" data-action="rest-restart">↻</button>
-          <button class="rest-mini" data-action="rest-cancel">✕</button>
+          <button class="rest-mini" data-action="rest-restart" aria-label="Restart rest">${icon('again', 2.2)}</button>
+          <button class="rest-mini" data-action="rest-cancel" aria-label="Stop rest">${icon('close', 2.2)}</button>
         </div>
       </div>`;
   }
@@ -1454,7 +1475,7 @@ function restDockHTML() {
     const cls = 'restbtn' + (hint ? (suggested ? '' : ' quiet') : (tier === 'heavy' ? ' heavy' : ''));
     const tag = suggested
       ? `<span class="rest-tag">${esc(tier === 'normal' && pairFor ? `Pairs with ${pairFor}` : hint.name)}</span>` : '';
-    return `<button class="${cls}" data-action="rest" data-tier="${tier}">Rest <span>${fmtMMSS(sec)}</span>${tag}</button>`;
+    return `<button class="${cls}" data-action="rest" data-tier="${tier}"><span class="restbtn-k">Rest</span><span class="restbtn-t">${fmtMMSS(sec)}</span>${tag}</button>`;
   };
   return `<div class="rest-idle">${btn('normal', normalRestSec())}${btn('heavy', h)}</div>`;
 }
@@ -1487,14 +1508,14 @@ function slotsHTML(day) {
     const word = g.slots.length > 2 ? 'Trio · cycle through' : 'Pair · alternate sets';
     return `
       <div class="pairmat ${allDone ? 'done' : ''}">
-        <div class="pairtag">${tieSVG()}${word} · rest ${fmtMMSS(pairRestSec(day, g.slots[0]))} between</div>
+        <div class="pairtag">${tieSVG()}<span>${word}</span><span class="pairtag-rest">${fmtMMSS(pairRestSec(day, g.slots[0]))} rest</span></div>
         ${g.slots.map((s) => slotCardHTML(day, s, true)).join('')}
       </div>`;
   }).join('');
 }
 
 function tieSVG() {
-  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M7 8h13m0 0-3-3m3 3-3 3M17 16H4m0 0 3-3m-3 3 3 3"/></svg>`;
+  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 8h13m0 0-3-3m3 3-3 3M17 16H4m0 0 3-3m-3 3 3 3"/></svg>`;
 }
 
 function viewDay(dayId) {
@@ -1503,11 +1524,13 @@ function viewDay(dayId) {
   return `
     ${topbar('#/')}
     <div class="dayhead">
-      ${barleyHTML()}
-      <div class="dayhead-name">${esc(day.name)} <span class="dayhead-sub">${esc(day.subtitle)}</span></div>
+      <div class="dayhead-name">${esc(day.name)}</div>
+      <div class="dayhead-sub">${esc(day.subtitle)}</div>
     </div>
-    ${trailHTML(day)}
-    <div id="restdock" class="restdock">${restDockHTML()}</div>
+    <div class="dock">
+      ${trailHTML(day)}
+      <div id="restdock" class="restdock">${restDockHTML()}</div>
+    </div>
     <div class="slots">${slotsHTML(day)}</div>
     <button class="finishbtn" data-action="finish" data-day="${day.id}">Finish session</button>`;
 }
@@ -1532,7 +1555,7 @@ function viewFinish(dayId) {
     const e = a ? a.entries[slot.id] : null;
     const noted = !!(e && e.note && e.note.trim());
     const rung = slot.rungs ? effectiveRung(dayId, slot) : '';
-    if (rung) extras.push(`${slot.name} — ${rung}${noted ? ' ✎' : ''}`);
+    if (rung) extras.push(`${slot.name} — ${rung}${noted ? ' · note' : ''}`);
     if (slot.track) {
       const w = effectiveWeight(dayId, slot);
       const wTxt = w === '' || w == null ? '—' : (slot.added ? '+' : '') + w;
@@ -1542,16 +1565,19 @@ function viewFinish(dayId) {
         num += ` ×${r === '' || r == null ? '—' : esc(String(r))}`;
       }
       rows.push(`<div class="rrow">
-        <span class="rrow-name">${esc(slot.name)}${noted ? ' <i class="rrow-note">✎</i>' : ''}</span>
+        <span class="rrow-name">${esc(slot.name)}${noted ? ` <i class="rrow-note" aria-label="has a note">${icon('note', 2)}</i>` : ''}</span>
         <span class="rrow-num">${num}</span></div>`);
     } else if (noted && !rung) {
-      extras.push(`${slot.name} ✎`);
+      extras.push(`${slot.name} · note`);
     }
   }
+  const meta = [];
+  if (doneCt) meta.push(`${doneCt} of ${day.slots.length} done`);
+  if (mins) meta.push(`${mins} min`);
   return `
     ${topbar('#/day/' + dayId)}
     <div class="finish-wrap">
-      <div class="finish-line">${esc(day.name)}${doneCt ? ` · ${doneCt} of ${day.slots.length}` : ''}${mins ? ` · ${mins} min` : ''}</div>
+      <div class="finish-line">${esc(day.name)}<span class="finish-meta">${esc(meta.length ? meta.join(' · ') : day.subtitle)}</span></div>
       <div class="recap">
         <div class="recap-head">Will save</div>
         ${rows.join('')}
@@ -1569,42 +1595,52 @@ function viewSettings() {
   ).join('');
   return `
     ${topbar('#/')}
+    <div class="dayhead-name">Settings</div>
     <div class="settings">
-      <div class="setrow">
-        <div class="setlabel">Theme</div>
-        <div class="segwrap">${seg('theme', s.theme, [['auto', 'Auto'], ['light', 'Light'], ['dark', 'Dark']])}</div>
-      </div>
-      <div class="setrow">
-        <div class="setlabel">Unit</div>
-        <div class="segwrap">${seg('unit', s.unit, [['lb', 'lb'], ['kg', 'kg']])}</div>
-      </div>
-      <div class="setrow">
-        <div class="setlabel">Rest — normal</div>
-        <input class="setnum" type="number" inputmode="numeric" data-action="rest-normal" value="${s.restNormal}"> s
-      </div>
-      <div class="setrow">
-        <div class="setlabel">Rest — heavy</div>
-        <input class="setnum" type="number" inputmode="numeric" data-action="rest-heavy" value="${s.restHeavy}"> s
-      </div>
-      <div class="setrow">
-        <div class="setlabel">Recal date</div>
-        <input class="setdate" type="date" data-action="recal-date" value="${esc(s.recalDate || '')}">
-      </div>
-      <div class="setrow">
-        <div class="setlabel">Program</div>
-        <a class="setbtn" href="#/program">Edit</a>
-      </div>
-      <div class="setrow">
-        <div class="setlabel">Data</div>
-        <div class="btnrow">
-          <button class="setbtn" data-action="export">Export</button>
-          <button class="setbtn" data-action="copy-json">Copy JSON</button>
-          <a class="setbtn" href="#/import">Import</a>
+      <div class="group-head">Display</div>
+      <div class="group">
+        <div class="setrow">
+          <div class="setlabel">Theme</div>
+          <div class="segwrap">${seg('theme', s.theme, [['auto', 'Auto'], ['light', 'Light'], ['dark', 'Dark']])}</div>
+        </div>
+        <div class="setrow">
+          <div class="setlabel">Unit</div>
+          <div class="segwrap">${seg('unit', s.unit, [['lb', 'lb'], ['kg', 'kg']])}</div>
         </div>
       </div>
-      <div class="setrow">
-        <div class="setlabel">Danger</div>
-        <button class="setbtn danger" data-action="erase">Erase all data</button>
+      <div class="group-head">Rest</div>
+      <div class="group">
+        <div class="setrow">
+          <div class="setlabel">Normal</div>
+          <label class="numfield"><input class="setnum" type="number" inputmode="numeric" data-action="rest-normal" value="${s.restNormal}">s</label>
+        </div>
+        <div class="setrow">
+          <div class="setlabel">Heavy</div>
+          <label class="numfield"><input class="setnum" type="number" inputmode="numeric" data-action="rest-heavy" value="${s.restHeavy}">s</label>
+        </div>
+      </div>
+      <div class="group-head">Program</div>
+      <div class="group">
+        <div class="setrow">
+          <div class="setlabel">Recal date</div>
+          <input class="setdate" type="date" data-action="recal-date" value="${esc(s.recalDate || '')}">
+        </div>
+        <a class="grow-link" href="#/program"><span class="setlabel">Edit program</span>${icon('chev', 2.2)}</a>
+      </div>
+      <div class="group-head">Data</div>
+      <div class="group">
+        <div class="setrow">
+          <div class="setlabel">Backup</div>
+          <div class="btnrow">
+            <button class="setbtn" data-action="export">Export</button>
+            <button class="setbtn" data-action="copy-json">Copy JSON</button>
+          </div>
+        </div>
+        <a class="grow-link" href="#/import"><span class="setlabel">Import</span>${icon('chev', 2.2)}</a>
+        <div class="setrow">
+          <div class="setlabel">Erase everything</div>
+          <button class="setbtn danger" data-action="erase">Erase all data</button>
+        </div>
       </div>
       <div class="version">v${APP_VERSION} · ${state.sessions.length} sessions logged</div>
     </div>`;
@@ -1614,7 +1650,7 @@ function viewImport() {
   return `
     ${topbar('#/settings')}
     <div class="settings">
-      <div class="eyebrow">Import</div>
+      <div class="dayhead-name">Import</div>
       <p class="finish-hint">Paste a Strength Rebuild JSON export. Replaces everything.</p>
       <textarea id="importbox" rows="8" placeholder="{ … }"></textarea>
       <button class="finishbtn solid" data-action="import-load">Load</button>
@@ -1623,16 +1659,16 @@ function viewImport() {
 
 function viewProgram() {
   const days = state.program.days.map((day) => `
-    <div class="eyebrow">${esc(day.name)} — ${esc(day.subtitle)}</div>
-    <div class="proglist">
+    <div class="group-head">${esc(day.name)} — ${esc(day.subtitle)}</div>
+    <div class="group proglist">
       ${day.slots.map((s) => `
         <a class="progrow" href="#/program/${day.id}/${s.id}">
-          <span>${esc(s.name)}</span>
-          <span class="progrow-target">${esc(s.target || '')}</span>
+          <span class="progrow-name">${esc(s.name)}</span>
+          <span class="progrow-target">${esc(s.target || '')}</span>${icon('chev', 2.2)}
         </a>`).join('')}
-      <button class="setbtn" data-action="add-slot" data-day="${day.id}">+ Add exercise</button>
+      <button class="grow-link add" data-action="add-slot" data-day="${day.id}">${icon('plus', 2.4)}Add exercise</button>
     </div>`).join('');
-  return `${topbar('#/settings')}<div class="settings">${days}</div>`;
+  return `${topbar('#/settings')}<div class="dayhead-name">Program</div><div class="settings">${days}</div>`;
 }
 
 function viewSlotEdit(dayId, slotId) {
@@ -1642,6 +1678,12 @@ function viewSlotEdit(dayId, slotId) {
   const field = (label, action, value, ph) => `
     <label class="editfield"><span>${label}</span>
       <input type="text" data-action="${action}" value="${esc(value || '')}" placeholder="${ph || ''}"></label>`;
+  const sw = (label, action, on, sub) => `
+      <div class="setrow">
+        <div class="setlabel">${label}${sub ? `<span class="setsub">${sub}</span>` : ''}</div>
+        <button class="switch ${on ? 'on' : ''}" role="switch" aria-checked="${on ? 'true' : 'false'}"
+          aria-label="${label}" data-action="${action}"></button>
+      </div>`;
   return `
     ${topbar('#/program')}
     <div class="settings" data-editing-day="${dayId}" data-editing-slot="${slotId}">
@@ -1655,28 +1697,21 @@ function viewSlotEdit(dayId, slotId) {
         <textarea rows="3" data-action="edit-rungs">${esc((slot.rungs || []).join('\n'))}</textarea></label>
       ${field('Pair (same letter = done together)', 'edit-pair', slot.pair, 'e.g. a')}
       ${field('Pair rest (seconds — blank = normal tier)', 'edit-pairrest', slot.pairRest, 'e.g. 60')}
-      <div class="setrow">
-        <div class="setlabel">Track weight</div>
-        <button class="seg ${slot.track ? 'on' : ''}" data-action="edit-track">${slot.track ? 'On' : 'Off'}</button>
-      </div>
-      <div class="setrow">
-        <div class="setlabel">Added load (+)</div>
-        <button class="seg ${slot.added ? 'on' : ''}" data-action="edit-added">${slot.added ? 'On' : 'Off'}</button>
-      </div>
-      <div class="setrow">
-        <div class="setlabel">Track reps</div>
-        <button class="seg ${slot.reps ? 'on' : ''}" data-action="edit-reps">${slot.reps ? 'On' : 'Off'}</button>
-      </div>
-      <div class="setrow">
-        <div class="setlabel">Rest tier</div>
-        <div class="segwrap">
-          <button class="seg ${slot.rest !== 'heavy' ? 'on' : ''}" data-action="edit-rest" data-v="normal">Normal</button>
-          <button class="seg ${slot.rest === 'heavy' ? 'on' : ''}" data-action="edit-rest" data-v="heavy">Heavy</button>
+      <div class="group">
+        ${sw('Track weight', 'edit-track', slot.track)}
+        ${sw('Added load (+)', 'edit-added', slot.added)}
+        ${sw('Track reps', 'edit-reps', slot.reps)}
+        <div class="setrow">
+          <div class="setlabel">Rest tier</div>
+          <div class="segwrap">
+            <button class="seg ${slot.rest !== 'heavy' ? 'on' : ''}" data-action="edit-rest" data-v="normal">Normal</button>
+            <button class="seg ${slot.rest === 'heavy' ? 'on' : ''}" data-action="edit-rest" data-v="heavy">Heavy</button>
+          </div>
         </div>
       </div>
-      <div class="btnrow">
-        <button class="setbtn" data-action="edit-up">↑ Move up</button>
-        <button class="setbtn" data-action="edit-down">↓ Move down</button>
+      <div class="btnrow edit-actions">
+        <button class="setbtn" data-action="edit-up">${icon('up', 2.2)}Move up</button>
+        <button class="setbtn" data-action="edit-down">${icon('dn', 2.2)}Move down</button>
         <button class="setbtn danger" data-action="edit-delete">Delete</button>
       </div>
     </div>`;
@@ -1825,6 +1860,8 @@ document.addEventListener('click', (ev) => {
       mat.classList.toggle('done', cards.every((c) => c.classList.contains('done')));
     }
     t.outerHTML = ringHTML(slot, e);
+    const fresh = $(`.ring[data-slot="${slotId}"]`);
+    if (fresh) fresh.classList.add('pop');
     if (total) {
       const line = $(`[data-setline="${slotId}"]`);
       if (line) {
