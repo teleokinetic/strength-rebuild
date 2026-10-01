@@ -1527,8 +1527,10 @@ function viewDay(dayId) {
       <div class="dayhead-name">${esc(day.name)}</div>
       <div class="dayhead-sub">${esc(day.subtitle)}</div>
     </div>
-    ${trailHTML(day)}
-    <div id="restdock" class="restdock">${restDockHTML()}</div>
+    <div class="dock">
+      ${trailHTML(day)}
+      <div id="restdock" class="restdock">${restDockHTML()}</div>
+    </div>
     <div class="slots">${slotsHTML(day)}</div>
     <button class="finishbtn" data-action="finish" data-day="${day.id}">Finish session</button>`;
 }

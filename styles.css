@@ -302,7 +302,7 @@ input:focus-visible, textarea:focus-visible { outline: none; }
 
 /* ---------- day header ---------- */
 
-.dayhead { margin: 4px 0 10px; }
+.dayhead { margin: 4px 0 6px; }
 .dayhead-name { font-size: 30px; font-weight: 700; letter-spacing: -0.025em; line-height: 1.12; }
 .dayhead-sub {
   display: block; color: var(--dim); font-size: 16px; font-weight: 400;
@@ -311,7 +311,7 @@ input:focus-visible, textarea:focus-visible { outline: none; }
 
 /* ---------- trail: one segment per slot, fills as rings are tapped ---------- */
 
-.trail { display: flex; align-items: center; gap: 10px; margin: 0 0 4px; }
+.trail { display: flex; align-items: center; gap: 10px; margin: 0 0 9px; }
 .trail-bar { display: flex; gap: 3px; flex: 1; }
 .trail-pip {
   flex: 1; height: 4px; border-radius: 2px; background: var(--fill-2);
@@ -327,7 +327,9 @@ input:focus-visible, textarea:focus-visible { outline: none; }
 
 /* Frosted, full-bleed and sticky: the session scrolls under it. Every
    dock state is the same height so nothing below ever jumps. */
-.restdock {
+/* The session progress line rides in the pinned dock with the rest
+   buttons, so "where am I" stays in view the whole way down. */
+.dock {
   position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
   background: var(--glass);
   -webkit-backdrop-filter: saturate(180%) blur(22px);
@@ -338,6 +340,7 @@ input:focus-visible, textarea:focus-visible { outline: none; }
 
 /* Matching strip over the status-bar / Dynamic Island band so content
    scrolling past the stuck dock never shows through sharp. */
+.restdock { position: relative; }
 body::before {
   content: '';
   position: fixed; top: 0; left: 0; right: 0;
