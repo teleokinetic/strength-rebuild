@@ -1,7 +1,7 @@
 /* Strength Rebuild — offline shell.
    Bump CACHE when shipping changes so clients pick up the new version. */
 
-const CACHE = 'sr-v2.14.0';
+const CACHE = 'sr-v2.15.0';
 // Critical shell is all-or-nothing; fonts/icons are best-effort so one
 // flaky request on gym wifi can't silently sink the whole update.
 const CRITICAL = [
@@ -20,12 +20,17 @@ const EXTRAS = [
   'icons/icon-512.png',
 ];
 
+// cache: 'reload' skips the browser's HTTP cache. GitHub Pages serves
+// max-age=600, so without it an update opened within ten minutes of a push
+// could store the OLD app.js under the NEW cache name and stay stuck on it.
+const fresh = (u) => new Request(u, { cache: 'reload' });
+
 self.addEventListener('install', (e) => {
   e.waitUntil(
     caches.open(CACHE)
       .then(async (c) => {
-        await c.addAll(CRITICAL);
-        await Promise.allSettled(EXTRAS.map((u) => c.add(u)));
+        await c.addAll(CRITICAL.map(fresh));
+        await Promise.allSettled(EXTRAS.map((u) => c.add(fresh(u))));
       })
       .then(() => self.skipWaiting())
   );
