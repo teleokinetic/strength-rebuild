@@ -1274,20 +1274,15 @@ function viewProgression() {
 function chipInnerHTML(dayId, slot) {
   const w = effectiveWeight(dayId, slot);
   const r = slot.reps ? effectiveReps(dayId, slot) : null;
-  if (w === '' || w == null) {
-    // keep already-entered reps visible even before a weight exists
-    const reps = r === '' || r == null ? '' : `<span class="chip-reps">×${esc(String(r))}</span>`;
-    return `<span class="chip-add">Add weight</span>${reps}<span class="chip-caret">${icon('down', 2.6)}</span>`;
-  }
+  const reps = r === '' || r == null ? '' : `<span class="chip-reps">×${esc(String(r))}</span>`;
+  if (w === '' || w == null) return `<span class="chip-add">Add</span>${reps}`;
   const label = (slot.added ? '+' : '') + w;
-  const repsChip = slot.reps
-    ? `<span class="chip-reps">×${r === '' || r == null ? '—' : esc(String(r))}</span>` : '';
-  return `<span class="chip-num">${esc(String(label))}</span><span class="chip-unit">${esc(state.settings.unit)}</span>${repsChip}<span class="chip-caret">${icon('down', 2.6)}</span>`;
+  return `<span class="chip-num">${esc(String(label))}</span><span class="chip-unit">${esc(state.settings.unit)}</span>${slot.reps ? (reps || '<span class="chip-reps">×—</span>') : ''}`;
 }
 
 function refreshChip(dayId, slot) {
   const btn = $(`[data-slotcard="${slot.id}"] .chip`);
-  if (btn) btn.innerHTML = chipInnerHTML(dayId, slot);
+  if (btn) btn.innerHTML = valInnerHTML(dayId, slot);
 }
 
 // The trail: one pip per slot, filled as rings are tapped — where the
@@ -1364,12 +1359,7 @@ const NUMWORD = ['zero', 'one', 'two', 'three', 'four', 'five', 'six',
 // The rest label coaches the count, tersely. The last set's rest is just
 // rest — the checked card already says what happened.
 function restLabelFor(n, total) {
-  if (n >= total) return `All ${NUMWORD[total] || total} in — take the full rest`;
-  if (n === total - 1) return 'One left — finish crisp';
-  if (n === 1) return 'One in — shake it out';
-  if (n * 2 === total) return 'Halfway — breathe easy';
-  const w = String(NUMWORD[n] || n);
-  return w.charAt(0).toUpperCase() + w.slice(1) + ` down, ${NUMWORD[total - n] || total - n} to go — breathe easy`;
+  return `Set ${n} of ${total}`;
 }
 
 const RING_CIRC = 2 * Math.PI * 12;
@@ -1404,6 +1394,9 @@ function setlineHTML(slot, e) {
   return `<div class="setline ${n ? '' : 'hidden'}" data-setline="${slot.id}">Set ${n} of ${total} down</div>`;
 }
 
+// One line per exercise: ring · name over target · today's number. Tapping
+// the row opens a drawer with everything adjustable (steppers, ladder,
+// options, note), so the list keeps one quiet rhythm the whole way down.
 function slotCardHTML(day, slot, onMat) {
   const a = state.active && state.active.dayId === day.id ? state.active.entries[slot.id] : null;
   const note = a && a.note ? a.note : '';
@@ -1414,7 +1407,8 @@ function slotCardHTML(day, slot, onMat) {
   const pairNote = partners.length
     ? `<div class="pair-note">Pair with ${esc(pairNames(day, slot))} — ${partners.length > 1 ? 'cycle through' : 'alternate sets'}</div>`
     : '';
-  const menu = slot.menu && slot.menu.length
+  const hasMenu = slot.menu && slot.menu.length;
+  const menu = hasMenu
     ? `<ul class="menu">${slot.menu.map((m) => `<li>${esc(m)}</li>`).join('')}</ul>` : '';
   const hasRungs = Array.isArray(slot.rungs) && slot.rungs.length;
   const effRung = hasRungs ? effectiveRung(day.id, slot) : '';
@@ -1423,54 +1417,57 @@ function slotCardHTML(day, slot, onMat) {
         `<button class="rung ${rn === effRung ? 'now' : ''}" data-action="rung" data-slot="${slot.id}" data-rung="${esc(rn)}">${esc(rn)}</button>`).join('')}</div>` : '';
   const warmup = slot.warmup
     ? `<div class="warmup"><span class="warmup-tag">Warm-up</span> ${esc(slot.warmup)}</div>` : '';
-  // Cards with no weight to log keep Note in the head, so they stay one line.
-  const noteBtn = `<button class="notebtn ${note ? 'has-note' : ''}" data-action="note" data-slot="${slot.id}" aria-label="Note">${icon('note', 1.9)}<span class="notebtn-t">Note</span></button>`;
-  let chip = '', chipEdit = '';
+  let steppers = '';
   if (slot.track) {
     const w = effectiveWeight(day.id, slot);
     const r = slot.reps ? effectiveReps(day.id, slot) : null;
-    chip = `
-      <button class="chip" data-action="chip" data-slot="${slot.id}">${chipInnerHTML(day.id, slot)}</button>`;
-    // Full-width row(s) below the footer — inside the flex footer this
-    // forces the whole page past the viewport when revealed.
     const weightRow = `
         <button class="step" data-action="step" data-slot="${slot.id}" data-d="-5">−5</button>
         <input class="chip-input" type="number" inputmode="decimal" step="any"
                data-action="weight" data-slot="${slot.id}" value="${w === '' || w == null ? '' : esc(String(w))}">
         <button class="step" data-action="step" data-slot="${slot.id}" data-d="5">+5</button>`;
-    chipEdit = slot.reps
-      ? `
-      <div class="chip-edit stacked hidden" data-edit="${slot.id}">
+    steppers = `
+      <div class="chip-edit stacked" data-edit="${slot.id}">
         <div class="edit-row"><span class="edit-tag">${esc(state.settings.unit)}</span>${weightRow}</div>
-        <div class="edit-row"><span class="edit-tag">reps</span>
+        ${slot.reps ? `<div class="edit-row"><span class="edit-tag">reps</span>
           <button class="step" data-action="rstep" data-slot="${slot.id}" data-d="-1">−1</button>
           <input class="chip-input" type="number" inputmode="numeric"
                  data-action="reps" data-slot="${slot.id}" value="${r === '' || r == null ? '' : esc(String(r))}">
           <button class="step" data-action="rstep" data-slot="${slot.id}" data-d="1">+1</button>
-        </div>
-      </div>`
-      : `
-      <div class="chip-edit hidden" data-edit="${slot.id}">${weightRow}</div>`;
+        </div>` : ''}
+      </div>`;
   }
+  const sub = [esc(slot.target || '')];
+  if (hasMenu) sub.push(`${slot.menu.length} options`);
+  const val = slot.track || hasRungs
+    ? `<button class="chip" data-action="expand" data-slot="${slot.id}" aria-label="Adjust">${valInnerHTML(day.id, slot)}</button>` : '';
   return `
-    <div class="slot ${done ? 'done' : ''}" data-slotcard="${slot.id}">
-      <div class="slot-head">
+    <div class="slot ${done ? 'done' : ''} ${note.trim() ? 'has-note' : ''}" data-slotcard="${slot.id}">
+      <div class="slot-row">
         ${ringHTML(slot, a)}
-        <div class="slot-name">${esc(slot.name)}</div>
-        <div class="slot-target">${esc(slot.target || '')}</div>
-        ${slot.track ? '' : noteBtn}
+        <button class="slot-main" data-action="expand" data-slot="${slot.id}" aria-expanded="false">
+          <span class="slot-name">${esc(slot.name)}<i class="note-dot" aria-label="has a note"></i></span>
+          <span class="slot-sub">${sub.filter(Boolean).join(' · ')}</span>
+        </button>
+        ${val}
       </div>
       ${pairNote}
       ${slot.cue ? `<div class="slot-cue">${esc(slot.cue)}</div>` : ''}
-      ${setlineHTML(slot, a)}
-      ${warmup}${menu}${rungs}
-      ${slot.track ? `<div class="slot-foot">${chip}${noteBtn}</div>` : ''}
-      ${chipEdit}
-      <div class="note-edit hidden" data-noteedit="${slot.id}">
-        <textarea rows="2" data-action="notetext" data-slot="${slot.id}"
-          placeholder="What happened?">${esc(note)}</textarea>
+      <div class="slot-drawer hidden" data-drawer="${slot.id}">
+        ${warmup}${rungs}${menu}${steppers}
+        <div class="note-edit" data-noteedit="${slot.id}">
+          <textarea rows="2" data-action="notetext" data-slot="${slot.id}"
+            placeholder="Note for today">${esc(note)}</textarea>
+        </div>
       </div>
     </div>`;
+}
+
+// The row's number: weight (and reps), or today's rung on a ladder.
+function valInnerHTML(dayId, slot) {
+  if (slot.track) return chipInnerHTML(dayId, slot);
+  const r = effectiveRung(dayId, slot);
+  return r ? `<span class="chip-rung">${esc(r)}</span>` : '<span class="chip-add">Pick rung</span>';
 }
 
 /* The dock's suggestion: every slot already declares its rest tier — once a
@@ -1503,14 +1500,14 @@ function restDockHTML() {
         <div class="rest-fill" data-rest-fill style="width:${pct}%"></div>
         <div class="rest-row">
           <div class="rest-time" data-rest-time>${fmtMMSS(left)}</div>
-          <span class="rest-label">${esc(rest.label || 'Resting')}</span>
+          <span class="rest-label">${esc(rest.label || 'Rest')}</span>
           <button class="rest-mini" data-action="rest-restart" aria-label="Restart rest">${icon('again', 2.2)}</button>
           <button class="rest-mini" data-action="rest-cancel" aria-label="Stop rest">${icon('close', 2.2)}</button>
         </div>
       </div>`;
   }
   if (rest.done) {
-    return `<button class="rest-done" data-action="rest-ack">Rest done — go</button>`;
+    return `<button class="rest-done" data-action="rest-ack">Rest done</button>`;
   }
   // Inside a pair the suggested normal button says who's paired, and a
   // group with its own rest (pairRest) lends the button that duration.
@@ -1521,8 +1518,7 @@ function restDockHTML() {
   const btn = (tier, sec) => {
     const suggested = hint && hint.tier === tier;
     const cls = 'restbtn' + (hint ? (suggested ? '' : ' quiet') : (tier === 'heavy' ? ' heavy' : ''));
-    const tag = suggested
-      ? `<span class="rest-tag">${esc(tier === 'normal' && pairFor ? `Pairs with ${pairFor}` : hint.name)}</span>` : '';
+    const tag = '';   // the brass alone says which tier fits; no caption
     return `<button class="${cls}" data-action="rest" data-tier="${tier}"><span class="restbtn-k">Rest</span><span class="restbtn-t">${fmtMMSS(sec)}</span>${tag}</button>`;
   };
   return `<div class="rest-idle">${btn('normal', normalRestSec())}${btn('heavy', h)}</div>`;
@@ -1550,8 +1546,17 @@ function slotsHTML(day) {
     if (last && last.pair && last.pair === slot.pair) last.slots.push(slot);
     else groups.push({ pair: slot.pair || null, slots: [slot] });
   }
-  return groups.map((g) => {
-    if (g.slots.length < 2) return g.slots.map((s) => slotCardHTML(day, s)).join('');
+  // Unpaired neighbours share one card too, so the page reads as a few
+  // blocks instead of a stack of separate boxes.
+  const merged = [];
+  for (const g of groups) {
+    const solo = g.slots.length < 2;
+    const prev = merged[merged.length - 1];
+    if (solo && prev && prev.solo) prev.slots.push(...g.slots);
+    else merged.push({ solo, pair: g.pair, slots: g.slots.slice() });
+  }
+  return merged.map((g) => {
+    if (g.solo) return `<div class="slotgroup">${g.slots.map((s) => slotCardHTML(day, s)).join('')}</div>`;
     const allDone = g.slots.every((s) => a && a.entries[s.id] && a.entries[s.id].done);
     const word = g.slots.length > 2 ? 'Trio · cycle through' : 'Pair · alternate sets';
     return `
@@ -1810,7 +1815,7 @@ document.addEventListener('click', (ev) => {
   const action = t.getAttribute('data-action');
   const dayId = currentDayId();
 
-  if (action === 'rest') { restStart(t.getAttribute('data-tier'), 'Resting — no rush'); return; }
+  if (action === 'rest') { restStart(t.getAttribute('data-tier'), null); return; }
   if (action === 'rest-restart') { restStart(rest.tier || 'normal', rest.label); return; }
   if (action === 'rest-cancel') { restCancel(); return; }
   if (action === 'rest-ack') { rest.done = false; renderRestDock(); return; }
@@ -1830,13 +1835,24 @@ document.addEventListener('click', (ev) => {
     render();
     return;
   }
-  if (action === 'chip') {
-    const box = $(`[data-edit="${t.getAttribute('data-slot')}"]`);
-    if (box) {
-      box.classList.toggle('hidden');
-      t.classList.toggle('open', !box.classList.contains('hidden'));
+  if (action === 'expand') {
+    // One drawer open at a time keeps the list calm.
+    const id = t.getAttribute('data-slot');
+    const box = $(`[data-drawer="${id}"]`);
+    if (!box) return;
+    const opening = box.classList.contains('hidden');
+    document.querySelectorAll('[data-drawer]').forEach((d) => {
+      d.classList.add('hidden');
+      const c = d.closest('.slot');
+      if (c) { c.classList.remove('open'); const m = c.querySelector('.slot-main'); if (m) m.setAttribute('aria-expanded', 'false'); }
+    });
+    if (opening) {
+      box.classList.remove('hidden');
+      const card = box.closest('.slot');
+      card.classList.add('open');
+      card.querySelector('.slot-main').setAttribute('aria-expanded', 'true');
     }
-    touchSlot(t.getAttribute('data-slot'));
+    touchSlot(id);
     return;
   }
   if (action === 'step') {
@@ -1936,19 +1952,10 @@ document.addEventListener('click', (ev) => {
     document.querySelectorAll(`[data-slotcard="${slotId}"] .rung`).forEach((el) => {
       el.classList.toggle('now', eff !== '' && el.getAttribute('data-rung') === eff);
     });
+    refreshChip(dayId, slot);
     touchSlot(slotId);
     return;
   }
-  if (action === 'note') {
-    const box = $(`[data-noteedit="${t.getAttribute('data-slot')}"]`);
-    if (box) {
-      box.classList.toggle('hidden');
-      if (!box.classList.contains('hidden')) box.querySelector('textarea').focus();
-    }
-    touchSlot(t.getAttribute('data-slot'));
-    return;
-  }
-
   if (action === 'finish') { location.hash = '#/finish/' + t.getAttribute('data-day'); return; }
   if (action === 'finish-save') {
     finishSession(t.getAttribute('data-day'), ($('#finishnote') || {}).value || '');
@@ -2077,8 +2084,8 @@ document.addEventListener('input', (ev) => {
   if (action === 'notetext') {
     const e = activeEntry(dayId, t.getAttribute('data-slot'));
     e.note = t.value;
-    const btn = $(`[data-slotcard="${t.getAttribute('data-slot')}"] .notebtn`);
-    if (btn) btn.classList.toggle('has-note', !!t.value.trim());
+    const card = $(`[data-slotcard="${t.getAttribute('data-slot')}"]`);
+    if (card) card.classList.toggle('has-note', !!t.value.trim());
     touchSlot(t.getAttribute('data-slot'));
     saveSoon();
     return;
