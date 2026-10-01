@@ -574,19 +574,12 @@ function lastSessionFor(dayId) {
 }
 
 // Sessions banked automatically (left open, or replaced by the other day)
-// carry this note. They still feed prefill, but home's "up next" and the
-// week strip only count sessions he actually finished. Read from the note,
-// so the stored shape never changes.
+// carry this note. They are real training and count everywhere — except a
+// day's usual length, where their end time is the moment they were banked,
+// not when he stopped. Read from the note, so the stored shape never changes.
 const AUTO_NOTE = '(auto-saved — session left open)';
 function isAutoSession(s) { return s.note === AUTO_NOTE; }
 function realSessions() { return state.sessions.filter((s) => !isAutoSession(s)); }
-function lastRealSessionFor(dayId) {
-  for (let i = state.sessions.length - 1; i >= 0; i--) {
-    const s = state.sessions[i];
-    if (s.dayId === dayId && !isAutoSession(s)) return s;
-  }
-  return null;
-}
 
 /* ======================= targets board (ledger) =======================
    Treatment 1 "instrument ledger": collapsed = 7-column equalizer,
@@ -1178,21 +1171,22 @@ function greetingHTML() {
 
 // The day's letter as a stamped mark ("Day A" → A).
 function dayLetter(day) {
-  const m = /([A-Z0-9])\s*$/i.exec(String(day.name || '').trim());
-  return m ? m[1].toUpperCase() : String(day.name || '?').charAt(0).toUpperCase();
+  const name = String(day.name || '?').trim();
+  const m = /(?:^|\s)([A-Z0-9])$/i.exec(name);   // "Day A" → A; "Upper" → U
+  return (m ? m[1] : name.charAt(0)).toUpperCase();
 }
 function dayMarkHTML(day, cls) {
   return `<span class="daymark ${cls || ''}">${esc(dayLetter(day))}</span>`;
 }
 
-// The day he's on: an open session wins; otherwise the day finished least
+// The day he's on: an open session wins; otherwise the day trained least
 // recently (never-trained first), so A and B alternate on their own.
 function suggestedDay() {
   if (state.active && findDay(state.active.dayId)) return findDay(state.active.dayId);
   let best = null;
   let bestT = Infinity;
   for (const day of state.program.days) {
-    const last = lastRealSessionFor(day.id);
+    const last = lastSessionFor(day.id);
     const t = last ? sessionTs(last) : -Infinity;
     if (t < bestT) { best = day; bestT = t; }
   }
@@ -1209,7 +1203,7 @@ function typicalMinutes(dayId) {
 
 function dayStatusHTML(day) {
   if (state.active && state.active.dayId === day.id) return '<span class="daycard-live">In progress</span>';
-  const last = lastRealSessionFor(day.id);
+  const last = lastSessionFor(day.id);
   if (last && startOfDay(sessionTs(last)) === startOfDay(Date.now())) {
     return `<span class="day-done">${earMini()}Done today</span>`;
   }
@@ -1222,7 +1216,7 @@ function viewHome() {
   if (!next) return `${topbar()}${greetingHTML()}${progRowHTML()}${weekStripHTML(st)}`;
   const live = !!(state.active && state.active.dayId === next.id);
   const mins = typicalMinutes(next.id);
-  const last = lastRealSessionFor(next.id);
+  const last = lastSessionFor(next.id);
   const meta = [`${next.slots.length} exercises`];
   if (mins) meta.push(`about ${mins} min`);
   if (!live && last) meta.push(`last ${relPhrase(sessionTs(last))}`);
@@ -1252,7 +1246,7 @@ function viewHome() {
 
 // Monday-first weeks: sessions per week and the two-a-week run.
 function rhythmStats() {
-  const real = realSessions();
+  const real = state.sessions;
   if (!real.length) return null;
   const firstW = weekStart(sessionTs(real[0]));
   const nowW = weekStart(Date.now());
@@ -1282,7 +1276,7 @@ function weekLine(st) {
 function weekDays() {
   const ws = weekStart(Date.now());
   const today = startOfDay(Date.now());
-  const real = realSessions();
+  const real = state.sessions;
   const out = [];
   for (let i = 0; i < 7; i++) {
     const d = new Date(ws);
@@ -1347,6 +1341,9 @@ function showSplash() {
     clearTimeout(splashTimer);
     const words = el.querySelector('.splash-hi');
     const to = $('.greet-hi');
+    // A tap mid-rise would measure the words part-way up; finish the rise first.
+    words.style.animation = 'none';
+    words.style.opacity = '1';
     if (to) {
       const a = words.getBoundingClientRect();
       const b = to.getBoundingClientRect();
@@ -2463,7 +2460,13 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     if (!hadController || reloaded) return;
     reloaded = true;
-    if (rest.running) { toast('Update ready — lands on next open'); return; }
+    // Never pull the page out from under him: a running rest, the save
+    // screen (its note isn't stored until Save), or a field being typed in.
+    const typing = document.activeElement && /^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName);
+    if (rest.running || /^#\/finish\//.test(location.hash) || typing) {
+      toast('Update ready — lands on next open');
+      return;
+    }
     flushSave();
     location.reload();
   });

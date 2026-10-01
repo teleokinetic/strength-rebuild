@@ -156,6 +156,7 @@ input:focus-visible, textarea:focus-visible { outline: none; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; animation: none !important; }
+  .barley.grow .stem, .barley.grow .awns path { stroke-dashoffset: 0; }
 }
 
 /* ---------- layout ---------- */
@@ -348,7 +349,7 @@ body.settle-in #app > :nth-child(n+6) { animation-delay: 0.26s; }
 @keyframes rise { from { opacity: 0; transform: translateY(6px); } }
 
 /* Growing barley (splash and save screen): the parts arrive in order. */
-.barley.grow .stem, .barley.grow .awns path { stroke-dasharray: 1; stroke-dashoffset: 1; }
+.barley.grow .stem, .barley.grow .awns path { stroke-dasharray: 1 2; stroke-dashoffset: 1; }
 .barley.grow .stem { animation: draw 0.55s var(--ease) 0.05s forwards; }
 .barley.grow .awns path { animation: draw 0.5s var(--ease) forwards; animation-delay: 0.95s; }
 .barley.grow .awns path:nth-child(2) { animation-delay: 1.02s; }
@@ -1041,7 +1042,7 @@ body::before {
   padding: 11px 20px; font-size: 15px; font-weight: 500; opacity: 0;
   transition: opacity 0.22s var(--ease), transform 0.3s var(--ease);
   pointer-events: none;
-  max-width: calc(100vw - 40px); text-align: center; z-index: 50;
+  max-width: calc(100vw - 40px); text-align: center; z-index: 70;   /* above the greeting */
 }
 #toast.show { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
 
