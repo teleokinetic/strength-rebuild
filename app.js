@@ -10,7 +10,7 @@
 
 const STORE_KEY = 'sr-state-v2';
 const V1_KEY = 'sr-state-v1';        // read-only: migration source, never written
-const APP_VERSION = '2.15.0';
+const APP_VERSION = '2.15.1';
 
 let state = null;
 
@@ -574,12 +574,20 @@ function lastSessionFor(dayId) {
 }
 
 // Sessions banked automatically (left open, or replaced by the other day)
-// carry this note. They are real training and count everywhere — except a
-// day's usual length, where their end time is the moment they were banked,
-// not when he stopped. Read from the note, so the stored shape never changes.
+// carry this note. They keep feeding prefill, but only a session he saved
+// marks a day on home — the workout's day is the day Save is pressed, and
+// opening the app to look around must never put a workout on the week.
+// Read from the note, so the stored shape never changes.
 const AUTO_NOTE = '(auto-saved — session left open)';
 function isAutoSession(s) { return s.note === AUTO_NOTE; }
 function realSessions() { return state.sessions.filter((s) => !isAutoSession(s)); }
+function lastSavedSessionFor(dayId) {
+  for (let i = state.sessions.length - 1; i >= 0; i--) {
+    const s = state.sessions[i];
+    if (s.dayId === dayId && !isAutoSession(s)) return s;
+  }
+  return null;
+}
 
 /* ======================= targets board (ledger) =======================
    Treatment 1 "instrument ledger": collapsed = 7-column equalizer,
@@ -900,17 +908,23 @@ function trainStats() {
 function ensureActive(dayId) {
   if (state.active && state.active.dayId === dayId) return state.active;
   if (state.active) {
-    recordSession(state.active.dayId, '(auto-saved — session left open)');
+    recordSession(state.active.dayId, AUTO_NOTE, true);
     toast('Previous session auto-saved');
   }
   state.active = { dayId, startedAt: Date.now(), lastActivityAt: Date.now(), entries: {} };
   return state.active;
 }
 
+// A workout belongs to the day Save is pressed. Opening the app and poking
+// at it the day before must not make the workout "start" that day, so the
+// first touch on a new calendar day restarts the session clock (what was
+// touched stays put).
 function activeEntry(dayId, slotId) {
   const a = ensureActive(dayId);
   if (!a.entries[slotId]) a.entries[slotId] = { weight: null, note: '' };
-  a.lastActivityAt = Date.now();
+  const now = Date.now();
+  if (startOfDay(a.lastActivityAt || a.startedAt) < startOfDay(now)) a.startedAt = now;
+  a.lastActivityAt = now;
   return a.entries[slotId];
 }
 
@@ -925,7 +939,10 @@ function effectiveWeight(dayId, slot) {
 
 // Build and push the session record for a day's active entries, then clear
 // the active session. Navigation, rest, save, and toasts stay with callers.
-function recordSession(dayId, note) {
+// Saved by hand: it ends now and starts today (never on an earlier day).
+// Banked automatically: it ends when it was last touched, not when the
+// app noticed it had been left open.
+function recordSession(dayId, note, auto) {
   const day = findDay(dayId);
   if (!day) { state.active = null; return; }
   const a = state.active && state.active.dayId === dayId ? state.active : null;
@@ -953,11 +970,16 @@ function recordSession(dayId, note) {
       entries.push(entry);
     }
   }
+  const now = Date.now();
+  let startedAt = a ? a.startedAt : now;
+  let endedAt = now;
+  if (auto && a) endedAt = Math.max(startedAt, a.lastActivityAt || startedAt);
+  else if (startOfDay(startedAt) < startOfDay(now)) startedAt = now;
   state.sessions.push({
     id: uid(), v: 2,
     dayId: day.id, dayName: `${day.name} — ${day.subtitle}`,
-    startedAt: a ? a.startedAt : Date.now(),
-    endedAt: Date.now(),
+    startedAt,
+    endedAt,
     note: (note || '').trim(),
     entries,
   });
@@ -999,7 +1021,7 @@ function autoFinishStale() {
   if (!a) return;
   const last = a.lastActivityAt || a.startedAt;
   if (Date.now() - last > STALE_AFTER_MS) {
-    recordSession(a.dayId, '(auto-saved — session left open)');
+    recordSession(a.dayId, AUTO_NOTE, true);
     save();
     render();
     toast('Previous session auto-saved');
@@ -1179,14 +1201,14 @@ function dayMarkHTML(day, cls) {
   return `<span class="daymark ${cls || ''}">${esc(dayLetter(day))}</span>`;
 }
 
-// The day he's on: an open session wins; otherwise the day trained least
+// The day he's on: an open session wins; otherwise the day saved least
 // recently (never-trained first), so A and B alternate on their own.
 function suggestedDay() {
   if (state.active && findDay(state.active.dayId)) return findDay(state.active.dayId);
   let best = null;
   let bestT = Infinity;
   for (const day of state.program.days) {
-    const last = lastSessionFor(day.id);
+    const last = lastSavedSessionFor(day.id);
     const t = last ? sessionTs(last) : -Infinity;
     if (t < bestT) { best = day; bestT = t; }
   }
@@ -1203,7 +1225,7 @@ function typicalMinutes(dayId) {
 
 function dayStatusHTML(day) {
   if (state.active && state.active.dayId === day.id) return '<span class="daycard-live">In progress</span>';
-  const last = lastSessionFor(day.id);
+  const last = lastSavedSessionFor(day.id);
   if (last && startOfDay(sessionTs(last)) === startOfDay(Date.now())) {
     return `<span class="day-done">${earMini()}Done today</span>`;
   }
@@ -1216,7 +1238,7 @@ function viewHome() {
   if (!next) return `${topbar()}${greetingHTML()}${progRowHTML()}${weekStripHTML(st)}`;
   const live = !!(state.active && state.active.dayId === next.id);
   const mins = typicalMinutes(next.id);
-  const last = lastSessionFor(next.id);
+  const last = lastSavedSessionFor(next.id);
   const meta = [`${next.slots.length} exercises`];
   if (mins) meta.push(`about ${mins} min`);
   if (!live && last) meta.push(`last ${relPhrase(sessionTs(last))}`);
@@ -1246,7 +1268,7 @@ function viewHome() {
 
 // Monday-first weeks: sessions per week and the two-a-week run.
 function rhythmStats() {
-  const real = state.sessions;
+  const real = realSessions();
   if (!real.length) return null;
   const firstW = weekStart(sessionTs(real[0]));
   const nowW = weekStart(Date.now());
@@ -1276,7 +1298,7 @@ function weekLine(st) {
 function weekDays() {
   const ws = weekStart(Date.now());
   const today = startOfDay(Date.now());
-  const real = state.sessions;
+  const real = realSessions();
   const out = [];
   for (let i = 0; i < 7; i++) {
     const d = new Date(ws);
@@ -1866,7 +1888,10 @@ function viewFinish(dayId) {
   const day = findDay(dayId);
   if (!day) { location.hash = '#/'; return ''; }
   const a = state.active && state.active.dayId === dayId ? state.active : null;
-  const mins = a ? Math.max(1, Math.round((Date.now() - a.startedAt) / 60000)) : 0;
+  // Minutes only when the session started today — a session opened the day
+  // before will be dated today when it's saved, so its length is unknown.
+  const mins = a && startOfDay(a.startedAt) === startOfDay(Date.now())
+    ? Math.max(1, Math.round((Date.now() - a.startedAt) / 60000)) : 0;
   // Ring count joins the headline only once rings were used — an ignored
   // trail must never read "0 of 9" at the finish.
   let doneCt = 0;
