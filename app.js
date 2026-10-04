@@ -10,7 +10,7 @@
 
 const STORE_KEY = 'sr-state-v2';
 const V1_KEY = 'sr-state-v1';        // read-only: migration source, never written
-const APP_VERSION = '2.17.0';
+const APP_VERSION = '2.18.0';
 
 let state = null;
 
@@ -130,7 +130,7 @@ function patchProgram() {
   const p = state.program;
   if (!p) return;
   const v = parseFloat(p.specVersion) || 0;
-  if (v >= 1.8) return;
+  if (v >= 1.9) return;
 
   // 0.4: Bulgarian split squat becomes Stork squat; both days open
   // with a no-weight Prep slot (wrist prep + passive/active hangs).
@@ -431,7 +431,20 @@ function patchProgram() {
     }
   }
 
-  p.specVersion = '1.8';
+  // 1.9: press and chins come apart (his 10/4 call) — each done on its own
+  // with full rest between sets, no alternating. The pair and its 1:30
+  // group rest go; both fall back to the normal tier.
+  if (v < 1.9) {
+    const dayB = p.days.find((d) => d.id === 'dayB');
+    for (const s of (dayB ? dayB.slots : [])) {
+      const k = slug(s.name);
+      if (k === 'db-standing-overhead-press' || k === 'chin-up-strict') {
+        delete s.pair; delete s.pairRest;
+      }
+    }
+  }
+
+  p.specVersion = '1.9';
   save();
 }
 

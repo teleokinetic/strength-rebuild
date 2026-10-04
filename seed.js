@@ -12,7 +12,7 @@
 //   pairRest: optional rest (seconds) the group takes instead of the normal tier.
 
 const SEED_PROGRAM = {
-  specVersion: '1.8',
+  specVersion: '1.9',
   days: [
     {
       id: 'dayA',
@@ -86,11 +86,11 @@ const SEED_PROGRAM = {
         },
         {
           id: 'b3', name: 'DB standing overhead press', target: '3×6–10 · RIR 2–3',
-          track: true, reps: true, rest: 'normal', pair: 'a', short: 'the press', pairRest: 90,
+          track: true, reps: true, rest: 'normal', short: 'the press',
         },
         {
           id: 'b4', name: 'Chin-up, strict', target: '3×5–12',
-          track: true, added: true, reps: true, rest: 'normal', pair: 'a', short: 'chins', pairRest: 90,
+          track: true, added: true, reps: true, rest: 'normal', short: 'chins',
         },
         {
           id: 'b5', name: 'Transitional squats', target: '3 sets · one per shape',
