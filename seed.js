@@ -1,4 +1,4 @@
-// Strength Rebuild — program seed (v1.8)
+// Strength Rebuild — program seed (v2.1)
 // This is only the FIRST-RUN seed. After first launch the program lives in
 // localStorage and is edited in-app; changes here won't overwrite it.
 //
@@ -12,7 +12,7 @@
 //   pairRest: optional rest (seconds) the group takes instead of the normal tier.
 
 const SEED_PROGRAM = {
-  specVersion: '2.0',
+  specVersion: '2.1',
   days: [
     {
       id: 'dayA',
@@ -21,10 +21,6 @@ const SEED_PROGRAM = {
       slots: [
         {
           id: 'prep-dayA', name: 'Prep', target: '~3 min',
-          track: false, rest: 'normal',
-        },
-        {
-          id: 'a1', name: 'Jump to targets', target: '4 rounds · 3 jumps',
           track: false, rest: 'normal',
         },
         {
@@ -44,12 +40,8 @@ const SEED_PROGRAM = {
           track: true, reps: true, rest: 'normal',
         },
         {
-          id: 'a6', name: 'Nordic ladder', target: '3×4–8',
-          track: false, rest: 'normal', pair: 'b', short: 'Nordics',
-          rungs: [
-            'Bilateral slider', 'Single-leg slider', 'Shallow negative',
-            'Full negative', 'Band assist', 'Full Nordic',
-          ],
+          id: 'a10', name: 'Hamstring curl machine', target: '3×8–12 · RIR 2–3',
+          track: true, reps: true, rest: 'normal', pair: 'b', short: 'curls',
         },
         {
           id: 'a7', name: 'Suitcase carry', target: '3×30–40 m /side',

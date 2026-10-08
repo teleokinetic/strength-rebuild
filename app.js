@@ -10,7 +10,7 @@
 
 const STORE_KEY = 'sr-state-v2';
 const V1_KEY = 'sr-state-v1';        // read-only: migration source, never written
-const APP_VERSION = '2.18.1';
+const APP_VERSION = '2.19.0';
 
 let state = null;
 
@@ -130,7 +130,7 @@ function patchProgram() {
   const p = state.program;
   if (!p) return;
   const v = parseFloat(p.specVersion) || 0;
-  if (v >= 2.0) return;
+  if (v >= 2.1) return;
 
   // 0.4: Bulgarian split squat becomes Stork squat; both days open
   // with a no-weight Prep slot (wrist prep + passive/active hangs).
@@ -453,7 +453,26 @@ function patchProgram() {
     }
   }
 
-  p.specVersion = '2.0';
+  // 2.1: Day A (his 10/7 call) — the jumps come off the front, and the
+  // hamstring curl machine takes the Nordic ladder's place, still paired
+  // with the carry. Old Nordic entries stay in the log as they were.
+  if (v < 2.1) {
+    const dayA = p.days.find((d) => d.id === 'dayA');
+    if (dayA) {
+      dayA.slots = dayA.slots.filter((s) => slug(s.name) !== 'jump-to-targets');
+      const i = dayA.slots.findIndex((s) => slug(s.name) === 'nordic-ladder');
+      const curl = {
+        id: 'a10', name: 'Hamstring curl machine', target: '3×8–12 · RIR 2–3',
+        track: true, reps: true, rest: 'normal', pair: 'b', short: 'curls',
+      };
+      if (!dayA.slots.some((s) => slug(s.name) === 'hamstring-curl-machine')) {
+        if (i !== -1) dayA.slots.splice(i, 1, curl);
+        else dayA.slots.push(curl);
+      }
+    }
+  }
+
+  p.specVersion = '2.1';
   save();
 }
 
