@@ -30,6 +30,19 @@ Gym Sync/
 "Anyone" only means the phones can reach it without a Google sign-in; every
 request still needs that app's secret key, which lives only in the code.
 
+## GitHub mirror (optional)
+
+Each sync also commits that app's data to the private repo
+`teleokinetic/gym-data` — `strength-rebuild/` and `forte/`, each with
+`state.json` and a readable `log.md` (current program + every session) — so
+any LLM pointed at the repo can read both programs in one place.
+
+1. GitHub → Settings → Developer settings → **Fine-grained token**: only
+   `teleokinetic/gym-data`, permission **Contents: Read and write**.
+2. Apps Script → **Project Settings → Script Properties → Add**:
+   `githubToken` = the token. (Different repo? also `githubRepo` = `owner/name`.)
+3. Run `syncGithubNow` once. Then deploy a new version (see Maintenance).
+
 ## How it behaves
 
 - Sends after **Finish**, and when you leave the app with program or
