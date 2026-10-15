@@ -41,7 +41,7 @@ any LLM pointed at the repo can read both programs in one place.
    `teleokinetic/gym-data`, permission **Contents: Read and write**.
 2. Apps Script → **Project Settings → Script Properties → Add**:
    `githubToken` = the token. (Different repo? also `githubRepo` = `owner/name`.)
-3. Run `syncGithubNow` once. Then deploy a new version (see Maintenance).
+3. Run `syncGithubNow` once. No redeploy needed — the token is read at run time.
 
 ## How it behaves
 
