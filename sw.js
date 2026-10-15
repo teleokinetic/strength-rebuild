@@ -1,7 +1,7 @@
 /* Strength Rebuild — offline shell.
    Bump CACHE when shipping changes so clients pick up the new version. */
 
-const CACHE = 'sr-v2.19.0';
+const CACHE = 'sr-v2.20.0';
 // Critical shell is all-or-nothing; fonts/icons are best-effort so one
 // flaky request on gym wifi can't silently sink the whole update.
 const CRITICAL = [
@@ -47,6 +47,8 @@ self.addEventListener('activate', (e) => {
 // Network-first for navigations (so updates land), cache-first for assets.
 self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
+  // Only this app's own files: Drive sync must never be served from cache.
+  if (new URL(e.request.url).origin !== self.location.origin) return;
   if (e.request.mode === 'navigate') {
     e.respondWith(
       fetch(e.request)

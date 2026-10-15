@@ -10,7 +10,7 @@
 
 const STORE_KEY = 'sr-state-v2';
 const V1_KEY = 'sr-state-v1';        // read-only: migration source, never written
-const APP_VERSION = '2.19.0';
+const APP_VERSION = '2.20.0';
 
 let state = null;
 
@@ -1052,6 +1052,7 @@ function finishSession(dayId, note) {
   save();
   location.hash = '#/';
   toast('Session saved');
+  syncPush();
 }
 
 // Only Finish → Save logs a session, and only Discard drops one. An open
@@ -2026,6 +2027,7 @@ function viewSettings() {
         </div>
         <a class="grow-link" href="#/program"><span class="setlabel">Edit program</span>${icon('chev', 2.2)}</a>
       </div>
+      ${viewSyncGroup()}
       <div class="group-head">Data</div>
       <div class="group">
         <div class="setrow">
@@ -2163,6 +2165,7 @@ document.addEventListener('click', (ev) => {
   const t = ev.target.closest('[data-action]');
   if (!t) return;
   const action = t.getAttribute('data-action');
+  if (syncAction(action, t)) return;
   const dayId = currentDayId();
 
   if (action === 'rest') { restStart(t.getAttribute('data-tier'), null); return; }
@@ -2365,6 +2368,7 @@ document.addEventListener('click', (ev) => {
       applyTheme();
       location.hash = '#/';
       toast('Imported');
+      syncPush({ force: true });
     } catch (e) { toast('Could not parse JSON'); }
     return;
   }
@@ -2531,6 +2535,202 @@ function exportJSON() {
   save();
 }
 
+/* ============================ Drive sync ============================
+   One-way backup to Tanner's Google Drive through the Gym Sync Apps Script
+   (strength-rebuild/drive-sync). The whole state goes up after Finish, and
+   when the app is left with program/settings changes; the script keeps
+   latest.json + one copy per day and rebuilds the Google Sheet. No signal →
+   it waits and goes up on the next open. The in-flight session never
+   triggers a send. Config lives under its own key, so Export, Import and
+   Erase never carry or wipe it. */
+
+const SYNC_STORE = 'sr-sync';
+const SYNC_APP = 'sr';
+let sync = { url: '', key: '', lastOk: 0, sentHash: '', error: '', drive: 0 };
+let syncBusy = false;
+let syncAgain = false;
+
+function syncLoad() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(SYNC_STORE) || 'null');
+    if (raw && typeof raw === 'object') sync = Object.assign(sync, raw);
+  } catch (e) { /* unreadable → not connected */ }
+}
+function syncSave() { try { localStorage.setItem(SYNC_STORE, JSON.stringify(sync)); } catch (e) {} }
+function syncOn() { return !!(sync.url && sync.key); }
+
+// What's worth a send: everything but the session in progress.
+function syncHash() {
+  const rest = {};
+  for (const k in state) if (k !== 'active' && k !== 'drafts') rest[k] = state[k];
+  const s = JSON.stringify(rest);
+  let h = 0x811c9dc5;
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return (h >>> 0).toString(36) + '.' + s.length;
+}
+
+// opts.force: Import/Restore — replace Drive's copy even if it has more.
+// opts.always: send even if nothing changed (Connect, Sync now).
+function syncPush(opts) {
+  opts = opts || {};
+  if (!syncOn()) return Promise.resolve(false);
+  if (syncBusy) { syncAgain = true; return Promise.resolve(false); }
+  const h = syncHash();
+  if (!opts.force && !opts.always && h === sync.sentHash) return Promise.resolve(true);
+  syncBusy = true;
+  syncPaint('Sending…');
+  const body = JSON.stringify({ app: SYNC_APP, key: sync.key, force: !!opts.force, version: APP_VERSION, state });
+  return fetch(sync.url, {
+    method: 'POST', body, cache: 'no-store', redirect: 'follow',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },   // no preflight — Apps Script can't answer one
+  })
+    .then((r) => r.json())
+    .then((res) => {
+      if (res && res.ok) { sync.lastOk = Date.now(); sync.sentHash = h; sync.error = ''; sync.drive = 0; }
+      else { sync.error = (res && res.error) || 'failed'; sync.drive = (res && res.drive) || 0; }
+      return !!(res && res.ok);
+    })
+    .catch(() => { sync.error = 'offline'; return false; })
+    .then((ok) => {
+      syncBusy = false;
+      syncSave();
+      syncPaint();
+      if (syncAgain) { syncAgain = false; syncPush(); }
+      return ok;
+    });
+}
+
+function syncRestore() {
+  if (!syncOn()) return;
+  syncPaint('Fetching…');
+  const u = `${sync.url}?app=${encodeURIComponent(SYNC_APP)}&key=${encodeURIComponent(sync.key)}&action=latest&t=${Date.now()}`;
+  fetch(u, { cache: 'no-store', redirect: 'follow' })
+    .then((r) => r.json())
+    .then((res) => {
+      if (!res || !res.ok) {
+        toast(res && res.error === 'empty' ? 'Nothing on Drive yet' : res && res.error === 'bad-key' ? 'Sync code rejected' : 'Restore failed');
+        syncPaint();
+        return;
+      }
+      if (!validState(res.state)) { toast('Drive copy unreadable'); syncPaint(); return; }
+      state = res.state;
+      patchProgram();
+      save();
+      applyTheme();
+      sync.sentHash = syncHash();
+      sync.lastOk = Date.now(); sync.error = ''; sync.drive = 0;
+      syncSave();
+      location.hash = '#/';
+      render();
+      toast(`Restored · ${state.sessions.length} session${state.sessions.length === 1 ? "" : "s"}`);
+    })
+    .catch(() => { toast('No connection'); syncPaint(); });
+}
+
+function syncConnect(code) {
+  let cfg = null;
+  try { cfg = JSON.parse(atob(String(code || '').replace(/\s+/g, '').replace(/^GS1\./, ''))); } catch (e) {}
+  if (!cfg || !/^https:\/\//.test(cfg.u || '') || !cfg.k) { toast('That isn’t a sync code'); return; }
+  if (cfg.a !== SYNC_APP) { toast('That code is for Forte'); return; }
+  sync = { url: cfg.u, key: cfg.k, lastOk: 0, sentHash: '', error: '', drive: 0 };
+  syncSave();
+  render();
+  syncPush({ always: true }).then((ok) => { if (ok) toast('Connected to Drive'); });
+}
+
+function syncDisconnect() {
+  sync = { url: '', key: '', lastOk: 0, sentHash: '', error: '', drive: 0 };
+  try { localStorage.removeItem(SYNC_STORE); } catch (e) {}
+  render();
+}
+
+function syncAgo(t) {
+  const m = Math.round((Date.now() - t) / 60000);
+  if (m < 1) return 'just now';
+  if (m < 60) return `${m} min ago`;
+  const d = new Date(t);
+  const time = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  if (new Date().toDateString() === d.toDateString()) return `today ${time}`;
+  return d.toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' }) + ` ${time}`;
+}
+
+function syncStatus() {
+  if (sync.error === 'behind') {
+    return { warn: true, text: `Drive has ${sync.drive}, this phone ${state.sessions.length} sessions — Restore first` };
+  }
+  if (sync.error === 'bad-key') return { warn: true, text: 'Sync code rejected — reconnect' };
+  const pending = sync.sentHash !== syncHash();
+  if (sync.error && pending) return { warn: false, text: 'Waiting for signal — sends on next open' };
+  if (!sync.lastOk) return { warn: false, text: 'Not sent yet' };
+  return { warn: false, text: `Saved ${syncAgo(sync.lastOk)}${pending ? ' · changes waiting' : ''}` };
+}
+
+function syncPaint(busyText) {
+  const el = $('#syncstate');
+  if (!el) return;
+  const s = busyText ? { warn: false, text: busyText } : syncStatus();
+  el.textContent = s.text;
+  el.classList.toggle('warn', !!s.warn);
+}
+
+function viewSyncGroup() {
+  if (!syncOn()) {
+    return `
+      <div class="group-head">Drive</div>
+      <div class="group">
+        <div class="setrow syncrow">
+          <input class="synccode" id="synccode" type="text" placeholder="Paste sync code" autocomplete="off" autocapitalize="off" spellcheck="false">
+          <button class="setbtn" data-action="sync-connect">Connect</button>
+        </div>
+      </div>`;
+  }
+  const s = syncStatus();
+  return `
+    <div class="group-head">Drive</div>
+    <div class="group">
+      <div class="setrow">
+        <div class="setlabel">Backup</div>
+        <div class="syncstate${s.warn ? ' warn' : ''}" id="syncstate">${esc(s.text)}</div>
+      </div>
+      <div class="setrow">
+        <div class="btnrow">
+          <button class="setbtn" data-action="sync-now">Sync now</button>
+          <button class="setbtn" data-action="sync-restore">Restore</button>
+        </div>
+        <button class="setbtn quiet" data-action="sync-off">Disconnect</button>
+      </div>
+    </div>`;
+}
+
+let pendingRestore = false;
+function syncAction(action, t) {
+  if (action === 'sync-connect') { syncConnect(($('#synccode') || {}).value); return true; }
+  if (action === 'sync-now') { syncPush({ always: true }); return true; }
+  if (action === 'sync-off') {
+    if (t.textContent !== 'Tap again') { t.textContent = 'Tap again'; setTimeout(() => { if (document.body.contains(t)) t.textContent = 'Disconnect'; }, 3500); return true; }
+    syncDisconnect();
+    return true;
+  }
+  if (action === 'sync-restore') {
+    if (!pendingRestore) {
+      pendingRestore = true;
+      t.textContent = 'Replace this phone?';
+      t.classList.add('danger');
+      setTimeout(() => { pendingRestore = false; if (document.body.contains(t)) { t.textContent = 'Restore'; t.classList.remove('danger'); } }, 3500);
+      return true;
+    }
+    pendingRestore = false;
+    syncRestore();
+    return true;
+  }
+  return false;
+}
+
+// Leaving the app sends what changed; coming back (or regaining signal)
+// retries anything that didn't make it.
+document.addEventListener('visibilitychange', () => { if (syncOn()) syncPush(); });
+window.addEventListener('online', () => { if (syncOn()) syncPush(); });
+
 /* ============================ update flow ============================
    Installed iOS PWAs cling to old versions: they resume without a fresh
    boot (no update check) and a single failed request used to sink the
@@ -2569,10 +2769,12 @@ window.addEventListener('load', () => setTimeout(checkForUpdate, 3000));
 /* ============================== boot ============================== */
 
 load();
+syncLoad();
 patchProgram();
 quarantineAutoSessions();
 applyTheme();
 render();
+if (syncOn()) syncPush();
 // The greeting plays as its own screen once per launch, from home only.
 // sessionStorage survives the self-reload into an update, not a relaunch.
 let greeted = false;
