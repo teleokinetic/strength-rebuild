@@ -10,7 +10,7 @@
 
 const STORE_KEY = 'sr-state-v2';
 const V1_KEY = 'sr-state-v1';        // read-only: migration source, never written
-const APP_VERSION = '3.0.0';
+const APP_VERSION = '3.1.0';
 
 let state = null;
 
@@ -1051,8 +1051,10 @@ function recordSession(dayId, note) {
       const w = effectiveWeight(dayId, slot);
       const entry = { exerciseId: slug(slot.name), name: slot.name, weight: w === '' ? '' : parseFloat(w), note: slotNote };
       if (slot.reps) {
-        const r = effectiveReps(dayId, slot);
+        const banked = bankedReps(e);
+        const r = banked.length ? Math.min(...banked) : effectiveReps(dayId, slot);
         entry.reps = r === '' ? '' : parseInt(r, 10);
+        if (banked.length) entry.repsBySet = banked;
       }
       if (rung) entry.rung = rung;
       if (sets) entry.sets = sets;
@@ -1075,12 +1077,47 @@ function recordSession(dayId, note) {
   state.active = null;
 }
 
+/* ---- per-set reps (his 10/17 call) ----
+   Each tap on a counting ring banks that set's reps from the chip into
+   repsBySet. The chip always shows the set about to be banked: last
+   session's same set when there is one (the number to match or beat),
+   else the set just banked. A saved entry keeps `reps` as the LOWEST set,
+   so "ready to add weight" still means every set reached the top and
+   everything that reads `reps` (progression, targets, Gym Log) keeps
+   working; repsBySet rides along for the detail. */
+function bankedReps(e) { return e && Array.isArray(e.repsBySet) ? e.repsBySet.filter((r) => r > 0) : []; }
+
+// The newest logged entry with reps: its per-set list, or null if it
+// predates per-set logging.
+function lastRepsBySetFor(exerciseId) {
+  for (let i = state.sessions.length - 1; i >= 0; i--) {
+    const en = (state.sessions[i].entries || []).find((x) => x.exerciseId === exerciseId && (x.reps > 0 || Array.isArray(x.repsBySet)));
+    if (en) return Array.isArray(en.repsBySet) ? en.repsBySet : null;
+  }
+  return null;
+}
+
 function effectiveReps(dayId, slot) {
   const a = state.active;
   const e = a && a.dayId === dayId ? a.entries[slot.id] : null;
   if (e && e.reps != null && e.reps !== '') return e.reps;
   if (e && e.reps === '') return '';
+  const banked = bankedReps(e);
+  if (e && e.done && banked.length) return Math.min(...banked);
+  const n = (e && e.sets) || 0;
+  const prev = lastRepsBySetFor(slug(slot.name));
+  if (prev && prev[n] > 0) return prev[n];
+  if (banked.length) return banked[banked.length - 1];
+  if (prev && prev.length) return prev[prev.length - 1];
   return lastRepsFor(slug(slot.name));
+}
+
+// "sets 9/8" under the name once a set is banked.
+function setRepsText(dayId, slot) {
+  const a = state.active;
+  const e = a && a.dayId === dayId ? a.entries[slot.id] : null;
+  const b = bankedReps(e);
+  return b.length ? ` · sets ${b.join('/')}` : '';
 }
 
 // Effective rung mirrors effective weight: today's tap wins, else the last
@@ -1678,6 +1715,8 @@ function refreshChip(dayId, slot) {
   if (btn) btn.innerHTML = valInnerHTML(dayId, slot);
   const bo = $(`[data-backoff="${slot.id}"]`);
   if (bo) bo.textContent = backoffText(dayId, slot);
+  const sr = $(`[data-setreps="${slot.id}"]`);
+  if (sr) sr.textContent = setRepsText(dayId, slot);
 }
 
 // Squat back-off sets, read live off the top set and rounded to 5.
@@ -1856,7 +1895,7 @@ function slotCardHTML(day, slot, onMat) {
         ${ringHTML(slot, a)}
         <button class="slot-main" data-action="expand" data-slot="${slot.id}" aria-expanded="false">
           <span class="slot-name">${esc(slot.name)}<i class="note-dot" aria-label="has a note"></i></span>
-          <span class="slot-sub">${sub.filter(Boolean).join(' · ')}</span>
+          <span class="slot-sub">${sub.filter(Boolean).join(' · ')}${slot.reps && setTarget(slot) ? `<span class="setreps" data-setreps="${slot.id}">${esc(setRepsText(day.id, slot))}</span>` : ''}</span>
         </button>
         ${val}
       </div>
@@ -2042,10 +2081,12 @@ function viewFinish(dayId) {
     if (slot.track) {
       const w = effectiveWeight(dayId, slot);
       const wTxt = w === '' || w == null ? '—' : (slot.added ? '+' : '') + w;
-      let num = `<b>${esc(String(wTxt))}</b> ${esc(state.settings.unit)}`;
+      let num = slot.bw ? '' : `<b>${esc(String(wTxt))}</b> ${esc(state.settings.unit)}`;
       if (slot.reps) {
-        const r = effectiveReps(dayId, slot);
-        num += ` ×${r === '' || r == null ? '—' : esc(String(r))}`;
+        const e = state.active && state.active.dayId === dayId ? state.active.entries[slot.id] : null;
+        const b = bankedReps(e);
+        const r = b.length ? b.join('/') : effectiveReps(dayId, slot);
+        num += `${num ? ' ' : ''}×${r === '' || r == null ? '—' : esc(String(r))}`;
       }
       rows.push(`<div class="rrow">
         <span class="rrow-name">${esc(slot.name)}${noted ? ` <i class="rrow-note" aria-label="has a note">${icon('note', 2)}</i>` : ''}</span>
@@ -2352,7 +2393,18 @@ document.addEventListener('click', (ev) => {
       if (e.done) {
         delete e.done;
         delete e.sets;
+        delete e.repsBySet;
       } else {
+        if (slot.reps) {
+          // Bank this set's reps, then let the chip move on to the next set.
+          const n = e.sets || 0;
+          const r = parseInt(effectiveReps(dayId, slot), 10);
+          const list = Array.isArray(e.repsBySet) ? e.repsBySet.slice(0, n) : [];
+          while (list.length < n) list.push(null);
+          list[n] = Number.isFinite(r) ? r : null;
+          e.repsBySet = list;
+          delete e.reps;
+        }
         e.sets = Math.min((e.sets || 0) + 1, total);
         if (e.sets >= total) e.done = true;
         // The banked slot rides along so its group's own rest (the trio's
@@ -2376,6 +2428,9 @@ document.addEventListener('click', (ev) => {
       fresh.classList.add('pop');
       if (e.done) kernelBurst(fresh);
     }
+    refreshChip(dayId, slot);
+    const rin = $(`[data-edit="${slotId}"] input[data-action="reps"]`);
+    if (rin) { const r = effectiveReps(dayId, slot); rin.value = r === '' || r == null ? '' : r; }
     updateTrail(dayId);
     touchSlot(slotId);
     return;
