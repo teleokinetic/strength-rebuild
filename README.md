@@ -1,6 +1,6 @@
 # Strength Rebuild
 
-Personal gym companion for a two-day full-body strength program. Static PWA — no build step, no backend.
+Personal gym companion for a three-day full-body strength program (Day C Monday · Day A Wednesday · Day B Saturday). Static PWA — no build step, no backend.
 
 v2 model: anchors + task menus, one-press rest. No per-set logging.
 

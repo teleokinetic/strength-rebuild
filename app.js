@@ -10,7 +10,7 @@
 
 const STORE_KEY = 'sr-state-v2';
 const V1_KEY = 'sr-state-v1';        // read-only: migration source, never written
-const APP_VERSION = '2.20.0';
+const APP_VERSION = '3.0.0';
 
 let state = null;
 
@@ -130,7 +130,7 @@ function patchProgram() {
   const p = state.program;
   if (!p) return;
   const v = parseFloat(p.specVersion) || 0;
-  if (v >= 2.1) return;
+  if (v >= 3.0) return;
 
   // 0.4: Bulgarian split squat becomes Stork squat; both days open
   // with a no-weight Prep slot (wrist prep + passive/active hangs).
@@ -472,7 +472,24 @@ function patchProgram() {
     }
   }
 
-  p.specVersion = '2.1';
+  // 3.0: three days (his 10/17 call) — Day C (Monday, the light day),
+  // Day A (Wednesday, still squat + horizontal) and Day B (Saturday, still
+  // hinge + vertical). The days are rebuilt whole from the seed; slot ids
+  // and exercise names carry over wherever a lift continues, so history,
+  // prefill and the Gym Log read straight through. The old program is kept
+  // under programBackup. A slot's `start` is a one-time Week 1 prefill,
+  // stamped now and used until that lift is next logged.
+  if (v < 3.0) {
+    state.programBackup = {
+      at: Date.now(), specVersion: p.specVersion || '',
+      days: JSON.parse(JSON.stringify(p.days)),
+    };
+    const now = Date.now();
+    p.days = JSON.parse(JSON.stringify(SEED_PROGRAM.days));
+    for (const d of p.days) for (const s of d.slots) if (s.start != null) s.startAt = now;
+  }
+
+  p.specVersion = '3.0';
   save();
 }
 
@@ -634,11 +651,11 @@ const TARGETS = [
   // bench mark is barbell 155×5; DB-equivalent proxy ≈ 70s (155 / 2 / ~1.1)
   { key: 'bench',  label: 'Bench',      eq: 'Bch', ex: 'db-bench-press', goal: 70,  goalText: 'bar 155 ×5', curFmt: (w) => `DB ${w}s` },
   { key: 'dl',     label: 'Deadlift',   eq: 'DL',  locked: true,         goalText: '310 ×5 · later phase' },
-  // chins current reads live from working-reps once logged; the static
-  // cur/pct is the 7/9 calibration fallback until then
-  { key: 'mu',     label: 'Muscle-up',  eq: 'MU',  repsEx: 'chin-up-strict', repsGoal: 12,
-    curFmt: (r) => `chins ${r}`, cur: 'chins 5', pct: 42, goalText: '12 strict',
-    pips: ['12 chins', '+40 chin', 'dips ×10', 'ring MU'], pipNow: 0 },
+  // 10/17: chins build strength by load, not reps — 3×8 strict, then +5 at
+  // a time toward +40. Reads the Day B chin-up's added load and reps live.
+  { key: 'mu',     label: 'Muscle-up',  eq: 'MU',  addedEx: 'chin-up-strict', goal: 40,
+    cur: 'chins 5', pct: 10, goalText: '+40 chin',
+    pips: ['3×8 strict', '+40 chin', 'dips ×10', 'ring MU'], pipNow: 0 },
   { key: 'row',    label: 'Row',        eq: 'Row', ex: 'one-arm-db-row', goal: 75,  goalText: '75 ×8', repsAlong: true },
   // nordic reads live from the Day A ladder once a rung is tapped; the
   // static cur/pct is the calibration fallback until then
@@ -668,6 +685,20 @@ function targetState(item) {
         pct: Math.round(((i + 1) / ladder.length) * 100),
         pips: ladder, pipNow: i,
       };
+    }
+    return { cur: item.cur, pct: item.pct };
+  }
+  if (item.addedEx) {
+    for (let i = state.sessions.length - 1; i >= 0; i--) {
+      const e = (state.sessions[i].entries || []).find((x) => x.exerciseId === item.addedEx && (x.reps > 0 || x.weight > 0));
+      if (!e) continue;
+      const w = e.weight > 0 ? e.weight : 0;
+      const r = e.reps > 0 ? e.reps : 0;
+      const cur = (w > 0 ? `+${w}` : 'BW') + (r ? ` ×${r}` : '');
+      // Bodyweight phase fills the first quarter (reps toward 8); load the rest.
+      const pct = w > 0 ? 25 + Math.round(Math.min(1, w / item.goal) * 75) : Math.round(Math.min(1, r / 8) * 25);
+      const pipNow = w >= item.goal ? 2 : (w > 0 || r >= 8) ? 1 : 0;
+      return { cur, pct, pipNow };
     }
     return { cur: item.cur, pct: item.pct };
   }
@@ -830,7 +861,7 @@ function liftItem(slot, ex, all) {
   const curR = rHist.length ? rHist[rHist.length - 1].r : null;
   const firstR = rHist.length ? rHist[0].r : null;
   const top = repRangeTop(slot);
-  const ready = top != null && curR != null && curR >= top;
+  const ready = !slot.bw && top != null && curR != null && curR >= top;
 
   // Change streak: trailing sessions with the same working numbers.
   const key = (h) => `${wOk(h) ? h.w : ''}|${slot.reps ? (h.r == null ? '' : h.r) : ''}`;
@@ -851,7 +882,7 @@ function liftItem(slot, ex, all) {
   const delta = cur != null && first != null ? cur - first : 0;
   const weeks = Math.max(1, Math.round((hist[hist.length - 1].t - hist[0].t) / WEEK_MS));
   const label = cur == null ? '' : (slot.added ? '+' : '') + cur;
-  const next = (cur == null ? 0 : cur) + LOAD_STEP;
+  const next = (cur == null ? 0 : cur) + (slot.step || LOAD_STEP);
   const nextLabel = (slot.added ? '+' : '') + next;
 
   let bumps = 0;
@@ -905,7 +936,7 @@ function progressionData() {
   for (const day of state.program.days) {
     for (const slot of day.slots) {
       const ex = slug(slot.name);
-      if (seen[ex]) continue;
+      if (seen[ex] || slot.light) continue;
       seen[ex] = true;
       if (Array.isArray(slot.rungs) && slot.rungs.length) {
         const hist = historyFor(ex).filter((h) => h.rung);
@@ -977,12 +1008,29 @@ function activeEntry(dayId, slotId) {
   return a.entries[slotId];
 }
 
-// Effective weight shown on a slot chip: session adjustment wins, else prefill.
+// A slot's one-time Week 1 load: shown until the lift is logged again after
+// the program change that set it, then ordinary prefill takes over.
+function startFor(slot) {
+  if (slot.start == null || slot.bw) return null;
+  const ex = slug(slot.name);
+  const since = slot.startAt || 0;
+  for (const sess of state.sessions) {
+    if (sessionTs(sess) < since) continue;
+    if ((sess.entries || []).some((e) => e.exerciseId === ex && e.weight !== '' && e.weight != null)) return null;
+  }
+  return slot.start;
+}
+
+// Effective weight shown on a slot chip: session adjustment wins, else the
+// Week 1 start, else prefill. Reps-only slots carry no weight at all.
 function effectiveWeight(dayId, slot) {
+  if (slot.bw) return '';
   const a = state.active;
   const e = a && a.dayId === dayId ? a.entries[slot.id] : null;
   if (e && e.weight != null && e.weight !== '') return e.weight;
   if (e && e.weight === '') return '';
+  const st = startFor(slot);
+  if (st != null) return st;
   return lastWeightFor(slug(slot.name));
 }
 
@@ -1247,10 +1295,26 @@ function dayMarkHTML(day, cls) {
   return `<span class="daymark ${cls || ''}">${esc(dayLetter(day))}</span>`;
 }
 
-// The day he's on: an open session wins; otherwise the day trained least
-// recently (never-trained first), so A and B alternate on their own.
+// The day he's on: an open session wins. Days with a weekday (dow) follow
+// the calendar — today's day until it's done today, then the next one on
+// the schedule; a missed day just shows in the rows below. Without
+// weekdays, the day trained least recently (never-trained first).
 function suggestedDay() {
   if (state.active && findDay(state.active.dayId)) return findDay(state.active.dayId);
+  const sched = state.program.days.filter((d) => Number.isInteger(d.dow));
+  if (sched.length) {
+    const dow = new Date().getDay();
+    const ahead = (d) => (d.dow - dow + 7) % 7;
+    const order = sched.slice().sort((x, y) => ahead(x) - ahead(y));
+    for (const d of order) {
+      if (ahead(d) === 0) {
+        const last = lastSessionFor(d.id);
+        if (last && startOfDay(sessionTs(last)) === startOfDay(Date.now())) continue;
+      }
+      return d;
+    }
+    return order[0];
+  }
   let best = null;
   let bestT = Infinity;
   for (const day of state.program.days) {
@@ -1325,20 +1389,29 @@ function rhythmStats() {
     weeks.unshift({ start: ws, count: real.filter((s) => weekStart(sessionTs(s)) === ws).length });
     d.setDate(d.getDate() - 7);
   }
+  const n = weeklyTarget();
   let streak = 0;
   for (let i = weeks.length - 1; i >= 0; i--) {
-    if (weeks[i].start === nowW) { if (weeks[i].count >= 2) streak++; continue; }
-    if (weeks[i].count >= 2) streak++; else break;
+    if (weeks[i].start === nowW) { if (weeks[i].count >= n) streak++; continue; }
+    if (weeks[i].count >= n) streak++; else break;
   }
   const thisWeek = weeks.length && weeks[weeks.length - 1].start === nowW ? weeks[weeks.length - 1].count : 0;
   return { streak, thisWeek };
 }
 
+// Sessions a week: one per scheduled day (three), else the old two.
+function weeklyTarget() {
+  const n = state.program.days.filter((d) => Number.isInteger(d.dow)).length;
+  return n || 2;
+}
+
 function weekLine(st) {
-  if (!st) return 'Two a week is the rhythm';
+  const n = weeklyTarget();
+  const word = cap(NUMWORD[n] || String(n));
+  if (!st) return `${word} a week is the rhythm`;
   const run = st.streak >= 2 ? ` · ${st.streak} weeks running` : '';
-  if (st.thisWeek >= 2) return `${st.thisWeek === 2 ? 'Two' : st.thisWeek} this week${run}`;
-  return `${st.thisWeek} of 2 this week${run}`;
+  if (st.thisWeek >= n) return `${st.thisWeek === n ? word : st.thisWeek} this week${run}`;
+  return `${st.thisWeek} of ${n} this week${run}`;
 }
 
 function weekDays() {
@@ -1472,8 +1545,9 @@ function liftVerdictHTML(it) {
     return `<div class="tnext ready">At ×${it.curR} — load ${esc(it.nextLabel)} next session</div>`;
   }
   if (it.motion === 'holding') {
-    const reset = it.top != null && it.cur != null && it.cur - LOAD_STEP > 0
-      ? `reset ${it.cur - LOAD_STEP} ×${it.top}, or hold` : 'nudge it, or hold';
+    const stp = it.slot.step || LOAD_STEP;
+    const reset = it.top != null && it.cur != null && it.cur - stp > 0
+      ? `reset ${it.cur - stp} ×${it.top}, or hold` : 'nudge it, or hold';
     return `<div class="tnext flag">Flat ${it.streak} sessions — ${reset}</div>`;
   }
   if (it.mode === 'r') {
@@ -1589,6 +1663,10 @@ function viewProgression() {
 function chipInnerHTML(dayId, slot) {
   const w = effectiveWeight(dayId, slot);
   const r = slot.reps ? effectiveReps(dayId, slot) : null;
+  if (slot.bw) {
+    return r === '' || r == null ? '<span class="chip-add">Reps</span>'
+      : `<span class="chip-num">×${esc(String(r))}</span>`;
+  }
   const reps = r === '' || r == null ? '' : `<span class="chip-reps">×${esc(String(r))}</span>`;
   if (w === '' || w == null) return `<span class="chip-add">Add</span>${reps}`;
   const label = (slot.added ? '+' : '') + w;
@@ -1598,20 +1676,30 @@ function chipInnerHTML(dayId, slot) {
 function refreshChip(dayId, slot) {
   const btn = $(`[data-slotcard="${slot.id}"] .chip`);
   if (btn) btn.innerHTML = valInnerHTML(dayId, slot);
+  const bo = $(`[data-backoff="${slot.id}"]`);
+  if (bo) bo.textContent = backoffText(dayId, slot);
 }
+
+// Squat back-off sets, read live off the top set and rounded to 5.
+function backoffText(dayId, slot) {
+  if (!slot.backoff) return '';
+  const w = parseFloat(effectiveWeight(dayId, slot));
+  return w > 0 ? `back-off ~${Math.round((w * slot.backoff) / 5) * 5}` : 'back-off ~92%';
+}
+
+// Optional slots (a "0–2×" add-on) never hold back the trail or Finish.
+function requiredSlots(day) { return day.slots.filter((s) => !s.optional); }
+function isDone(a, s) { return !!(a && a.entries[s.id] && a.entries[s.id].done); }
 
 // The trail: one pip per slot, filled as rings are tapped — where the
 // session is at a glance. Rings are optional; an untouched trail stays quiet.
 function trailHTML(day) {
   const a = state.active && state.active.dayId === day.id ? state.active : null;
-  let done = 0;
-  const pips = day.slots.map((s) => {
-    const on = !!(a && a.entries[s.id] && a.entries[s.id].done);
-    if (on) done++;
-    return `<span class="trail-pip ${on ? 'on' : ''}"></span>`;
-  }).join('');
-  const all = done > 0 && done === day.slots.length;
-  return `<div class="trail ${all ? 'all' : ''}" data-trail><div class="trail-bar">${pips}</div><span class="trail-count">${done} of ${day.slots.length}</span></div>`;
+  const req = requiredSlots(day);
+  const done = req.filter((s) => isDone(a, s)).length;
+  const pips = day.slots.map((s) => `<span class="trail-pip ${isDone(a, s) ? 'on' : ''}"></span>`).join('');
+  const all = done > 0 && done === req.length;
+  return `<div class="trail ${all ? 'all' : ''}" data-trail><div class="trail-bar">${pips}</div><span class="trail-count">${done} of ${req.length}</span></div>`;
 }
 
 // The last ring of the session sends a ripple down the trail and turns
@@ -1740,14 +1828,15 @@ function slotCardHTML(day, slot, onMat) {
   if (slot.track) {
     const w = effectiveWeight(day.id, slot);
     const r = slot.reps ? effectiveReps(day.id, slot) : null;
+    const st = slot.step || 5;
     const weightRow = `
-        <button class="step" data-action="step" data-slot="${slot.id}" data-d="-5">−5</button>
+        <button class="step" data-action="step" data-slot="${slot.id}" data-d="-${st}">−${st}</button>
         <input class="chip-input" type="number" inputmode="decimal" step="any"
                data-action="weight" data-slot="${slot.id}" value="${w === '' || w == null ? '' : esc(String(w))}">
-        <button class="step" data-action="step" data-slot="${slot.id}" data-d="5">+5</button>`;
+        <button class="step" data-action="step" data-slot="${slot.id}" data-d="${st}">+${st}</button>`;
     steppers = `
       <div class="chip-edit stacked" data-edit="${slot.id}">
-        <div class="edit-row"><span class="edit-tag">${esc(state.settings.unit)}</span>${weightRow}</div>
+        ${slot.bw ? '' : `<div class="edit-row"><span class="edit-tag">${esc(state.settings.unit)}</span>${weightRow}</div>`}
         ${slot.reps ? `<div class="edit-row"><span class="edit-tag">reps</span>
           <button class="step" data-action="rstep" data-slot="${slot.id}" data-d="-1">−1</button>
           <input class="chip-input" type="number" inputmode="numeric"
@@ -1757,6 +1846,7 @@ function slotCardHTML(day, slot, onMat) {
       </div>`;
   }
   const sub = [esc(slot.target || '')];
+  if (slot.backoff) sub.push(`<span data-backoff="${slot.id}">${esc(backoffText(day.id, slot))}</span>`);
   if (hasMenu) sub.push(`${slot.menu.length} options`);
   const val = slot.track || hasRungs
     ? `<button class="chip" data-action="expand" data-slot="${slot.id}" aria-label="Adjust">${valInnerHTML(day.id, slot)}</button>` : '';
@@ -1876,7 +1966,7 @@ function slotsHTML(day) {
   }
   return merged.map((g) => {
     if (g.solo) return `<div class="slotgroup">${g.slots.map((s) => slotCardHTML(day, s)).join('')}</div>`;
-    const allDone = g.slots.every((s) => a && a.entries[s.id] && a.entries[s.id].done);
+    const allDone = g.slots.filter((s) => !s.optional).every((s) => isDone(a, s));
     const trio = g.slots.length > 2;
     const word = trio ? 'Trio · cycle through' : 'Pair · alternate sets';
     return `
@@ -1898,7 +1988,7 @@ function viewDay(dayId) {
   const day = findDay(dayId);
   if (!day) { location.hash = '#/'; return ''; }
   const a = state.active && state.active.dayId === dayId ? state.active : null;
-  const allDone = !!a && day.slots.every((s) => a.entries[s.id] && a.entries[s.id].done);
+  const allDone = !!a && requiredSlots(day).every((s) => isDone(a, s));
   return `
     ${topbar('#/')}
     <div class="dayhead">
@@ -1965,7 +2055,7 @@ function viewFinish(dayId) {
     }
   }
   const meta = [day.name];
-  if (doneCt) meta.push(`${doneCt} of ${day.slots.length} done`);
+  if (doneCt) meta.push(`${Math.min(doneCt, requiredSlots(day).length)} of ${requiredSlots(day).length} done`);
   if (mins) meta.push(`${mins} min`);
   // The ear grows on the way in: stem, kernels bottom to top, awns last,
   // then a few loose kernels fall.
