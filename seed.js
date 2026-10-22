@@ -29,10 +29,11 @@
 // (now Saturday). C is the new light Monday.
 
 const SEED_PROGRAM = {
-  specVersion: '3.0',
+  specVersion: '3.2',
   days: [
     {
       id: 'dayC',
+      title: 'Hips & Ease',
       name: 'Day C',
       subtitle: 'Hips + Easy upper',
       dow: 1,
@@ -71,6 +72,7 @@ const SEED_PROGRAM = {
     },
     {
       id: 'dayA',
+      title: 'Squat & Press',
       name: 'Day A',
       subtitle: 'Squat + Horizontal',
       dow: 3,
@@ -118,6 +120,7 @@ const SEED_PROGRAM = {
     },
     {
       id: 'dayB',
+      title: 'Hinge & Pull',
       name: 'Day B',
       subtitle: 'Hinge + Vertical',
       dow: 6,

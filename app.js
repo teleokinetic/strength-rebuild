@@ -10,7 +10,7 @@
 
 const STORE_KEY = 'sr-state-v2';
 const V1_KEY = 'sr-state-v1';        // read-only: migration source, never written
-const APP_VERSION = '3.1.0';
+const APP_VERSION = '3.2.0';
 
 let state = null;
 
@@ -130,7 +130,7 @@ function patchProgram() {
   const p = state.program;
   if (!p) return;
   const v = parseFloat(p.specVersion) || 0;
-  if (v >= 3.0) return;
+  if (v >= 3.2) return;
 
   // 0.4: Bulgarian split squat becomes Stork squat; both days open
   // with a no-weight Prep slot (wrist prep + passive/active hangs).
@@ -489,7 +489,17 @@ function patchProgram() {
     for (const d of p.days) for (const s of d.slots) if (s.start != null) s.startAt = now;
   }
 
-  p.specVersion = '3.0';
+  // 3.2: focus names (his 10/22 call). Each day keeps its name ("Day B")
+  // as the subtitle and in the log, so history and the Gym Log read
+  // straight through; the title is display only.
+  if (v < 3.2) {
+    for (const d of p.days) {
+      const seed = SEED_PROGRAM.days.find((x) => x.id === d.id);
+      if (seed && seed.title && !d.title) d.title = seed.title;
+    }
+  }
+
+  p.specVersion = '3.2';
   save();
 }
 
@@ -1240,42 +1250,30 @@ document.addEventListener('visibilitychange', () => {
 
 /* ============================== views ============================== */
 
-// Pressed barley — the one ornament (companion to Forte's rose sprig).
-// Tall and narrow so it hugs an edge without spreading into content. Its
-// parts are classed so it can draw itself at launch and grow on the save
-// screen: stem, awns, kernels (listed bottom to top), leaves.
-const KERNELS = [
-  [41, 62, 3.4, 7, 24], [49, 60, 3.4, 7, -20], [40, 50, 3.4, 7, 22], [48, 48, 3.4, 7, -22],
-  [39, 38, 3.3, 6.6, 20], [47, 36, 3.3, 6.6, -24], [40, 27, 3, 6, 16], [46, 25, 3, 6, -18],
-  [43, 17, 2.8, 5.6, -2],
-];
-function barleySVG(cls) {
-  const kern = KERNELS.map(([cx, cy, rx, ry, r], i) =>
-    `<g class="kern" style="--i:${i}"><ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" transform="rotate(${r} ${cx} ${cy})"/></g>`).join('');
+// The hillside oak — the one ornament (companion to Forte's rose sprig).
+// Parts are classed so it can draw itself: the hill, the trunk, the limbs,
+// then the crown, then its underside.
+const OAK = {
+  ground: ['M2 102 C18 94 54 94 70 102'],
+  trunk: ['M33 96 C34 86 33 76 31 68', 'M39 96 C38 86 39 76 41 68'],
+  limbs: [
+    'M31 68 C26 62 20 58 13 56', 'M41 68 C46 62 52 58 59 55', 'M35 72 C35 62 36 52 35 42',
+    'M32 70 C29 60 26 52 22 46', 'M40 70 C43 60 46 52 50 46',
+  ],
+  crown: [
+    'M12 60 C4 58 3 46 11 42 C8 32 16 24 25 27', 'M27 24 C31 14 45 13 48 23',
+    'M50 24 C60 24 66 34 61 42 C69 46 68 58 60 60',
+  ],
+  under: ['M18 62 C22 64 26 63 28 61', 'M44 61 C48 64 53 63 56 61'],
+};
+function oakSVG(cls) {
+  const part = (k) => OAK[k].map((d) => `<path class="o-${k}" pathLength="1" d="${d}"/>`).join('');
   return `
-    <svg class="${cls}" viewBox="0 0 90 132" aria-hidden="true">
-      <g stroke-linecap="round">
-        <path class="stem" pathLength="1" d="M46 130 C 48 106 48 88 45 66" fill="none" stroke="currentColor" stroke-width="2"/>
-        <g class="awns" stroke="currentColor" stroke-width="1.1" opacity="0.5" fill="none">
-          <path pathLength="1" d="M42 58 L 30 8"/><path pathLength="1" d="M45 54 L 40 4"/><path pathLength="1" d="M48 56 L 50 2"/>
-          <path pathLength="1" d="M51 60 L 60 10"/><path pathLength="1" d="M40 64 L 26 22"/>
-        </g>
-        <g class="kerns" fill="currentColor" opacity="0.45">${kern}</g>
-        <path class="leaf" d="M46 100 C 35 97 27 90 24 79 C 31 83 40 90 46 95 Z" fill="currentColor" opacity="0.3"/>
-        <path class="leaf r" d="M47 112 C 55 109 60 104 62 97 C 57 100 51 105 47 109 Z" fill="currentColor" opacity="0.3"/>
+    <svg class="oak ${cls || ''}" viewBox="0 10 72 94" aria-hidden="true">
+      <g fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+        ${part('ground')}${part('trunk')}${part('limbs')}${part('crown')}${part('under')}
       </g>
     </svg>`;
-}
-function barleyHTML() { return barleySVG('barley'); }
-
-// A small ear for "done" marks: a stem and four kernels, drawn at icon size.
-function earMini() {
-  return `<svg class="ear-mini" viewBox="0 0 16 16" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round">
-    <path d="M8 15.2V7.4"/><path d="M6.4 3.6 5 .9M9.6 3.6 11 .9" stroke-width="1"/></g>
-    <g fill="currentColor"><ellipse cx="6.6" cy="9.4" rx="1.5" ry="2.7" transform="rotate(26 6.6 9.4)"/>
-    <ellipse cx="9.4" cy="8.6" rx="1.5" ry="2.7" transform="rotate(-24 9.4 8.6)"/>
-    <ellipse cx="6.8" cy="5.4" rx="1.4" ry="2.5" transform="rotate(22 6.8 5.4)"/>
-    <ellipse cx="9.3" cy="4.7" rx="1.4" ry="2.5" transform="rotate(-22 9.3 4.7)"/></g></svg>`;
 }
 
 // One small stroke-icon set (24-grid, round caps) so every glyph in the
@@ -1284,6 +1282,7 @@ const ICON_PATHS = {
   back: '<path d="M15 5l-7 7 7 7"/>',
   chev: '<path d="M9 5l7 7-7 7"/>',
   down: '<path d="M6 9l6 6 6-6"/>',
+  clock: '<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M10 2h4"/>',
   check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
   close: '<path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/>',
   again: '<path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3"/><path d="M4.5 4.5v4h4"/>',
@@ -1298,13 +1297,24 @@ function icon(name, sw) {
     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON_PATHS[name]}</svg>`;
 }
 
-function topbar(backTo) {
-  const left = backTo
-    ? `<a class="backlink" href="${backTo}">${icon('back', 2.4)}Back</a>`
-    : `<div class="wordmark">Strength <span class="half">Rebuild</span></div>`;
-  const right = backTo ? '' : `<a class="gear" href="#/settings" aria-label="Settings">${icon('gear', 1.8)}</a>`;
-  return `<div class="topbar ${backTo ? '' : 'home'}">${left}${right}</div>`;
+// Home: the date and the gear. A session is a sheet over home, so it
+// closes downward; every other page steps back.
+function topbar(backTo, sheet) {
+  if (!backTo) {
+    const now = new Date();
+    const date = now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+    return `<div class="topbar home"><div class="topdate">${esc(date)}</div>
+      <a class="gear" href="${'#/settings'}" aria-label="Settings">${icon('gear', 1.8)}</a></div>`;
+  }
+  const left = sheet
+    ? `<a class="backlink" href="${backTo}" aria-label="Close session, back to home">${icon('down', 2.4)}Home</a>`
+    : `<a class="backlink" href="${backTo}">${icon('back', 2.4)}Back</a>`;
+  return `<div class="topbar">${left}</div>`;
 }
+
+// A day's display title ("Hinge & Pull") over its name ("Day B").
+function dayTitle(day) { return day.title || day.name; }
+function daySub(day) { return day.title ? day.name : day.subtitle; }
 
 /* ---- home ----
    Up next: one decisive card for the day he's on, the other day as a row,
@@ -1313,23 +1323,7 @@ function topbar(backTo) {
    screen at launch and then settles into place. Sized to fit one screen. */
 
 function greetingHTML() {
-  const now = new Date();
-  const weekday = now.toLocaleDateString(undefined, { weekday: 'long' });
-  return `
-    <div class="greet">
-      <h1 class="greet-hi">${esc(greeting())}, Tanner</h1>
-      <div class="greet-date">${esc(weekday)} · ${esc(fmtDate(now.getTime()))}</div>
-    </div>`;
-}
-
-// The day's letter as a stamped mark ("Day A" → A).
-function dayLetter(day) {
-  const name = String(day.name || '?').trim();
-  const m = /(?:^|\s)([A-Z0-9])$/i.exec(name);   // "Day A" → A; "Upper" → U
-  return (m ? m[1] : name.charAt(0)).toUpperCase();
-}
-function dayMarkHTML(day, cls) {
-  return `<span class="daymark ${cls || ''}">${esc(dayLetter(day))}</span>`;
+  return `<div class="greet"><h1 class="greet-hi">${esc(greeting())}, Tanner</h1></div>`;
 }
 
 // The day he's on: an open session wins. Days with a weekday (dow) follow
@@ -1370,45 +1364,60 @@ function typicalMinutes(dayId) {
   return Math.round(mins.reduce((a, b) => a + b, 0) / mins.length / 5) * 5;
 }
 
+// When a day was last trained: "Yesterday", a weekday within the week,
+// then the plain relative phrase.
+function lastPhrase(ts) {
+  const days = Math.round((startOfDay(Date.now()) - startOfDay(ts)) / 86400000);
+  if (days === 1) return 'Yesterday';
+  if (days > 1 && days < 7) return new Date(ts).toLocaleDateString(undefined, { weekday: 'long' });
+  return cap(relPhrase(ts));
+}
+
 function dayStatusHTML(day) {
   if ((state.active && state.active.dayId === day.id) || (state.drafts && state.drafts[day.id])) return '<span class="daycard-live">In progress</span>';
   const last = lastSessionFor(day.id);
   if (last && startOfDay(sessionTs(last)) === startOfDay(Date.now())) {
-    return `<span class="day-done">${earMini()}Done today</span>`;
+    return `<span class="day-done">${icon('check', 2.6)}Done today</span>`;
   }
-  return `<span>${last ? esc(cap(relPhrase(sessionTs(last)))) : 'Not yet'}</span>`;
+  return `<span>${last ? esc(lastPhrase(sessionTs(last))) : 'Not yet'}</span>`;
+}
+
+// When the up-next day falls: "Today", "Tomorrow", or its weekday.
+function whenLabel(day) {
+  if (!Number.isInteger(day.dow)) return '';
+  const ahead = (day.dow - new Date().getDay() + 7) % 7;
+  if (ahead === 0) return 'Today';
+  if (ahead === 1) return 'Tomorrow';
+  const d = new Date(); d.setDate(d.getDate() + ahead);
+  return d.toLocaleDateString(undefined, { weekday: 'long' });
 }
 
 function viewHome() {
   const next = suggestedDay();
   const st = rhythmStats();
-  if (!next) return `${topbar()}${greetingHTML()}${progRowHTML()}${weekStripHTML(st)}`;
-  const live = !!(state.active && state.active.dayId === next.id);
-  const mins = typicalMinutes(next.id);
-  const last = lastSessionFor(next.id);
-  const meta = [`${next.slots.length} exercises`];
-  if (mins) meta.push(`about ${mins} min`);
-  if (!live && last) meta.push(`last ${relPhrase(sessionTs(last))}`);
-  const others = state.program.days.filter((d) => d.id !== next.id).map((d) => `
+  const rows = (days) => `<div class="group homerows">${days.map((d) => `
     <a class="dayrow" href="#/day/${d.id}">
-      ${dayMarkHTML(d)}
-      <span class="dr-body"><span class="dr-name">${esc(d.name)}</span><span class="dr-sub">${esc(d.subtitle)}</span></span>
-      <span class="dr-when">${dayStatusHTML(d)}</span>${icon('chev', 2.2)}
-    </a>`).join('');
+      <span class="dr-name">${esc(dayTitle(d))}</span>
+      <span class="dr-when">${dayStatusHTML(d)}</span>${icon('chev', 2.4)}
+    </a>`).join('')}${progRowHTML()}</div>`;
+  if (!next) return `${topbar()}${greetingHTML()}${weekStripHTML(st)}${rows([])}`;
+  const live = !!(state.active && state.active.dayId === next.id);
+  const when = whenLabel(next);
+  const others = state.program.days.filter((d) => d.id !== next.id);
   return `
     ${topbar()}
     ${greetingHTML()}
     <a class="upnext" href="#/day/${next.id}">
-      <span class="upnext-top">${dayMarkHTML(next, 'lg')}
-        <span class="upnext-k ${live ? 'live' : ''}">${live ? 'In progress' : 'Up next'}</span></span>
-      <span class="upnext-name">${esc(next.name)}</span>
-      <span class="upnext-sub">${esc(next.subtitle)}</span>
-      <span class="upnext-meta">${esc(meta.join(' · '))}</span>
-      <span class="upnext-go">${live ? 'Pick up where you left off' : `Start ${esc(next.name)}`}${icon('chev', 2.4)}</span>
+      <span class="upnext-k ${live ? 'live' : ''}">${live ? 'In progress' : `Up next${when ? ' · ' + esc(when) : ''}`}</span>
+      <span class="upnext-name">${esc(dayTitle(next))}</span>
+      <span class="upnext-sub">${esc(daySub(next))}</span>
+      <span class="upnext-foot">
+        <span class="upnext-go">${live ? 'Resume' : 'Start'}${icon('chev', 2.6)}</span>
+        ${oakSVG('upnext-oak')}
+      </span>
     </a>
-    ${others ? `<div class="group dayrows">${others}</div>` : ''}
-    ${progRowHTML()}
-    ${weekStripHTML(st)}`;
+    ${weekStripHTML(st)}
+    ${rows(others)}`;
 }
 
 /* ---- this week ---- */
@@ -1470,24 +1479,28 @@ function weekDays() {
   return out;
 }
 
-// This week as seven days, each trained day stamped with that day's letter.
+// This week as seven dots, Monday first: filled where he trained, a sky
+// ring on a scheduled day still ahead, today's letter set in a capsule.
 function weekStripHTML(st) {
-  const days = weekDays().map((d) => {
-    const mark = d.days.length
-      ? `<span class="wk-mark">${esc(dayLetter(d.days[d.days.length - 1]))}</span>`
-      : '<span class="wk-mark empty"></span>';
-    return `<div class="wk-day ${d.today ? 'today' : ''} ${d.future ? 'future' : ''}">
-      <span class="wk-l">${esc(d.letter)}</span><span class="wk-n">${d.num}</span>${mark}</div>`;
+  const dows = new Set(state.program.days.filter((d) => Number.isInteger(d.dow)).map((d) => d.dow));
+  const n = weeklyTarget();
+  const count = st ? st.thisWeek : 0;
+  const days = weekDays().map((d, i) => {
+    const dow = (i + 1) % 7;
+    const kind = d.days.length ? 'done' : (dows.has(dow) && (d.future || d.today)) ? 'plan' : '';
+    const label = d.days.length ? `trained ${d.days.map(dayTitle).join(', ')}` : kind === 'plan' ? 'planned' : 'rest';
+    return `<div class="wk-day ${d.today ? 'today' : ''}" aria-label="${esc(d.letter)}${d.today ? ', today' : ''}, ${esc(label)}">
+      <span class="wk-l">${esc(d.letter)}</span><span class="wk-dot ${kind}"></span></div>`;
   }).join('');
   return `
-    <div class="weekcard">
+    <div class="week">
+      <div class="week-head"><span class="week-k">This week</span><span class="week-n">${Math.min(count, 99)} of ${n}</span></div>
       <div class="wk-row">${days}</div>
-      <div class="wk-line">${esc(weekLine(st))}</div>
     </div>`;
 }
 
 /* ---- greeting splash ----
-   At launch the greeting gets the whole screen for a moment: the barley
+   At launch the greeting gets the whole screen for a moment: the oak
    draws itself, the words rise, then they glide up into the home greeting
    and the page settles in under them. Tap to skip. Once per launch, from
    home only, never under reduced motion. */
@@ -1500,15 +1513,15 @@ function showSplash() {
   const old = $('.splash');
   if (old) old.remove();
   const now = new Date();
-  const weekday = now.toLocaleDateString(undefined, { weekday: 'long' });
+  const date = now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
   const el = document.createElement('div');
   el.className = 'splash';
   el.setAttribute('aria-hidden', 'true');
   el.innerHTML = `
     <div class="splash-inner">
-      ${barleySVG('barley grow')}
+      ${oakSVG('grow')}
       <div class="splash-hi">${esc(greeting())}, Tanner</div>
-      <div class="splash-date">${esc(weekday)} · ${esc(fmtDate(now.getTime()))}</div>
+      <div class="splash-date">${esc(date)}</div>
     </div>`;
   document.body.appendChild(el);
   document.body.classList.add('splashing');
@@ -1533,50 +1546,33 @@ function showSplash() {
     setTimeout(() => {
       el.remove();
       document.body.classList.remove('settle-in');
-    }, 760);
+    }, 640);
   };
   el.addEventListener('click', settle);
   // Leaving home mid-splash (a tap can't, but a resume link could) settles too.
   window.addEventListener('hashchange', settle, { once: true });
-  splashTimer = setTimeout(settle, 2100);
+  splashTimer = setTimeout(settle, 1250);
 }
 
 /* ---- progression: home entry row + the page ---- */
 
-// The way into Progression: a tinted strip, not another card like the
-// days. One headline (what's ready, else the biggest gain), the recal
-// check under it, and the targets board drawn small on the right.
+// The way into Progression: the last row on home. A pill when lifts are
+// ready to move up; a second line only when there's something to do.
 function progRowHTML() {
   const items = progressionData();
   const readyCt = items.filter((i) => i.motion === 'ready').length;
-  let best = null;
-  for (const it of items) {
-    if (it.kind === 'lift' && it.mode === 'w' && it.delta > 0 && (!best || it.delta > best.delta)) best = it;
-  }
-  let main;
-  if (readyCt) main = `${readyCt} lift${readyCt === 1 ? '' : 's'} ready to move up`;
-  else if (best) main = `${best.slot.name.split(',')[0]} +${best.delta} ${state.settings.unit}`;
-  else main = 'Fills in as sessions land';
   const ts = recalTs();
   const due = ts != null && Date.now() >= ts;
-  const sub = ts == null ? '' : due ? 'Recalibration due — export first' : `Targets · recal ${fmtDate(ts)}`;
-  const eq = TARGETS.map((item) => {
-    const s = targetState(item);
-    return `<span class="mini-col ${item.locked ? 'off' : ''}"><i style="height:${s.pct}%"></i></span>`;
-  }).join('');
   return `
-    <a class="prow" href="#/progression">
-      <span class="prow-body">
-        <span class="prow-k">Progression${icon('chev', 2.6)}</span>
-        <span class="prow-main">${esc(main)}</span>
-        ${sub ? `<span class="prow-s ${due ? 'due' : ''}">${esc(sub)}</span>` : ''}
-      </span>
-      <span class="mini-eq" aria-hidden="true">${eq}</span>
+    <a class="dayrow progrow-home" href="#/progression">
+      <span class="dr-body"><span class="dr-name">Progression</span>
+        ${due ? '<span class="dr-sub due">Recalibration due — export first</span>' : ''}</span>
+      ${readyCt ? `<span class="pill">${readyCt} ready</span>` : ''}${icon('chev', 2.4)}
     </a>`;
 }
 
 // The open card's closing line — every open row ends in a verdict:
-// the load, the pace, or a reset. Suggestions stay hairline, never brass.
+// the load, the pace, or a reset. Suggestions stay hairline, never accent.
 function liftVerdictHTML(it) {
   if (it.motion === 'ready') {
     return `<div class="tnext ready">At ×${it.curR} — load ${esc(it.nextLabel)} next session</div>`;
@@ -1692,7 +1688,7 @@ function viewProgression() {
     ${section('Next session', 'at the top of their range', ready)}
     ${section('Climbing', 'last bump first', climbing)}
     ${section('Holding', HOLDING_AFTER + '+ sessions without a change', holding)}
-    <div class="fieldmark">${barleyHTML()}</div>`;
+    <div class="fieldmark">${oakSVG()}</div>`;
 }
 
 // Chip face, rebuilt from effective values on every change — a fresh slot
@@ -1819,24 +1815,27 @@ function restLabelFor(n, total) {
 
 const RING_CIRC = 2 * Math.PI * 12;
 
-function ringHTML(slot, e) {
+// One ring for every kind of slot: a counting ring draws an arc per set;
+// done is the same mark everywhere — a soft sky fill with a check.
+// `fresh` plays the completion phrase: the fill blooms out of the closed
+// ring, then the check writes itself.
+function ringHTML(slot, e, fresh) {
   const done = !!(e && e.done);
   const total = setTarget(slot);
-  if (!total) {
-    return `<button class="ring ${done ? 'on' : ''}" data-action="ring" data-slot="${slot.id}"
-      aria-label="${done ? 'Done — tap to reopen' : 'Mark done'}"></button>`;
-  }
-  const n = done ? total : Math.min((e && e.sets) || 0, total - 1);
-  const off = RING_CIRC * (1 - n / total);
+  const n = total ? (done ? total : Math.min((e && e.sets) || 0, total - 1)) : 0;
+  const off = RING_CIRC * (1 - (total ? n / total : 0));
+  const label = total ? (done ? 'Reset sets' : `Count one set, ${n} of ${total} done`) : (done ? 'Done — tap to reopen' : 'Mark done');
   return `
-    <button class="ring counting ${done ? 'on' : ''}" data-action="ring" data-slot="${slot.id}"
-      aria-label="${done ? 'Reset sets' : 'Count one set'}">
+    <button class="ring ${total ? 'counting' : ''} ${done ? 'on' : ''} ${fresh ? 'fresh' : ''}" data-action="ring" data-slot="${slot.id}"
+      aria-label="${label}">
       <svg viewBox="0 0 28 28" aria-hidden="true">
         <circle class="ring-track" cx="14" cy="14" r="12"></circle>
-        <circle class="ring-arc" cx="14" cy="14" r="12"
-          style="stroke-dasharray:${RING_CIRC.toFixed(2)};stroke-dashoffset:${off.toFixed(2)}"></circle>
+        ${total ? `<circle class="ring-arc" cx="14" cy="14" r="12"
+          style="stroke-dasharray:${RING_CIRC.toFixed(2)};stroke-dashoffset:${off.toFixed(2)}"></circle>` : ''}
+        <circle class="ring-fill" cx="14" cy="14" r="12"></circle>
+        <path class="ring-check" pathLength="1" d="M8.8 14.4l3.4 3.4 7-7.6"></path>
       </svg>
-      <span class="ring-count">${done ? icon('check', 3.2) : (n || '')}</span>
+      ${total && !done && n ? `<span class="ring-count">${n}</span>` : ''}
     </button>`;
 }
 
@@ -1890,7 +1889,7 @@ function slotCardHTML(day, slot, onMat) {
   const val = slot.track || hasRungs
     ? `<button class="chip" data-action="expand" data-slot="${slot.id}" aria-label="Adjust">${valInnerHTML(day.id, slot)}</button>` : '';
   return `
-    <div class="slot ${done ? 'done' : ''} ${note.trim() ? 'has-note' : ''}" data-slotcard="${slot.id}">
+    <div class="slot ${done ? 'done' : ''} ${a && a.sets && !done ? 'live' : ''} ${note.trim() ? 'has-note' : ''}" data-slotcard="${slot.id}">
       <div class="slot-row">
         ${ringHTML(slot, a)}
         <button class="slot-main" data-action="expand" data-slot="${slot.id}" aria-expanded="false">
@@ -1919,7 +1918,7 @@ function valInnerHTML(dayId, slot) {
 }
 
 /* The dock's suggestion: every slot already declares its rest tier — once a
-   slot is touched (chip, weight, note, rung) the brass follows its tier and
+   slot is touched (chip, weight, note, rung) the accent follows its tier and
    names the lift. Ephemeral by design: resets on every route render, and
    with no touch yet the dock keeps its old neutral look. */
 let currentSlotId = null;
@@ -1966,8 +1965,8 @@ function restDockHTML() {
   const btn = (tier, sec) => {
     const suggested = hint && hint.tier === tier;
     const cls = 'restbtn' + (hint ? (suggested ? '' : ' quiet') : (tier === 'heavy' ? ' heavy' : ''));
-    const tag = '';   // the brass alone says which tier fits; no caption
-    return `<button class="${cls}" data-action="rest" data-tier="${tier}"><span class="restbtn-k">Rest</span><span class="restbtn-t">${fmtMMSS(sec)}</span>${tag}</button>`;
+    const tag = '';   // the fill alone says which tier fits; no caption
+    return `<button class="${cls}" data-action="rest" data-tier="${tier}" aria-label="Rest ${fmtMMSS(sec)}">${icon('clock', 2.2)}<span class="restbtn-t">${fmtMMSS(sec)}</span>${tag}</button>`;
   };
   return `<div class="rest-idle">${btn('normal', normalRestSec())}${btn('heavy', h)}</div>`;
 }
@@ -2012,7 +2011,7 @@ function slotsHTML(day) {
       <div class="pairmat ${allDone ? 'done' : ''}">
         <div class="pairtag">
           <span class="pt-live">${tieSVG()}<span>${word}</span><span class="pairtag-rest">${fmtMMSS(pairRestSec(day, g.slots[0]))} rest</span></span>
-          <span class="pt-done">${earMini()}${trio ? 'Trio done' : 'Pair done'}</span>
+          <span class="pt-done">${icon('check', 2.6)}${trio ? 'Trio done' : 'Pair done'}</span>
         </div>
         ${g.slots.map((s) => slotCardHTML(day, s, true)).join('')}
       </div>`;
@@ -2029,10 +2028,10 @@ function viewDay(dayId) {
   const a = state.active && state.active.dayId === dayId ? state.active : null;
   const allDone = !!a && requiredSlots(day).every((s) => isDone(a, s));
   return `
-    ${topbar('#/')}
+    ${topbar('#/', true)}
     <div class="dayhead">
-      <div class="dayhead-name">${esc(day.name)}</div>
-      <div class="dayhead-sub">${esc(day.subtitle)}</div>
+      <div class="dayhead-name">${esc(dayTitle(day))}</div>
+      <div class="dayhead-sub">${esc(daySub(day))}</div>
     </div>
     <div class="dock">
       ${trailHTML(day)}
@@ -2043,18 +2042,13 @@ function viewDay(dayId) {
     <button class="discardbtn ${a ? '' : 'off'}" data-action="discard" data-day="${day.id}">Discard session</button>`;
 }
 
-// A few brass kernels scatter off a ring the moment its exercise is done.
-function kernelBurst(ringEl) {
+// As an exercise finishes, one soft halo widens off its ring.
+function ringHalo(ringEl) {
   if (!ringEl || reducedMotion()) return;
-  const row = ringEl.closest('.slot-row');
-  if (!row) return;
-  const b = document.createElement('span');
-  b.className = 'burst';
-  b.style.left = (ringEl.offsetLeft + ringEl.offsetWidth / 2) + 'px';
-  b.style.top = (ringEl.offsetTop + ringEl.offsetHeight / 2) + 'px';
-  b.innerHTML = [0, 1, 2, 3, 4, 5].map((i) => `<i style="--a:${i * 60 + 12}deg;--d:${i * 18}ms"></i>`).join('');
-  row.appendChild(b);
-  setTimeout(() => b.remove(), 1000);
+  const h = document.createElement('span');
+  h.className = 'halo';
+  ringEl.appendChild(h);
+  setTimeout(() => h.remove(), 1600);
 }
 
 // Confirm + recap in one card: the promise ("saves every tracked lift at the
@@ -2095,16 +2089,15 @@ function viewFinish(dayId) {
       extras.push(`${slot.name} · note`);
     }
   }
-  const meta = [day.name];
+  const meta = [dayTitle(day)];
   if (doneCt) meta.push(`${Math.min(doneCt, requiredSlots(day).length)} of ${requiredSlots(day).length} done`);
   if (mins) meta.push(`${mins} min`);
-  // The ear grows on the way in: stem, kernels bottom to top, awns last,
-  // then a few loose kernels fall.
+  // The oak draws itself on the way in: ground, trunk and limbs, crown.
   return `
     ${topbar('#/day/' + dayId)}
     <div class="finish-wrap">
       <div class="finish-hero">
-        <div class="earwrap">${barleySVG('barley grow ripen')}<span class="fall" aria-hidden="true"><i></i><i></i><i></i></span></div>
+        <div class="oakwrap">${oakSVG('grow')}</div>
         <div class="finish-line">Good work, Tanner</div>
         <div class="finish-meta">${esc(meta.join(' · '))}</div>
       </div>
@@ -2191,7 +2184,7 @@ function viewImport() {
 
 function viewProgram() {
   const days = state.program.days.map((day) => `
-    <div class="group-head">${esc(day.name)} — ${esc(day.subtitle)}</div>
+    <div class="group-head">${esc(dayTitle(day))} · ${esc(day.name)}</div>
     <div class="group proglist">
       ${day.slots.map((s) => `
         <a class="progrow" href="#/program/${day.id}/${s.id}">
@@ -2251,10 +2244,40 @@ function viewSlotEdit(dayId, slotId) {
 
 /* ============================== router ============================== */
 
+// A session is a sheet over home: it rises from the bottom on the way in
+// and drops away on the way out, home easing back up underneath. Other
+// routes swap in place. A still copy of the outgoing page (the ghost)
+// carries the motion so the real page can render at once.
+let lastView = null;
+function sheetMotion(from, to) {
+  if (!from || from === to || reducedMotion()) return null;
+  if (to === 'day' && from !== 'finish') return 'in';
+  if (from === 'day' && to === 'home') return 'out';
+  return null;
+}
+function makeGhost(app, cls) {
+  const g = document.createElement('div');
+  g.className = 'ghost ' + cls;
+  g.setAttribute('aria-hidden', 'true');
+  g.innerHTML = `<div class="ghost-page" data-view="${app.getAttribute('data-view') || ''}" style="transform:translateY(${-window.scrollY}px)">${app.innerHTML}</div>`;
+  g.querySelectorAll('[id]').forEach((n) => n.removeAttribute('id'));
+  // A still copy: no completion phrase or halo replaying inside it.
+  g.querySelectorAll('.fresh').forEach((n) => n.classList.remove('fresh'));
+  g.querySelectorAll('.halo, .splash').forEach((n) => n.remove());
+  document.body.appendChild(g);
+  setTimeout(() => g.remove(), 700);
+  return g;
+}
+
 function render() {
   currentSlotId = null;
   const hash = location.hash || '#/';
   const parts = hash.replace(/^#\//, '').split('/');
+  const view = parts[0] || 'home';
+  const motion = sheetMotion(lastView, view);
+  lastView = view;
+  const appEl = $('#app');
+  if (motion && appEl.innerHTML) makeGhost(appEl, motion === 'in' ? 'recede' : 'drop');
   if ((parts[0] === 'day' || parts[0] === 'finish') && parts[1]) resumeDraft(parts[1]);
   let html = '';
   if (parts[0] === 'day' && parts[1]) html = viewDay(parts[1]);
@@ -2269,6 +2292,12 @@ function render() {
   app.setAttribute('data-view', parts[0] || 'home');
   app.innerHTML = html;
   window.scrollTo(0, 0);
+  app.classList.remove('sheet-in', 'emerge');
+  if (motion) {
+    app.getBoundingClientRect();
+    app.classList.add(motion === 'in' ? 'sheet-in' : 'emerge');
+    setTimeout(() => app.classList.remove('sheet-in', 'emerge'), 700);
+  }
 }
 
 window.addEventListener('hashchange', render);
@@ -2277,6 +2306,14 @@ window.addEventListener('hashchange', render);
 
 let pendingErase = false;
 let pendingDiscard = false;
+
+function closeDrawers() {
+  document.querySelectorAll('[data-drawer]').forEach((d) => {
+    d.classList.add('hidden');
+    const c = d.closest('.slot');
+    if (c) { c.classList.remove('open'); const m = c.querySelector('.slot-main'); if (m) m.setAttribute('aria-expanded', 'false'); }
+  });
+}
 
 function currentDayId() {
   const m = (location.hash || '').match(/^#\/day\/([^/]+)/);
@@ -2327,11 +2364,7 @@ document.addEventListener('click', (ev) => {
     const box = $(`[data-drawer="${id}"]`);
     if (!box) return;
     const opening = box.classList.contains('hidden');
-    document.querySelectorAll('[data-drawer]').forEach((d) => {
-      d.classList.add('hidden');
-      const c = d.closest('.slot');
-      if (c) { c.classList.remove('open'); const m = c.querySelector('.slot-main'); if (m) m.setAttribute('aria-expanded', 'false'); }
-    });
+    closeDrawers();
     if (opening) {
       box.classList.remove('hidden');
       const card = box.closest('.slot');
@@ -2380,6 +2413,10 @@ document.addEventListener('click', (ev) => {
     const day = findDay(dayId);
     const slot = findSlot(day, slotId);
     if (!slot) return;
+    // Logging a set means the adjusting is over: fold the editor away and
+    // drop the keyboard. A typed value is committed first (change fires on blur).
+    if (document.activeElement && document.activeElement.matches('input, textarea')) document.activeElement.blur();
+    closeDrawers();
     const e = activeEntry(dayId, slotId);
     // Done state is ephemeral by design: lives in the active session, never
     // in the log — Finish works fine if rings go untouched. Delete on clear
@@ -2414,7 +2451,10 @@ document.addEventListener('click', (ev) => {
     } else if (e.done) { delete e.done; } else { e.done = true; }
     save();
     const card = $(`[data-slotcard="${slotId}"]`);
-    if (card) card.classList.toggle('done', !!e.done);
+    if (card) {
+      card.classList.toggle('done', !!e.done);
+      card.classList.toggle('live', !!e.sets && !e.done);
+    }
     const mat = card && card.closest('.pairmat');
     if (mat) {
       const cards = [...mat.querySelectorAll('[data-slotcard]')];
@@ -2422,11 +2462,23 @@ document.addEventListener('click', (ev) => {
       mat.classList.toggle('just', all && !mat.classList.contains('done'));
       mat.classList.toggle('done', all);
     }
-    t.outerHTML = ringHTML(slot, e);
+    // The arc grows from where it was rather than snapping to the new set.
+    const oldArc = t.querySelector('.ring-arc');
+    const oldOff = oldArc ? oldArc.style.strokeDashoffset : null;
+    t.outerHTML = ringHTML(slot, e, !!e.done);
     const fresh = $(`.ring[data-slot="${slotId}"]`);
     if (fresh) {
+      const arc = fresh.querySelector('.ring-arc');
+      if (arc && oldOff != null && !reducedMotion()) {
+        const to = arc.style.strokeDashoffset;
+        arc.style.transition = 'none';
+        arc.style.strokeDashoffset = oldOff;
+        arc.getBoundingClientRect();
+        arc.style.transition = '';
+        arc.style.strokeDashoffset = to;
+      }
       fresh.classList.add('pop');
-      if (e.done) kernelBurst(fresh);
+      if (e.done) ringHalo(fresh);
     }
     refreshChip(dayId, slot);
     const rin = $(`[data-edit="${slotId}"] input[data-action="reps"]`);
