@@ -1073,3 +1073,18 @@ body::before {
 @keyframes recede { to { transform: scale(0.955) translateY(-12px); opacity: 0; } }
 @keyframes drop { to { transform: translateY(100%); } }
 @keyframes emerge { from { transform: scale(0.955) translateY(-12px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* Pushes: the new page slides in from the right over the old one, which
+   drifts left a little and dims; Back reverses it. Same curve as the sheet. */
+.ghost.behind { animation: behind 0.5s var(--sheet) both; }
+.ghost.away { z-index: 8; animation: away 0.42s var(--sheet) both; box-shadow: -1px 0 0 var(--sep), -12px 0 32px rgba(0, 0, 0, 0.18); }
+#app.push-in {
+  position: relative; z-index: 2; background: var(--bg); min-height: 100dvh;
+  box-shadow: -1px 0 0 var(--sep), -12px 0 32px rgba(0, 0, 0, 0.18);
+  animation: pushin 0.5s var(--sheet) both;
+}
+#app.pop-in { animation: popin 0.42s var(--sheet) both; }
+@keyframes pushin { from { transform: translateX(100%); } to { transform: none; } }
+@keyframes behind { to { transform: translateX(-28%); opacity: 0.55; } }
+@keyframes away { to { transform: translateX(100%); } }
+@keyframes popin { from { transform: translateX(-28%); opacity: 0.55; } to { transform: none; opacity: 1; } }

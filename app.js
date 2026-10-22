@@ -10,7 +10,7 @@
 
 const STORE_KEY = 'sr-state-v2';
 const V1_KEY = 'sr-state-v1';        // read-only: migration source, never written
-const APP_VERSION = '3.2.1';
+const APP_VERSION = '3.2.2';
 
 let state = null;
 
@@ -2248,11 +2248,18 @@ function viewSlotEdit(dayId, slotId) {
 // and drops away on the way out, home easing back up underneath. Other
 // routes swap in place. A still copy of the outgoing page (the ghost)
 // carries the motion so the real page can render at once.
+// Every other page is a push: deeper pages slide in from the right over
+// a dimmed parallax of the page before; Back slides them away again.
 let lastView = null;
-function sheetMotion(from, to) {
-  if (!from || from === to || reducedMotion()) return null;
-  if (to === 'day' && from !== 'finish') return 'in';
+let lastDepth = 0;
+const DEPTH = { home: 0, day: 1, settings: 1, progression: 1, finish: 2, program: 2, import: 2, slot: 3 };
+function navMotion(from, to, fromDepth, toDepth) {
+  if (!from || reducedMotion()) return null;
+  if (to === 'day' && from !== 'finish' && from !== 'day') return 'in';
   if (from === 'day' && to === 'home') return 'out';
+  if (from === to && fromDepth === toDepth) return null;
+  if (toDepth > fromDepth) return 'push';
+  if (toDepth < fromDepth) return 'pop';
   return null;
 }
 function makeGhost(app, cls) {
@@ -2274,10 +2281,13 @@ function render() {
   const hash = location.hash || '#/';
   const parts = hash.replace(/^#\//, '').split('/');
   const view = parts[0] || 'home';
-  const motion = sheetMotion(lastView, view);
+  const depth = view === 'program' && parts[2] ? DEPTH.slot : (DEPTH[view] != null ? DEPTH[view] : 1);
+  const motion = navMotion(lastView, view, lastDepth, depth);
   lastView = view;
+  lastDepth = depth;
   const appEl = $('#app');
-  if (motion && appEl.innerHTML) makeGhost(appEl, motion === 'in' ? 'recede' : 'drop');
+  const GHOST = { in: 'recede', out: 'drop', push: 'behind', pop: 'away' };
+  if (motion && appEl.innerHTML) makeGhost(appEl, GHOST[motion]);
   if ((parts[0] === 'day' || parts[0] === 'finish') && parts[1]) resumeDraft(parts[1]);
   let html = '';
   if (parts[0] === 'day' && parts[1]) html = viewDay(parts[1]);
@@ -2293,12 +2303,13 @@ function render() {
   document.documentElement.setAttribute('data-view', parts[0] || 'home');
   app.innerHTML = html;
   window.scrollTo(0, 0);
-  app.classList.remove('sheet-in', 'emerge');
+  const ENTER = { in: 'sheet-in', out: 'emerge', push: 'push-in', pop: 'pop-in' };
+  app.classList.remove('sheet-in', 'emerge', 'push-in', 'pop-in');
   updateDock();
   if (motion) {
     app.getBoundingClientRect();
-    app.classList.add(motion === 'in' ? 'sheet-in' : 'emerge');
-    setTimeout(() => app.classList.remove('sheet-in', 'emerge'), 700);
+    app.classList.add(ENTER[motion]);
+    setTimeout(() => app.classList.remove(ENTER[motion]), 700);
   }
 }
 
