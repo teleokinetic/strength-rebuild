@@ -10,7 +10,7 @@
 
 const STORE_KEY = 'sr-state-v2';
 const V1_KEY = 'sr-state-v1';        // read-only: migration source, never written
-const APP_VERSION = '3.2.0';
+const APP_VERSION = '3.2.1';
 
 let state = null;
 
@@ -2290,9 +2290,11 @@ function render() {
   else html = viewHome();
   const app = $('#app');
   app.setAttribute('data-view', parts[0] || 'home');
+  document.documentElement.setAttribute('data-view', parts[0] || 'home');
   app.innerHTML = html;
   window.scrollTo(0, 0);
   app.classList.remove('sheet-in', 'emerge');
+  updateDock();
   if (motion) {
     app.getBoundingClientRect();
     app.classList.add(motion === 'in' ? 'sheet-in' : 'emerge');
@@ -2301,6 +2303,17 @@ function render() {
 }
 
 window.addEventListener('hashchange', render);
+
+// The dock's edge fade shows only while it's pinned under the top.
+let dockRaf = 0;
+function updateDock() {
+  dockRaf = 0;
+  const d = $('.dock');
+  if (!d) return;
+  const pin = parseFloat(getComputedStyle(d).top) || 0;
+  d.classList.toggle('stuck', window.scrollY > 0 && d.getBoundingClientRect().top <= pin + 0.5);
+}
+window.addEventListener('scroll', () => { if (!dockRaf) dockRaf = requestAnimationFrame(updateDock); }, { passive: true });
 
 /* ============================== actions ============================== */
 

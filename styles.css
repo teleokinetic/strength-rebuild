@@ -23,6 +23,7 @@
 :root, :root[data-theme="dark"] {
   --bg: #12171E;
   --glass: rgba(18, 23, 30, 0.88);
+  --glass-clear: rgba(18, 23, 30, 0);
   --surface: #1B222C;         /* cards */
   --inset: #232C38;           /* panels inside cards */
   --fill: rgba(200, 215, 230, 0.08);   /* controls */
@@ -49,6 +50,7 @@
 :root[data-theme="light"] {
   --bg: #EEF0F2;
   --glass: rgba(238, 240, 242, 0.88);
+  --glass-clear: rgba(238, 240, 242, 0);
   --surface: #FFFFFF;
   --inset: #F3F5F7;
   --fill: rgba(21, 25, 30, 0.06);
@@ -74,6 +76,7 @@
   :root:not([data-theme]) {
     --bg: #EEF0F2;
     --glass: rgba(238, 240, 242, 0.88);
+  --glass-clear: rgba(238, 240, 242, 0);
     --surface: #FFFFFF;
     --inset: #F3F5F7;
     --fill: rgba(21, 25, 30, 0.06);
@@ -460,6 +463,20 @@ body.settle-in #app > :nth-child(n+5) { animation-delay: 0.18s; }
   margin: 0 calc(-1 * var(--gutter)) 8px;
   padding: 10px var(--gutter) 10px;
 }
+/* Edge fade: once the dock is pinned, the list doesn't get sliced off
+   under it — rows dissolve into the glass over a short gradient. Shown
+   only while stuck, so at rest it never tints the first card. */
+.dock::after {
+  content: ''; position: absolute; left: 0; right: 0; top: 100%; height: 28px;
+  background: linear-gradient(to bottom, var(--glass) 0%, var(--glass) 12%, var(--glass-clear) 100%);
+  pointer-events: none; opacity: 0; transition: opacity 0.2s var(--ease);
+}
+.dock.stuck::after { opacity: 1; }
+
+/* The session scrolls without a scroll bar: the trail already says where
+   you are. (scrollbar-width covers Safari 18.2+, the pseudo-element the rest.) */
+html[data-view="day"] { scrollbar-width: none; }
+html[data-view="day"]::-webkit-scrollbar { display: none; width: 0; height: 0; }
 
 /* Matching strip over the status-bar / Dynamic Island band so content
    scrolling past the stuck dock never shows through sharp. */
