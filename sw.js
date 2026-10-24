@@ -1,7 +1,7 @@
 /* Strength Rebuild — offline shell.
    Bump CACHE when shipping changes so clients pick up the new version. */
 
-const CACHE = 'sr-v3.3.1';
+const CACHE = 'sr-v3.3.2';
 // Critical shell is all-or-nothing; fonts/icons are best-effort so one
 // flaky request on gym wifi can't silently sink the whole update.
 const CRITICAL = [

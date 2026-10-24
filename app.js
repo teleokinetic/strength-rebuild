@@ -10,7 +10,7 @@
 
 const STORE_KEY = 'sr-state-v2';
 const V1_KEY = 'sr-state-v1';        // read-only: migration source, never written
-const APP_VERSION = '3.3.1';
+const APP_VERSION = '3.3.2';
 
 let state = null;
 
@@ -1089,9 +1089,9 @@ function recordSession(dayId, note) {
 
 /* ---- per-set reps (his 10/17 call) ----
    Each tap on a counting ring banks that set's reps from the chip into
-   repsBySet. The chip always shows the set about to be banked: last
-   session's same set when there is one (the number to match or beat),
-   else the set just banked. A saved entry keeps `reps` as the LOWEST set,
+   repsBySet. The chip shows the set about to be banked: set 1 starts from last
+   session's set 1; after that it carries forward the set just banked
+   (whatever was done or typed) — no per-set numbers from history (10/24). A saved entry keeps `reps` as the LOWEST set,
    so "ready to add weight" still means every set reached the top and
    everything that reads `reps` (progression, targets, Gym Log) keeps
    working; repsBySet rides along for the detail. */
@@ -1114,11 +1114,12 @@ function effectiveReps(dayId, slot) {
   if (e && e.reps === '') return '';
   const banked = bankedReps(e);
   if (e && e.done && banked.length) return Math.min(...banked);
-  const n = (e && e.sets) || 0;
-  const prev = lastRepsBySetFor(slug(slot.name));
-  if (prev && prev[n] > 0) return prev[n];
+  // Mid-exercise: carry forward the set just done. Nothing is planned per set.
   if (banked.length) return banked[banked.length - 1];
-  if (prev && prev.length) return prev[prev.length - 1];
+  // Set 1: where set 1 landed last session.
+  const prev = lastRepsBySetFor(slug(slot.name));
+  const first = prev ? prev.find((x) => x > 0) : null;
+  if (first) return first;
   return lastRepsFor(slug(slot.name));
 }
 
