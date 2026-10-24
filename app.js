@@ -10,7 +10,7 @@
 
 const STORE_KEY = 'sr-state-v2';
 const V1_KEY = 'sr-state-v1';        // read-only: migration source, never written
-const APP_VERSION = '3.3.0';
+const APP_VERSION = '3.3.1';
 
 let state = null;
 
@@ -1245,11 +1245,8 @@ function playRestMotion(kind) {
   clearTimeout(restMotionT);
   restMotion = reducedMotion() ? null : kind;
   if (!restMotion) return;
-  restMotionT = setTimeout(() => {
-    restMotion = null;
-    const d = $('#restdock');
-    if (d) d.classList.remove('moving');
-  }, 1100);
+  // When it's over, draw the dock still — this also clears out the ghosts.
+  restMotionT = setTimeout(() => { restMotion = null; renderRestDock(); }, 1100);
 }
 function stopRestMotion() { clearTimeout(restMotionT); restMotion = null; }
 function restAck() {
