@@ -166,6 +166,7 @@ input:focus-visible, textarea:focus-visible { outline: none; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; animation: none !important; }
+  .rest-ghost { display: none; }
   .oak.grow path { stroke-dashoffset: 0; }
   .ring .ring-check { transition: none !important; }
 }
@@ -555,6 +556,76 @@ body::before {
   animation: restpulse 1s ease-in-out infinite alternate;
 }
 @keyframes restpulse { from { filter: brightness(1); } to { filter: brightness(1.08); } }
+
+/* ---------- rest done: clap in, reel out ----------
+   Arriving, the done bar's two halves fly in from the screen edges and clap
+   together; leaving, it drops away and the timers fall back in from above,
+   left first, landing with a small squash. Motion blur is faked with blur,
+   stretch and a trailing smear (box-shadow ghosts) — transform/filter only.
+   While it plays the dock runs out to the screen edges and clips to a
+   soft-edged window, so nothing flies over the trail or the cards. */
+.restdock { position: relative; --mo: var(--accent); }
+.restdock.moving {
+  margin: -10px calc(-1 * var(--gutter)) -10px; padding: 10px var(--gutter) 10px;
+  overflow: clip;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 10px, #000 calc(100% - 10px), transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 10px, #000 calc(100% - 10px), transparent 100%);
+}
+.restdock .rest-ghost { position: absolute; width: auto; top: 10px; left: var(--gutter); right: var(--gutter); pointer-events: none; }
+.restdock .restbtn { --c: var(--mo); }
+.restdock .restbtn.quiet, .restdock .restbtn.heavy { --c: var(--surface); }
+.rest-half, .rest-ghost, .restdock .restbtn {
+  --t1: color-mix(in srgb, var(--c, var(--mo)) 42%, transparent);
+  --t2: color-mix(in srgb, var(--c, var(--mo)) 18%, transparent);
+  --z: 0 0 0 0 transparent;
+}
+.rest-ghost.rest-running { --c: var(--surface); }
+
+.rest-sink { animation: rd-sink 0.38s cubic-bezier(0.4, 0, 0.2, 1) both; }
+.rest-done.clap {
+  position: relative; background: transparent;
+  animation: rd-hit 0.64s linear backwards, restpulse 1s ease-in-out 1s infinite alternate;
+}
+.rest-half { position: absolute; top: 0; bottom: 0; width: calc(50% + 1px); background: var(--mo); }
+.rest-half.l { left: 0; border-radius: inherit; border-top-right-radius: 0; border-bottom-right-radius: 0;
+  animation: rd-inl 0.36s cubic-bezier(0.5, 0, 0.95, 0.6) 40ms backwards; }
+.rest-half.r { right: 0; border-radius: inherit; border-top-left-radius: 0; border-bottom-left-radius: 0;
+  animation: rd-inr 0.36s cubic-bezier(0.5, 0, 0.95, 0.6) 40ms backwards; }
+.rest-done-t { position: relative; display: block; animation: rd-text 0.38s cubic-bezier(0.2, 0.8, 0.2, 1) 0.38s backwards; }
+
+.rest-drop { display: grid; place-items: center; transform-origin: 50% 100%;
+  animation: rd-out 0.28s cubic-bezier(0.5, 0, 1, 0.6) both; }
+.rest-idle.enter .restbtn { transform-origin: 50% 100%; animation: rd-in 0.64s linear 60ms backwards; }
+.rest-idle.enter .restbtn:nth-child(2) { animation-delay: 130ms; }
+
+@keyframes rd-sink { to { transform: scale(0.94); filter: blur(3px); opacity: 0; } }
+@keyframes rd-inl {
+  0% { transform: translateX(-135%) scaleX(1.15); filter: blur(6px); box-shadow: -30px 0 18px -4px var(--t1), -60px 0 26px -8px var(--t2); }
+  100% { transform: none; filter: blur(1px); box-shadow: -10px 0 10px -4px var(--t1), -20px 0 14px -8px var(--t2); }
+}
+@keyframes rd-inr {
+  0% { transform: translateX(135%) scaleX(1.15); filter: blur(6px); box-shadow: 30px 0 18px -4px var(--t1), 60px 0 26px -8px var(--t2); }
+  100% { transform: none; filter: blur(1px); box-shadow: 10px 0 10px -4px var(--t1), 20px 0 14px -8px var(--t2); }
+}
+@keyframes rd-hit {
+  0%, 62% { transform: none; }
+  72% { transform: scaleX(1.03) scaleY(0.93); }
+  86% { transform: scaleX(0.996) scaleY(1.01); }
+  100% { transform: none; }
+}
+@keyframes rd-text { 0% { opacity: 0; transform: scale(0.86); filter: blur(5px); } 100% { opacity: 1; transform: none; filter: blur(0); } }
+@keyframes rd-out {
+  0% { transform: none; filter: blur(0); box-shadow: var(--z), var(--z); }
+  100% { transform: translateY(112%) scaleY(1.12); filter: blur(4px); opacity: 0.25; box-shadow: 0 -20px 14px -4px var(--t1), 0 -42px 20px -8px var(--t2); }
+}
+@keyframes rd-in {
+  0% { transform: translateY(-125%) scaleY(1.16); filter: blur(6px); box-shadow: 0 -30px 18px -4px var(--t1), 0 -60px 26px -8px var(--t2); animation-timing-function: cubic-bezier(0.45, 0, 1, 0.75); }
+  52% { transform: translateY(0) scaleY(1.04); filter: blur(1.5px); box-shadow: 0 -14px 10px -4px var(--t1), 0 -28px 16px -8px var(--t2); animation-timing-function: cubic-bezier(0.2, 0.8, 0.4, 1); }
+  62% { transform: translateY(0) scaleX(1.025) scaleY(0.94); filter: blur(0); box-shadow: var(--z), var(--z); animation-timing-function: cubic-bezier(0.3, 0, 0.5, 1); }
+  78% { transform: translateY(-5px) scaleY(1.01); animation-timing-function: cubic-bezier(0.5, 0, 0.7, 1); }
+  90% { transform: translateY(0) scaleY(0.99); }
+  100% { transform: none; filter: blur(0); box-shadow: var(--z), var(--z); }
+}
 
 /* ---------- slots ---------- */
 

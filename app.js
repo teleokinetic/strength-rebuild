@@ -10,7 +10,7 @@
 
 const STORE_KEY = 'sr-state-v2';
 const V1_KEY = 'sr-state-v1';        // read-only: migration source, never written
-const APP_VERSION = '3.2.2';
+const APP_VERSION = '3.3.0';
 
 let state = null;
 
@@ -1203,6 +1203,7 @@ function releaseWakeLock() {
 /* ---- rest control ---- */
 
 function restStart(tier, label, forSlot) {
+  stopRestMotion();
   const sec = tier === 'heavy' ? state.settings.restHeavy : normalRestSec(forSlot);
   rest.running = true;
   rest.done = false;
@@ -1216,6 +1217,7 @@ function restStart(tier, label, forSlot) {
 }
 
 function restCancel() {
+  stopRestMotion();
   rest.running = false;
   rest.done = false;
   releaseWakeLock();
@@ -1229,8 +1231,31 @@ function restFinish() {
   buzz();
   releaseWakeLock();
   stopRestTick();
+  playRestMotion('in');
   renderRestDock();
-  setTimeout(() => { if (rest.done && !rest.running) { rest.done = false; renderRestDock(); } }, 4000);
+  setTimeout(() => { if (rest.done && !rest.running) restAck(); }, 4000);
+}
+
+/* Rest-done motion: the done bar claps in from both screen edges; leaving,
+   it drops away and the two timers fall back in from above. One-shot — a
+   re-render of the same state later draws it still. */
+let restMotion = null;   // 'in' | 'out' | null
+let restMotionT = null;
+function playRestMotion(kind) {
+  clearTimeout(restMotionT);
+  restMotion = reducedMotion() ? null : kind;
+  if (!restMotion) return;
+  restMotionT = setTimeout(() => {
+    restMotion = null;
+    const d = $('#restdock');
+    if (d) d.classList.remove('moving');
+  }, 1100);
+}
+function stopRestMotion() { clearTimeout(restMotionT); restMotion = null; }
+function restAck() {
+  rest.done = false;
+  playRestMotion('out');
+  renderRestDock();
 }
 
 function startRestTick() {
@@ -1954,7 +1979,18 @@ function restDockHTML() {
       </div>`;
   }
   if (rest.done) {
-    return `<button class="rest-done" data-action="rest-ack">Rest done</button>`;
+    if (restMotion !== 'in') return `<button class="rest-done" data-action="rest-ack">Rest done</button>`;
+    // The finished clock sinks away while the two halves clap in over it.
+    return `
+      <div class="rest-running rest-ghost rest-sink" aria-hidden="true">
+        <div class="rest-fill" style="width:100%"></div>
+        <div class="rest-row">
+          <div class="rest-time">0:00</div>
+          <span class="rest-label">${esc(rest.label || 'Rest')}</span>
+          <span class="rest-mini"></span><span class="rest-mini"></span>
+        </div>
+      </div>
+      <button class="rest-done clap" data-action="rest-ack"><span class="rest-half l"></span><span class="rest-half r"></span><span class="rest-done-t">Rest done</span></button>`;
   }
   // Inside a pair the suggested normal button says who's paired, and a
   // group with its own rest (pairRest) lends the button that duration.
@@ -1968,12 +2004,13 @@ function restDockHTML() {
     const tag = '';   // the fill alone says which tier fits; no caption
     return `<button class="${cls}" data-action="rest" data-tier="${tier}" aria-label="Rest ${fmtMMSS(sec)}">${icon('clock', 2.2)}<span class="restbtn-t">${fmtMMSS(sec)}</span>${tag}</button>`;
   };
-  return `<div class="rest-idle">${btn('normal', normalRestSec())}${btn('heavy', h)}</div>`;
+  const out = restMotion === 'out';
+  return `${out ? '<div class="rest-done rest-ghost rest-drop" aria-hidden="true">Rest done</div>' : ''}<div class="rest-idle${out ? ' enter' : ''}">${btn('normal', normalRestSec())}${btn('heavy', h)}</div>`;
 }
 
 function renderRestDock() {
   const dock = $('#restdock');
-  if (dock) dock.innerHTML = restDockHTML();
+  if (dock) { dock.classList.toggle('moving', !!restMotion); dock.innerHTML = restDockHTML(); }
 }
 function updateRestTime(left) {
   const t = $('[data-rest-time]');
@@ -2035,7 +2072,7 @@ function viewDay(dayId) {
     </div>
     <div class="dock">
       ${trailHTML(day)}
-      <div id="restdock" class="restdock">${restDockHTML()}</div>
+      <div id="restdock" class="restdock${restMotion ? ' moving' : ''}">${restDockHTML()}</div>
     </div>
     <div class="slots">${slotsHTML(day)}</div>
     <button class="finishbtn ${allDone ? 'ready' : ''}" data-action="finish" data-day="${day.id}">Finish session</button>
@@ -2363,7 +2400,7 @@ document.addEventListener('click', (ev) => {
   if (action === 'rest') { restStart(t.getAttribute('data-tier'), null); return; }
   if (action === 'rest-restart') { restStart(rest.tier || 'normal', rest.label); return; }
   if (action === 'rest-cancel') { restCancel(); return; }
-  if (action === 'rest-ack') { rest.done = false; renderRestDock(); return; }
+  if (action === 'rest-ack') { restAck(); return; }
 
   if (action === 'prog-toggle') {
     const k = t.getAttribute('data-key');
