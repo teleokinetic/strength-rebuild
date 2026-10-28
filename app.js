@@ -10,7 +10,7 @@
 
 const STORE_KEY = 'sr-state-v2';
 const V1_KEY = 'sr-state-v1';        // read-only: migration source, never written
-const APP_VERSION = '3.3.3';
+const APP_VERSION = '3.3.4';
 
 let state = null;
 
@@ -130,7 +130,7 @@ function patchProgram() {
   const p = state.program;
   if (!p) return;
   const v = parseFloat(p.specVersion) || 0;
-  if (v >= 3.3) return;
+  if (v >= 3.4) return;
 
   // 0.4: Bulgarian split squat becomes Stork squat; both days open
   // with a no-weight Prep slot (wrist prep + passive/active hangs).
@@ -507,7 +507,19 @@ function patchProgram() {
     }
   }
 
-  p.specVersion = '3.3';
+  // 3.4: back squat goes double-progression (his 10/28 call) — load-only
+  // +5s stalled at 175–185, so reps climb 5→8, then +5 lb and back to 5.
+  if (v < 3.4) {
+    for (const d of p.days) {
+      for (const s of d.slots) {
+        if (slug(s.name) !== 'back-squat') continue;
+        s.target = '4×5–8 · top + 3 back-off';
+        s.cue = 'Top set ~2 RIR · reps first — top set hits 8, then +5 lb';
+      }
+    }
+  }
+
+  p.specVersion = '3.4';
   save();
 }
 
