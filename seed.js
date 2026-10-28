@@ -29,7 +29,7 @@
 // (now Saturday). C is the new light Monday.
 
 const SEED_PROGRAM = {
-  specVersion: '3.2',
+  specVersion: '3.3',
   days: [
     {
       id: 'dayC',
@@ -79,7 +79,7 @@ const SEED_PROGRAM = {
       slots: [
         {
           id: 'a2', name: 'Back squat', target: '4×5 · top + 3 back-off',
-          track: true, rest: 'heavy', backoff: 0.92,
+          track: true, reps: true, rest: 'heavy', backoff: 0.92,
           cue: 'Top set ~2 RIR · wk 2: top 185, then +5 every 1–2 wks',
         },
         {

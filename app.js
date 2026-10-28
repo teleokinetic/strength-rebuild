@@ -10,7 +10,7 @@
 
 const STORE_KEY = 'sr-state-v2';
 const V1_KEY = 'sr-state-v1';        // read-only: migration source, never written
-const APP_VERSION = '3.3.2';
+const APP_VERSION = '3.3.3';
 
 let state = null;
 
@@ -130,7 +130,7 @@ function patchProgram() {
   const p = state.program;
   if (!p) return;
   const v = parseFloat(p.specVersion) || 0;
-  if (v >= 3.2) return;
+  if (v >= 3.3) return;
 
   // 0.4: Bulgarian split squat becomes Stork squat; both days open
   // with a no-weight Prep slot (wrist prep + passive/active hangs).
@@ -499,7 +499,15 @@ function patchProgram() {
     }
   }
 
-  p.specVersion = '3.2';
+  // 3.3: back squat gets the reps picker (his 10/28 ask) — the Gym Log
+  // showed squat loads with no reps, so the trend couldn't be read.
+  if (v < 3.3) {
+    for (const d of p.days) {
+      for (const s of d.slots) if (slug(s.name) === 'back-squat') s.reps = true;
+    }
+  }
+
+  p.specVersion = '3.3';
   save();
 }
 
