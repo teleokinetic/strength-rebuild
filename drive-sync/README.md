@@ -5,7 +5,7 @@ it keeps JSON backups in Drive and a readable Google Sheet.
 
 ```
 Gym Sync/
-  Gym Log                      ← Google Sheet: Tanner · Sessions / Progress, Carolina · Sessions / Progress
+  Gym Log                      ← Google Sheet: Tanner · Sessions / Progress / Off-days, Carolina · Sessions / Progress
   Sync codes.txt               ← one code per app (keep private)
   Strength Rebuild/latest.json ← what "Restore from Drive" loads
   Strength Rebuild/history/    ← one copy per day (+ any copy replaced by an import/restore)

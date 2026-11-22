@@ -5,7 +5,8 @@
      • keeps  Gym Sync/<App>/latest.json   — what "Restore from Drive" reads
      • keeps  Gym Sync/<App>/history/YYYY-MM-DD.json — one copy per day
      • rebuilds the "Gym Log" Google Sheet: a Sessions tab and a Progress tab
-       per person.
+       per person, plus an Off-days tab for an app that logs them (Strength
+       Rebuild's door-frame no-hangs and Friday sprints, v3.5).
    A phone with fewer sessions than Drive (fresh install, erased) is refused
    instead of overwriting the backup; only Import/Restore sends `force`, and
    even then the replaced copy is kept in history/.
@@ -212,7 +213,7 @@ function tab(ss, appId, kind) {
 
 function orderTabs(ss) {
   let i = 1;
-  ORDER.forEach((appId) => ['Sessions', 'Progress'].forEach((kind) => {
+  ORDER.forEach((appId) => ['Sessions', 'Progress', 'Off-days'].forEach((kind) => {
     const sh = ss.getSheetByName(`${APPS[appId].person} · ${kind}`);
     if (sh) { ss.setActiveSheet(sh); ss.moveActiveSheet(i++); }
   }));
@@ -250,7 +251,7 @@ function slotIndex(appId, st) {
       // A ladder is either explicit rungs or (Forte) the menu's short names, in order.
       const rungs = Array.isArray(s.rungs) ? s.rungs
         : Array.isArray(s.menu) ? s.menu.map((m) => String(m).split(/\s+—\s+/)[0]) : null;
-      map[id] = { name: s.name, added: !!s.added, assisted, rungs };
+      map[id] = { name: s.name, added: !!s.added, assisted, rungs, unit: s.unit || '' };
       order.push(id);
     });
   });
@@ -266,9 +267,10 @@ function readLog(appId, st) {
     .filter((x) => x.d)
     .sort((a, b) => a.d - b.d);
   const prev = {};
+  const unit = (st.settings && st.settings.unit) || 'lb';
   return {
     idx,
-    unit: (st.settings && st.settings.unit) || 'lb',
+    unit,
     program: st.program,
     sessions: sessions.map(({ s, d }) => {
       const entries = (s.entries || []).map((e) => {
@@ -291,7 +293,9 @@ function readLog(appId, st) {
           if (r != null && p.r != null && r > p.r && sameLoad && sameRung) up.r = true;
         }
         if (w != null || r != null || ri !== -1) prev[pk] = { w, r, ri };
-        return { id, slot, w, r, rung, sets: sets || null, note: (e.note || '').trim(), up };
+        // Kettlebell slots log in kg whatever the app's unit is (v3.5).
+        const u = e.unit || slot.unit || unit;
+        return { id, slot, w, r, rung, sets: sets || null, note: (e.note || '').trim(), up, unit: u };
       });
       const mins = s.startedAt && s.endedAt ? Math.round((when({ endedAt: s.endedAt }) - when({ endedAt: s.startedAt })) / 60000) : null;
       return { id: s.id, dayId: s.dayId || s.dayName || '', d, day: s.dayName || s.dayId || '', note: (s.note || '').trim(), mins: mins > 0 && mins < 300 ? mins : null, entries };
@@ -323,6 +327,71 @@ function buildTabs(appId, st) {
   const synced = Utilities.formatDate(new Date(), TZ, "EEE d MMM yyyy, h:mm a");
   buildSessions(tab(ss, appId, 'Sessions'), appId, log, synced);
   buildProgress(tab(ss, appId, 'Progress'), appId, log);
+  if (Array.isArray(st.offdays) && st.offdays.length) {
+    buildOffdays(tab(ss, appId, 'Off-days'), appId, st, synced);
+    orderTabs(ss);
+  }
+}
+
+/* ---- off-days (v3.5): no-hangs and Friday sprints, grouped by week ---- */
+
+// Monday-first weeks, newest first, each with its items newest first.
+function offdayWeeks(st) {
+  const items = (Array.isArray(st.offdays) ? st.offdays : [])
+    .map((x) => ({ x, d: when({ endedAt: x.at }) }))
+    .filter((o) => o.d)
+    .sort((a, b) => b.d - a.d);
+  const weeks = [];
+  const byKey = {};
+  items.forEach(({ x, d }) => {
+    const mon = new Date(d.getTime());
+    const dow = Number(Utilities.formatDate(d, TZ, 'u'));      // 1 = Monday … 7 = Sunday
+    mon.setTime(d.getTime() - (dow - 1) * 86400000);
+    const key = Utilities.formatDate(mon, TZ, 'yyyy-MM-dd');
+    if (!byKey[key]) {
+      byKey[key] = { key, mon, items: [], nh: 0, spr: 0 };
+      weeks.push(byKey[key]);
+    }
+    const w = byKey[key];
+    const nh = x.kind === 'nohangs';
+    if (nh) w.nh++; else w.spr++;
+    w.items.push({
+      d, kind: x.kind,
+      what: nh ? 'No-hangs' : 'Wind sprints',
+      detail: nh ? (x.pulls >= 10 ? '10 pulls' : `${x.pulls} of 10 pulls`) : `${x.sprints} run${x.sprints === 1 ? '' : 's'}`,
+      note: (x.note || '').trim(),
+    });
+  });
+  weeks.forEach((w) => {
+    w.title = `Week of ${Utilities.formatDate(w.mon, TZ, 'd MMM yyyy')} · no-hangs ${w.nh} of 3 · sprints ${w.spr ? '✓' : '—'}`;
+  });
+  return weeks;
+}
+
+function buildOffdays(sh, appId, st, synced) {
+  const app = APPS[appId];
+  const T = app.theme;
+  const g = new Grid(4, T);
+  const weeks = offdayWeeks(st);
+  g.row([`${app.person} · Off-days`], { size: 18, weight: 'bold', color: T.accent, merge: true }, 38);
+  g.row([`Door-frame no-hangs (aim 3 a week) and Friday sprints · updated ${synced}`], { size: 10, color: T.dim, merge: true }, 20);
+  g.row([], {}, 12);
+  weeks.forEach((w) => {
+    g.row([w.title], { bg: T.wash, color: T.accent, weight: 'bold', size: 12, merge: true }, 32);
+    w.items.forEach((x) => {
+      g.row([
+        { v: Utilities.formatDate(x.d, TZ, 'EEE d MMM'), font: NUM_FONT, size: 13 },
+        { v: x.what, weight: 'bold' },
+        { v: x.detail, font: NUM_FONT, size: 13, align: 'right' },
+        { v: x.note, color: T.dim, style: x.note ? 'italic' : 'normal', wrap: true },
+      ], {}, 26);
+    });
+    g.row([], {}, 14);
+  });
+  g.paint(sh);
+  [110, 140, 120, 360].forEach((wd, i) => sh.setColumnWidth(i + 1, wd));
+  sh.setFrozenRows(2);
+  sh.setFrozenColumns(0);
 }
 
 // A painter: rows of cells, each with its own look, written in one pass.
@@ -397,7 +466,7 @@ function buildSessions(sh, appId, log, synced) {
       const mark = (txt, on) => on ? { v: `${txt}  ▲`, color: T.accent, weight: 'bold', bg: T.up } : { v: txt };
       g.row([
         { v: e.slot.name },
-        Object.assign(mark(loadText(e.w, log.unit, e.slot), e.up.w), { font: NUM_FONT, size: 13, align: 'right' }),
+        Object.assign(mark(loadText(e.w, e.unit, e.slot), e.up.w), { font: NUM_FONT, size: 13, align: 'right' }),
         Object.assign(mark(e.r != null ? `${e.r} reps` : '', e.up.r), { font: NUM_FONT, size: 13, align: 'right' }),
         mark(e.rung, e.up.rung),
         { v: e.sets ? `${e.sets} sets` : '', color: T.dim, font: NUM_FONT, size: 13, align: 'right' },
@@ -455,7 +524,8 @@ function buildProgress(sh, appId, log) {
     ids.concat(retired).forEach((id) => {
       const isRetired = ids.indexOf(id) === -1;
       const slot = log.idx.map[id] || { name: seen[id] };
-      const unitNote = slot.added ? ` (+${unit})` : slot.assisted ? ` (${unit} help)` : '';
+      const su = slot.unit || unit;
+      const unitNote = slot.added ? ` (+${su})` : slot.assisted ? ` (${su} help)` : slot.unit && slot.unit !== unit ? ` (${slot.unit})` : '';
       const cells = [{ v: slot.name + unitNote, color: isRetired ? T.faint : T.ink, weight: 'bold', wrap: true }];
       // Ladder rows carry words, not numbers: smaller, wrapped, a taller row.
       const words = day.list.some((s) => s.entries.some((x) => x.id === id && x.rung));
@@ -533,7 +603,8 @@ function logMarkdown(appId, st) {
   ((st.program && st.program.days) || []).forEach((d) => {
     out.push(`### ${d.name}${d.subtitle ? ' — ' + d.subtitle : ''}`, '');
     (d.slots || []).forEach((s) => {
-      const kind = [s.track ? (s.added ? `added load (${u})` : /assist/i.test(s.target || '') || (appId === 'forte' && /chin-?ups?\b/i.test(s.name)) ? `assistance (${u}, lower is harder)` : `load (${u})`) : '',
+      const su = s.unit || u;
+      const kind = [s.track ? (s.added ? `added load (${su})` : /assist/i.test(s.target || '') || (appId === 'forte' && /chin-?ups?\b/i.test(s.name)) ? `assistance (${su}, lower is harder)` : `load (${su})`) : '',
         s.reps ? 'reps' : '', s.rest ? `${s.rest} rest` : ''].filter(Boolean).join(', ');
       out.push(`- **${s.name}**${s.target ? ` — ${s.target}` : ''}${kind ? ` _(${kind})_` : ''}`);
       if (s.warmup) out.push(`  - Warm-up: ${s.warmup}`);
@@ -544,12 +615,21 @@ function logMarkdown(appId, st) {
     });
     out.push('');
   });
+  const off = offdayWeeks(st);
+  if (off.length) {
+    out.push('## Off-days, newest first', '', 'Door-frame no-hangs (10 pulls, 10 s on / 50 s off, aim 3 a week) and Friday wind sprints — logged apart from sessions.', '');
+    off.forEach((wk) => {
+      out.push(`### ${wk.title}`, '');
+      wk.items.forEach((x) => out.push(`- ${Utilities.formatDate(x.d, TZ, 'EEE d MMM')}: ${x.what}${x.detail ? ' · ' + x.detail : ''}${x.note ? ` — ${x.note}` : ''}`));
+      out.push('');
+    });
+  }
   out.push('## Sessions, newest first', '');
   log.sessions.slice().reverse().forEach((s) => {
     out.push(`### ${Utilities.formatDate(s.d, TZ, 'EEE d MMM yyyy')} · ${s.day}${s.mins ? ` · ${s.mins} min` : ''}`, '');
     s.entries.forEach((e) => {
       const bits = [];
-      const load = loadText(e.w, u, e.slot);
+      const load = loadText(e.w, e.unit, e.slot);
       if (e.rung) bits.push(e.rung + (e.up.rung ? ' (up)' : ''));
       if (load) bits.push(load + (e.up.w ? ' (up)' : ''));
       if (e.r != null) bits.push(`${e.r} reps` + (e.up.r ? ' (up)' : ''));

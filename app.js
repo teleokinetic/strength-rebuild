@@ -624,6 +624,9 @@ const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').match
 
 function findDay(dayId) { return state.program.days.find((d) => d.id === dayId); }
 function findSlot(day, slotId) { return day ? day.slots.find((s) => s.id === slotId) : null; }
+// Kettlebell slots weigh in kg (the bells jump by kilograms); everything
+// else uses the app's unit.
+function unitOf(slot) { return (slot && slot.unit) || state.settings.unit; }
 
 function applyTheme() {
   const t = state.settings.theme;
@@ -1109,6 +1112,7 @@ function recordSession(dayId, note) {
     if (slot.track) {
       const w = effectiveWeight(dayId, slot);
       const entry = { exerciseId: slug(slot.name), name: slot.name, weight: w === '' ? '' : parseFloat(w), note: slotNote };
+      if (slot.unit) entry.unit = slot.unit;
       if (slot.reps) {
         const banked = bankedReps(e);
         const r = banked.length ? Math.min(...banked) : effectiveReps(dayId, slot);
@@ -1968,9 +1972,9 @@ function liftCardHTML(it) {
     ? sparkSVG(it.pts, { w: 330, h: 46, stroke: 2.5, dot: 4, goal: it.goal, cls: 'tspark' }) : '';
   const scheme = (it.slot.target || '').split('·')[0].trim();
   let tline;
-  if (it.mode === 'w' && it.first !== it.cur) tline = `${it.first} → <b>${esc(it.label)} ${esc(state.settings.unit)}</b>`;
+  if (it.mode === 'w' && it.first !== it.cur) tline = `${it.first} → <b>${esc(it.label)} ${esc(unitOf(it.slot))}</b>`;
   else if (it.mode === 'r' && it.firstR !== it.curR) tline = `×${it.firstR} → <b>×${it.curR}</b>`;
-  else tline = `<b>${it.label ? esc(it.label) + ' ' + esc(state.settings.unit) : '×' + it.curR}</b>`;
+  else tline = `<b>${it.label ? esc(it.label) + ' ' + esc(unitOf(it.slot)) : '×' + it.curR}</b>`;
   if (scheme) tline += ` · ${esc(scheme)}`;
   if (it.goal != null) tline += ` · goal ${it.goal}`;
   return `<div class="tcard">${spark}<div class="tline">${tline}</div>${liftVerdictHTML(it)}</div>`;
@@ -2060,7 +2064,7 @@ function chipInnerHTML(dayId, slot) {
   const reps = r === '' || r == null ? '' : `<span class="chip-reps">×${esc(String(r))}</span>`;
   if (w === '' || w == null) return `<span class="chip-add">Add</span>${reps}`;
   const label = (slot.added ? '+' : '') + w;
-  return `<span class="chip-num">${esc(String(label))}</span><span class="chip-unit">${esc(state.settings.unit)}</span>${slot.reps ? (reps || '<span class="chip-reps">×—</span>') : ''}`;
+  return `<span class="chip-num">${esc(String(label))}</span><span class="chip-unit">${esc(unitOf(slot))}</span>${slot.reps ? (reps || '<span class="chip-reps">×—</span>') : ''}`;
 }
 
 function refreshChip(dayId, slot) {
@@ -2231,7 +2235,7 @@ function slotCardHTML(day, slot, onMat) {
         <button class="step" data-action="step" data-slot="${slot.id}" data-d="${st}">+${st}</button>`;
     steppers = `
       <div class="chip-edit stacked" data-edit="${slot.id}">
-        ${slot.bw ? '' : `<div class="edit-row"><span class="edit-tag">${esc(state.settings.unit)}</span>${weightRow}</div>`}
+        ${slot.bw ? '' : `<div class="edit-row"><span class="edit-tag">${esc(unitOf(slot))}</span>${weightRow}</div>`}
         ${slot.reps ? `<div class="edit-row"><span class="edit-tag">reps</span>
           <button class="step" data-action="rstep" data-slot="${slot.id}" data-d="-1">−1</button>
           <input class="chip-input" type="number" inputmode="numeric"
@@ -2449,7 +2453,7 @@ function viewFinish(dayId) {
     if (slot.track) {
       const w = effectiveWeight(dayId, slot);
       const wTxt = w === '' || w == null ? '—' : (slot.added ? '+' : '') + w;
-      let num = slot.bw ? '' : `<b>${esc(String(wTxt))}</b> ${esc(state.settings.unit)}`;
+      let num = slot.bw ? '' : `<b>${esc(String(wTxt))}</b> ${esc(unitOf(slot))}`;
       if (slot.reps) {
         const e = state.active && state.active.dayId === dayId ? state.active.entries[slot.id] : null;
         const b = bankedReps(e);

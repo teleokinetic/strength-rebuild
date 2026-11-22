@@ -23,6 +23,8 @@
 //   step: the chip's ± step (default 5); 2.5 where the dumbbells go up by 2.5.
 //   start: a one-time Week 1 prefill, used until the lift is next logged.
 //   backoff: squat back-off sets as a fraction of the top set, shown live.
+//   unit: 'kg' on kettlebell slots (v3.5) — the bells jump by 4 kg; logged
+//     entries carry unit: 'kg' so the Gym Log reads them right.
 //
 // Days (his 10/17 call): A and B keep their letters and their history —
 // A is still squat + horizontal (now Wednesday), B still hinge + vertical
@@ -67,12 +69,12 @@ const SEED_PROGRAM = {
         },
         {
           id: 'c8', name: 'Bottoms-up KB carry', target: '2×30–40 m /side',
-          track: true, rest: 'normal', pair: 'b', short: 'the carry',
+          track: true, unit: 'kg', step: 4, rest: 'normal', pair: 'b', short: 'the carry',
           cue: 'Start light · elbow at 90°, wrist stacked, ribs quiet',
         },
         {
           id: 'c9', name: 'Loaded transitional squats', target: '3 sets · one per shape',
-          track: true, rest: 'normal',
+          track: true, unit: 'kg', step: 4, rest: 'normal',
           menu: ['Cossack squat', 'Rotational squat', 'Unicorn / deep rotational'],
         },
       ],
@@ -111,7 +113,7 @@ const SEED_PROGRAM = {
         },
         {
           id: 'a15', name: 'Single-leg calf raise, hip lock + reach', target: '2×8–15 /side',
-          track: true, reps: true, rest: 'normal', pair: 'c', pairRest: 60, short: 'calves',
+          track: true, unit: 'kg', step: 4, reps: true, rest: 'normal', pair: 'c', pairRest: 60, short: 'calves',
           cue: 'Free knee locked at 90/90 · same-side arm reaches tall',
           menu: [
             'Same-side reach — the default',
@@ -144,7 +146,7 @@ const SEED_PROGRAM = {
       slots: [
         {
           id: 'b13', name: 'Single-arm KB swing', target: '3×6–8 /side',
-          track: true, rest: 'normal',
+          track: true, unit: 'kg', step: 4, rest: 'normal',
           menu: [
             'Single-arm — one side, then the other',
             'Hand-to-hand alternating — 3×12–16 total',
@@ -168,7 +170,7 @@ const SEED_PROGRAM = {
         },
         {
           id: 'b15', name: 'See-saw KB press', target: '3×6–8 /side · RIR 2',
-          track: true, reps: true, rest: 'heavy', short: 'the press',
+          track: true, unit: 'kg', step: 4, reps: true, rest: 'heavy', short: 'the press',
           cue: 'One bell lowers as the other presses · pull the lowering bell down',
         },
         {
