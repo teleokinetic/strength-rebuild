@@ -10,7 +10,7 @@
 
 const STORE_KEY = 'sr-state-v2';
 const V1_KEY = 'sr-state-v1';        // read-only: migration source, never written
-const APP_VERSION = '3.3.4';
+const APP_VERSION = '3.5.0';
 
 let state = null;
 
@@ -27,6 +27,7 @@ function defaultState() {
     },
     program: JSON.parse(JSON.stringify(SEED_PROGRAM)),
     sessions: [],
+    offdays: [],
     active: null,
   };
 }
@@ -130,7 +131,7 @@ function patchProgram() {
   const p = state.program;
   if (!p) return;
   const v = parseFloat(p.specVersion) || 0;
-  if (v >= 3.4) return;
+  if (v >= 3.5) return;
 
   // 0.4: Bulgarian split squat becomes Stork squat; both days open
   // with a no-weight Prep slot (wrist prep + passive/active hangs).
@@ -519,7 +520,35 @@ function patchProgram() {
     }
   }
 
-  p.specVersion = '3.4';
+  // 3.5: the v3.5 spec (his 11/22 call). Days rebuilt whole from the seed,
+  // old program kept under programBackup. History carries only where the
+  // lift is near-identical: chin-up → weighted pull-up, reverse crunch →
+  // incline reverse crunch — those log entries are relabelled (the old name
+  // kept under `was`), so prefill and Progression read straight through.
+  // Everything else that changed starts its own line; the old lines stay.
+  if (v < 3.5) {
+    state.programBackup = {
+      at: Date.now(), specVersion: p.specVersion || '',
+      days: JSON.parse(JSON.stringify(p.days)),
+    };
+    const CARRY = {
+      'chin-up-strict': 'Weighted pull-up',
+      'reverse-crunch-knee-raise': 'Incline reverse crunch',
+    };
+    const relabel = (e) => {
+      const to = e && CARRY[e.exerciseId];
+      if (!to) return;
+      e.was = e.name; e.exerciseId = slug(to); e.name = to;
+    };
+    for (const sess of state.sessions) for (const e of sess.entries || []) relabel(e);
+    const now = Date.now();
+    p.days = JSON.parse(JSON.stringify(SEED_PROGRAM.days));
+    for (const d of p.days) for (const s of d.slots) if (s.start != null) s.startAt = now;
+    // The old Week 1 hip-thrust start is long since logged past — keep it quiet.
+    for (const d of p.days) for (const s of d.slots) if (slug(s.name) === 'smith-hip-thrust') { delete s.start; delete s.startAt; }
+  }
+
+  p.specVersion = '3.5';
   save();
 }
 
@@ -683,7 +712,7 @@ const TARGETS = [
   { key: 'dl',     label: 'Deadlift',   eq: 'DL',  locked: true,         goalText: '310 ×5 · later phase' },
   // 10/17: chins build strength by load, not reps — 3×8 strict, then +5 at
   // a time toward +40. Reads the Day B chin-up's added load and reps live.
-  { key: 'mu',     label: 'Muscle-up',  eq: 'MU',  addedEx: 'chin-up-strict', goal: 40,
+  { key: 'mu',     label: 'Muscle-up',  eq: 'MU',  addedEx: 'weighted-pull-up', goal: 40,
     cur: 'chins 5', pct: 10, goalText: '+40 chin',
     pips: ['3×8 strict', '+40 chin', 'dips ×10', 'ring MU'], pipNow: 0 },
   { key: 'row',    label: 'Row',        eq: 'Row', ex: 'one-arm-db-row', goal: 75,  goalText: '75 ×8', repsAlong: true },
@@ -1291,6 +1320,289 @@ document.addEventListener('visibilitychange', () => {
   if (!document.hidden && rest.running && Date.now() >= rest.endsAt) restFinish();
 });
 
+
+/* ============================== off-days ==============================
+   Off-day door-frame no-hangs (Tue/Thu/Sun) and Friday wind sprints (his
+   11/22 call). Logged apart from sessions, in state.offdays, so they never
+   count toward "of 3", never touch Progression, and never block Finish. */
+
+const NH = { lead: 5, on: 10, off: 50, pulls: 10 };
+
+function offdays() {
+  if (!Array.isArray(state.offdays)) state.offdays = [];
+  return state.offdays;
+}
+function lastOff(kind) {
+  const l = offdays();
+  for (let i = l.length - 1; i >= 0; i--) if (l[i].kind === kind) return l[i];
+  return null;
+}
+function offToday(kind) {
+  const x = lastOff(kind);
+  return !!x && startOfDay(x.at) === startOfDay(Date.now());
+}
+function offThisWeek(kind) {
+  const ws = weekStart(Date.now());
+  return offdays().filter((x) => x.kind === kind && weekStart(x.at) === ws).length;
+}
+function logOff(entry) {
+  offdays().push(Object.assign({ id: uid(), at: Date.now() }, entry));
+  save();
+  syncPush();
+}
+function offLabel(x) {
+  if (x.kind === 'nohangs') return x.pulls >= NH.pulls ? 'No-hangs' : `No-hangs · ${x.pulls} of ${NH.pulls}`;
+  return `Sprints · ${x.sprints}`;
+}
+
+// Home: one row, named for today — sprints on Friday, no-hangs otherwise.
+function offRowHTML() {
+  const fri = new Date().getDay() === 5;
+  const kind = fri ? 'sprints' : 'nohangs';
+  let when;
+  if (offToday(kind)) when = `<span class="day-done">${icon('check', 2.6)}Done today</span>`;
+  else if (kind === 'nohangs' && offThisWeek(kind)) when = `<span>${offThisWeek(kind)} this week</span>`;
+  else { const l = lastOff(kind); when = `<span>${l ? esc(lastPhrase(l.at)) : 'Not yet'}</span>`; }
+  return `
+    <a class="dayrow" href="#/offday">
+      <span class="dr-name">${fri ? 'Wind sprints' : 'No-hangs'}</span>
+      <span class="dr-when">${when}</span>${icon('chev', 2.4)}
+    </a>`;
+}
+
+// The newest sprint log, if it's recent enough to steer Day B (≤ 3 days).
+function recentSprints() {
+  const s = lastOff('sprints');
+  return s && Date.now() - s.at < 3.5 * 86400000 ? s : null;
+}
+
+let pendingOffDel = null;
+
+function viewOffday() {
+  const fri = new Date().getDay() === 5;
+  const ls = lastOff('sprints');
+  const ln = lastOff('nohangs');
+  const nWeek = offThisWeek('nohangs');
+  const nhMeta = [`${nWeek} of 3 this week`];
+  if (ln && !offToday('nohangs')) nhMeta.push(`last ${lastPhrase(ln.at).toLowerCase()}`);
+  if (offToday('nohangs')) nhMeta.push('done today');
+  const nh = `
+    <div class="offcard">
+      <div class="off-k">No-hangs</div>
+      <div class="off-line">10 pulls · 10 s on, 50 s off · 10 min</div>
+      <div class="off-cue">40–60% · feet stay down · open hand, first knuckle on the edge</div>
+      <a class="finishbtn solid offgo" href="#/nohangs">Start no-hangs</a>
+      <div class="off-meta">${esc(nhMeta.join(' · '))}</div>
+    </div>`;
+  const sp = `
+    <div class="offcard">
+      <div class="off-k">Friday sprints</div>
+      <div class="off-line">3–5 short, crisp sprint tests</div>
+      <div class="edit-row offrow"><span class="edit-tag">runs</span>
+        <button class="step" data-action="spr-step" data-d="-1">−1</button>
+        <input class="chip-input" id="sprn" type="number" inputmode="numeric" value="${(ls && ls.sprints) || 4}">
+        <button class="step" data-action="spr-step" data-d="1">+1</button>
+      </div>
+      <div class="note-edit"><textarea id="sprnote" rows="2" placeholder="Hamstrings and calves — how did they feel?"></textarea></div>
+      <button class="finishbtn solid offgo" data-action="spr-save">Log sprints</button>
+      ${ls ? `<div class="off-meta">Last ${esc(lastPhrase(ls.at).toLowerCase())}${ls.note ? ' · ' + esc(ls.note) : ''}</div>` : ''}
+    </div>`;
+  const recent = offdays().slice(-6).reverse();
+  const list = recent.length ? `
+    <div class="group-head">Recent</div>
+    <div class="group offlist">${recent.map((x) => `
+      <div class="setrow">
+        <span class="off-row-t"><span class="setlabel">${esc(offLabel(x))}</span>${x.note ? `<span class="off-row-n">${esc(x.note)}</span>` : ''}</span>
+        <span class="off-row-r"><span class="off-row-d">${esc(lastPhrase(x.at))}</span>
+          <button class="off-del" data-action="off-del" data-id="${esc(x.id)}" aria-label="Remove">${icon('close', 2.2)}</button></span>
+      </div>`).join('')}
+    </div>` : '';
+  return `
+    ${topbar('#/')}
+    <div class="dayhead">
+      <div class="dayhead-name">Off-days</div>
+      <div class="dayhead-sub">No-hangs Tue · Thu · Sun · sprints Friday</div>
+    </div>
+    <div class="offwrap">${fri ? sp + nh : nh + sp}${list}</div>`;
+}
+
+/* ---- the no-hang timer ----
+   A 5 s lead-in, then ten 10 s pulls with 50 s between, ending on the tenth
+   pull. Clock-based, so it stays right through a locked screen. Sound only
+   where iOS can mix it with whatever's playing (audioSession 'ambient');
+   elsewhere it's silent, with the screen and a buzz. */
+
+const nh = { started: false, startedAt: 0, pausedAt: 0, pausedMs: 0, tick: null, phase: '', sec: -1 };
+let nhCtx = null;
+
+function nhSoundOK() { return 'audioSession' in navigator; }
+function nhSoundOn() { return nhSoundOK() && state.settings.nhSound !== false; }
+function nhAudioInit() {
+  if (!nhSoundOn()) return;
+  try { navigator.audioSession.type = 'ambient'; } catch (e) {}
+  try {
+    nhCtx = nhCtx || new (window.AudioContext || window.webkitAudioContext)();
+    if (nhCtx.state === 'suspended') nhCtx.resume();
+  } catch (e) { nhCtx = null; }
+}
+function nhTone(freq, dur, vol) {
+  if (!nhSoundOn() || !nhCtx) return;
+  try {
+    const t = nhCtx.currentTime;
+    const o = nhCtx.createOscillator();
+    const g = nhCtx.createGain();
+    o.type = 'sine'; o.frequency.value = freq;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol || 0.22, t + 0.015);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(nhCtx.destination);
+    o.start(t); o.stop(t + dur + 0.03);
+  } catch (e) {}
+}
+
+function nhElapsed() {
+  if (!nh.started) return 0;
+  return (nh.pausedAt || Date.now()) - nh.startedAt - nh.pausedMs;
+}
+function nhPhase(ms) {
+  const t = ms / 1000 - NH.lead;
+  if (t < 0) return { phase: 'ready', left: -t, pull: 1, frac: 1 + t / NH.lead };
+  const cyc = NH.on + NH.off;
+  const k = Math.floor(t / cyc);
+  const w = t - k * cyc;
+  if (k >= NH.pulls || (k === NH.pulls - 1 && w >= NH.on)) return { phase: 'done', left: 0, pull: NH.pulls, frac: 1 };
+  if (w < NH.on) return { phase: 'pull', left: NH.on - w, pull: k + 1, frac: w / NH.on };
+  return { phase: 'rest', left: cyc - w, pull: k + 2, frac: (w - NH.on) / NH.off };
+}
+// Pulls started so far — what an early end logs.
+function nhPullsStarted(ph) {
+  if (ph.phase === 'ready') return 0;
+  if (ph.phase === 'pull') return ph.pull;
+  if (ph.phase === 'rest') return ph.pull - 1;
+  return NH.pulls;
+}
+
+const NH_R = 104;
+const NH_CIRC = 2 * Math.PI * NH_R;
+
+function nhControlsHTML() {
+  const ph = nhPhase(nhElapsed());
+  if (!nh.started) return `<button class="finishbtn solid" data-action="nh-start">Start</button>`;
+  if (ph.phase === 'done') return `<a class="finishbtn solid offgo" href="#/">Done</a>`;
+  return `
+    <div class="nh-two">
+      <button class="finishbtn" data-action="${nh.pausedAt ? 'nh-resume' : 'nh-pause'}">${nh.pausedAt ? 'Resume' : 'Pause'}</button>
+      <button class="finishbtn" data-action="nh-end">End</button>
+    </div>`;
+}
+
+function viewNoHangs() {
+  const sound = nhSoundOK()
+    ? `<button class="nh-sound" data-action="nh-sound">Sound ${nhSoundOn() ? 'on' : 'off'}</button>` : '';
+  return `
+    ${topbar('#/offday')}
+    <div class="nh" data-nh data-phase="idle">
+      <div class="nh-stage">
+        <svg class="nh-ring" viewBox="0 0 240 240" aria-hidden="true">
+          <circle class="nh-track" cx="120" cy="120" r="${NH_R}"></circle>
+          <circle class="nh-arc" data-nh-arc cx="120" cy="120" r="${NH_R}"
+            style="stroke-dasharray:${NH_CIRC.toFixed(1)};stroke-dashoffset:${NH_CIRC.toFixed(1)}"></circle>
+        </svg>
+        <div class="nh-center">
+          <div class="nh-phase" data-nh-phase>No-hangs</div>
+          <div class="nh-time" data-nh-time>10:00</div>
+          <div class="nh-count" data-nh-count>10 pulls</div>
+        </div>
+      </div>
+      <div class="nh-cue">40–60% · feet down · pull straight down · open hand</div>
+      <div class="nh-ctl" data-nh-ctl>${nhControlsHTML()}</div>
+      ${sound}
+    </div>`;
+}
+
+function nhPaint() {
+  const root = $('[data-nh]');
+  if (!root) return;
+  const ph = nhPhase(nhElapsed());
+  const prev = nh.phase;
+  if (nh.started) {
+    const sec = Math.ceil(ph.left - 1e-6);
+    if (ph.phase !== prev) {
+      if (ph.phase === 'pull') { nhTone(880, 0.32, 0.26); buzz(); }
+      else if (ph.phase === 'rest' && prev === 'pull') nhTone(523, 0.38, 0.2);
+      else if (ph.phase === 'done') { nhTone(660, 0.22, 0.22); setTimeout(() => nhTone(990, 0.4, 0.22), 230); buzz(); }
+    } else if ((ph.phase === 'rest' || ph.phase === 'ready') && sec !== nh.sec && sec >= 1 && sec <= 3 && !nh.pausedAt) {
+      nhTone(660, 0.09, 0.14);
+    }
+    nh.sec = sec;
+    nh.phase = ph.phase;
+  }
+  const phaseName = !nh.started ? 'idle' : ph.phase;
+  if (root.getAttribute('data-phase') !== phaseName) {
+    root.setAttribute('data-phase', phaseName);
+    const ctl = $('[data-nh-ctl]');
+    if (ctl) ctl.innerHTML = nhControlsHTML();
+  }
+  root.classList.toggle('paused', !!nh.pausedAt);
+  const word = { idle: 'No-hangs', ready: 'Get set', pull: 'Pull', rest: 'Rest', done: 'Done' }[phaseName];
+  const time = !nh.started ? '10:00' : ph.phase === 'done' ? '10' : String(Math.ceil(ph.left - 1e-6));
+  const count = !nh.started ? '10 pulls'
+    : ph.phase === 'done' ? 'Ten pulls'
+    : ph.phase === 'pull' ? `${ph.pull} of ${NH.pulls}`
+    : `Next: ${ph.pull} of ${NH.pulls}`;
+  $('[data-nh-phase]').textContent = word;
+  $('[data-nh-time]').textContent = time;
+  $('[data-nh-count]').textContent = count;
+  const arc = $('[data-nh-arc]');
+  const fill = !nh.started ? 0 : ph.phase === 'done' ? 1 : ph.frac;
+  arc.style.strokeDashoffset = (NH_CIRC * (1 - Math.max(0, Math.min(1, fill)))).toFixed(1);
+  if (nh.started && ph.phase === 'done') nhFinish(NH.pulls);
+}
+
+function nhStart() {
+  nhAudioInit();
+  Object.assign(nh, { started: true, startedAt: Date.now(), pausedAt: 0, pausedMs: 0, phase: 'ready', sec: -1 });
+  requestWakeLock();
+  clearInterval(nh.tick);
+  nh.tick = setInterval(nhPaint, 100);
+  nhPaint();
+}
+function nhPause() { if (nh.started && !nh.pausedAt) { nh.pausedAt = Date.now(); nhPaint(); } }
+function nhResume() {
+  if (!nh.pausedAt) return;
+  nhAudioInit();
+  nh.pausedMs += Date.now() - nh.pausedAt;
+  nh.pausedAt = 0;
+  nhPaint();
+}
+// Logs what was done (if any pull started) and stops the clock.
+function nhFinish(pulls) {
+  if (!nh.started) return;
+  clearInterval(nh.tick); nh.tick = null;
+  nh.started = false;
+  releaseWakeLock();
+  if (pulls > 0) {
+    logOff({ kind: 'nohangs', pulls });
+    toast(pulls >= NH.pulls ? 'No-hangs logged' : `No-hangs logged · ${pulls} of ${NH.pulls}`);
+  }
+  // Leave the finished face up; Done goes home.
+  const root = $('[data-nh]');
+  if (root && pulls >= NH.pulls) {
+    root.setAttribute('data-phase', 'done');
+    $('[data-nh-phase]').textContent = 'Done';
+    $('[data-nh-time]').textContent = '10';
+    $('[data-nh-count]').textContent = 'Ten pulls';
+    $('[data-nh-arc]').style.strokeDashoffset = '0';
+    $('[data-nh-ctl]').innerHTML = `<a class="finishbtn solid offgo" href="#/">Done</a>`;
+  }
+}
+// Leaving the timer (End, Back, or any other route) keeps the pulls done.
+function nhLeave() {
+  if (!nh.started) return;
+  nhFinish(nhPullsStarted(nhPhase(nhElapsed())));
+}
+document.addEventListener('visibilitychange', () => { if (!document.hidden && nh.started) nhPaint(); });
+
 /* ============================== views ============================== */
 
 // The hillside oak — the one ornament (companion to Forte's rose sprig).
@@ -1442,7 +1754,7 @@ function viewHome() {
     <a class="dayrow" href="#/day/${d.id}">
       <span class="dr-name">${esc(dayTitle(d))}</span>
       <span class="dr-when">${dayStatusHTML(d)}</span>${icon('chev', 2.4)}
-    </a>`).join('')}${progRowHTML()}</div>`;
+    </a>`).join('')}${offRowHTML()}${progRowHTML()}</div>`;
   if (!next) return `${topbar()}${greetingHTML()}${weekStripHTML(st)}${rows([])}`;
   const live = !!(state.active && state.active.dayId === next.id);
   const when = whenLabel(next);
@@ -1516,6 +1828,7 @@ function weekDays() {
       num: d.getDate(),
       letter: d.toLocaleDateString(undefined, { weekday: 'narrow' }),
       days: real.filter((s) => startOfDay(sessionTs(s)) === t).map((s) => findDay(s.dayId)).filter(Boolean),
+      off: offdays().some((x) => startOfDay(x.at) === t),
       today: t === today, future: t > today,
     });
   }
@@ -1531,9 +1844,10 @@ function weekStripHTML(st) {
   const days = weekDays().map((d, i) => {
     const dow = (i + 1) % 7;
     const kind = d.days.length ? 'done' : (dows.has(dow) && (d.future || d.today)) ? 'plan' : '';
-    const label = d.days.length ? `trained ${d.days.map(dayTitle).join(', ')}` : kind === 'plan' ? 'planned' : 'rest';
+    const off = !d.days.length && d.off;
+    const label = d.days.length ? `trained ${d.days.map(dayTitle).join(', ')}` : off ? 'off-day work' : kind === 'plan' ? 'planned' : 'rest';
     return `<div class="wk-day ${d.today ? 'today' : ''}" aria-label="${esc(d.letter)}${d.today ? ', today' : ''}, ${esc(label)}">
-      <span class="wk-l">${esc(d.letter)}</span><span class="wk-dot ${kind}"></span></div>`;
+      <span class="wk-l">${esc(d.letter)}</span><span class="wk-dot ${kind}${off ? ' off' : ''}"></span></div>`;
   }).join('');
   return `
     <div class="week">
@@ -2082,11 +2396,16 @@ function viewDay(dayId) {
   if (!day) { location.hash = '#/'; return ''; }
   const a = state.active && state.active.dayId === dayId ? state.active : null;
   const allDone = !!a && requiredSlots(day).every((s) => isDone(a, s));
+  // Friday's sprints steer the hinge and calf choices — show them on Day B.
+  const spr = day.id === 'dayB' ? recentSprints() : null;
+  const sprintLine = spr
+    ? `<div class="dayhead-off">${esc(new Date(spr.at).toLocaleDateString(undefined, { weekday: 'long' }))} sprints · ${esc(String(spr.sprints))}${spr.note ? ' · ' + esc(spr.note) : ''}</div>` : '';
   return `
     ${topbar('#/', true)}
     <div class="dayhead">
       <div class="dayhead-name">${esc(dayTitle(day))}</div>
       <div class="dayhead-sub">${esc(daySub(day))}</div>
+      ${sprintLine}
     </div>
     <div class="dock">
       ${trailHTML(day)}
@@ -2307,7 +2626,7 @@ function viewSlotEdit(dayId, slotId) {
 // a dimmed parallax of the page before; Back slides them away again.
 let lastView = null;
 let lastDepth = 0;
-const DEPTH = { home: 0, day: 1, settings: 1, progression: 1, finish: 2, program: 2, import: 2, slot: 3 };
+const DEPTH = { home: 0, day: 1, settings: 1, progression: 1, offday: 1, finish: 2, program: 2, import: 2, nohangs: 2, slot: 3 };
 function navMotion(from, to, fromDepth, toDepth) {
   if (!from || reducedMotion()) return null;
   if (to === 'day' && from !== 'finish' && from !== 'day') return 'in';
@@ -2344,10 +2663,13 @@ function render() {
   const GHOST = { in: 'recede', out: 'drop', push: 'behind', pop: 'away' };
   if (motion && appEl.innerHTML) makeGhost(appEl, GHOST[motion]);
   if ((parts[0] === 'day' || parts[0] === 'finish') && parts[1]) resumeDraft(parts[1]);
+  if (view !== 'nohangs') nhLeave();
   let html = '';
   if (parts[0] === 'day' && parts[1]) html = viewDay(parts[1]);
   else if (parts[0] === 'finish' && parts[1]) html = viewFinish(parts[1]);
   else if (parts[0] === 'progression') html = viewProgression();
+  else if (parts[0] === 'offday') html = viewOffday();
+  else if (parts[0] === 'nohangs') html = viewNoHangs();
   else if (parts[0] === 'settings') html = viewSettings();
   else if (parts[0] === 'import') html = viewImport();
   else if (parts[0] === 'program' && parts[1] && parts[2]) html = viewSlotEdit(parts[1], parts[2]);
@@ -2418,6 +2740,49 @@ document.addEventListener('click', (ev) => {
   if (action === 'rest') { restStart(t.getAttribute('data-tier'), null); return; }
   if (action === 'rest-restart') { restStart(rest.tier || 'normal', rest.label); return; }
   if (action === 'rest-cancel') { restCancel(); return; }
+
+  // off-days
+  if (action === 'nh-start') { nhStart(); return; }
+  if (action === 'nh-pause') { nhPause(); return; }
+  if (action === 'nh-resume') { nhResume(); return; }
+  if (action === 'nh-end') { nhLeave(); location.hash = '#/offday'; return; }
+  if (action === 'nh-sound') {
+    state.settings.nhSound = !nhSoundOn();
+    save();
+    if (nhSoundOn()) nhAudioInit();
+    t.textContent = `Sound ${nhSoundOn() ? 'on' : 'off'}`;
+    return;
+  }
+  if (action === 'spr-step') {
+    const inp = $('#sprn');
+    const n = (parseInt(inp.value, 10) || 0) + parseInt(t.getAttribute('data-d'), 10);
+    inp.value = Math.max(1, Math.min(12, n));
+    return;
+  }
+  if (action === 'spr-save') {
+    const n = parseInt($('#sprn').value, 10);
+    if (!(n > 0)) { toast('How many runs?'); return; }
+    logOff({ kind: 'sprints', sprints: Math.min(n, 30), note: ($('#sprnote').value || '').trim() });
+    toast('Sprints logged');
+    render();
+    return;
+  }
+  if (action === 'off-del') {
+    const id = t.getAttribute('data-id');
+    if (pendingOffDel !== id) {
+      pendingOffDel = id;
+      t.classList.add('armed');
+      t.setAttribute('aria-label', 'Tap again to remove');
+      setTimeout(() => { if (pendingOffDel === id) { pendingOffDel = null; t.classList.remove('armed'); } }, 3000);
+      return;
+    }
+    pendingOffDel = null;
+    state.offdays = offdays().filter((x) => x.id !== id);
+    save();
+    syncPush();
+    render();
+    return;
+  }
   if (action === 'rest-ack') { restAck(); return; }
 
   if (action === 'prog-toggle') {

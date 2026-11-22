@@ -1159,3 +1159,80 @@ body::before {
 @keyframes behind { to { transform: translateX(-28%); opacity: 0.55; } }
 @keyframes away { to { transform: translateX(100%); } }
 @keyframes popin { from { transform: translateX(-28%); opacity: 0.55; } to { transform: none; opacity: 1; } }
+
+/* ---------- off-days (v3.5) ----------
+   No-hangs and Friday sprints: their own page off home, a guided timer for
+   the no-hangs. Off-day work shows in the week as a small inner dot. */
+
+.wk-dot.off { position: relative; }
+.wk-dot.off::after {
+  content: ''; position: absolute; inset: 3.5px; border-radius: 50%;
+  background: var(--dim);
+}
+
+.dayhead-off {
+  margin-top: 8px; font-size: 14.5px; color: var(--accent-ink);
+  background: var(--accent-wash); border-radius: 12px; padding: 8px 12px; line-height: 1.35;
+}
+
+.offwrap { display: grid; gap: 12px; margin-top: 12px; }
+.offcard {
+  background: var(--surface); box-shadow: var(--card-shadow);
+  border-radius: var(--r-card); padding: 16px 16px 14px;
+  display: grid; gap: 10px;
+}
+.off-k { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
+.off-line { color: var(--dim); font-size: 15px; margin-top: -6px; }
+.off-cue { font-size: 14.5px; color: var(--ink); line-height: 1.4; }
+.off-meta { color: var(--dim); font-size: 14px; text-align: center; }
+.offrow { margin-top: 2px; }
+.offgo { display: flex; align-items: center; justify-content: center; margin-top: 2px; text-decoration: none; }
+.offlist .setrow { align-items: center; }
+.off-row-t { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.off-row-n { color: var(--dim); font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.off-row-r { display: inline-flex; align-items: center; gap: 4px; flex: none; }
+.off-row-d { color: var(--dim); font-size: 14px; }
+.off-del {
+  width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center;
+  background: none; color: var(--faint); margin-right: -8px;
+}
+.off-del .ico { width: 16px; height: 16px; }
+.off-del.armed { color: var(--danger); background: var(--fill); }
+
+/* The timer: one big ring. A pull washes the ring and the word in sky;
+   rest is quiet; paused dims. */
+.nh { display: grid; justify-items: center; gap: 18px; margin-top: 10px; }
+.nh-stage { position: relative; width: min(82vw, 320px); aspect-ratio: 1; }
+.nh-ring { width: 100%; height: 100%; transform: rotate(-90deg); }
+.nh-track { fill: none; stroke: var(--fill-2); stroke-width: 10; }
+.nh-arc {
+  fill: none; stroke: var(--faint); stroke-width: 10; stroke-linecap: round;
+  transition: stroke-dashoffset 0.12s linear, stroke 0.3s var(--ease);
+}
+.nh-center {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; text-align: center;
+}
+.nh-phase { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; color: var(--dim); transition: color 0.3s var(--ease); }
+.nh-time {
+  font-family: var(--num); font-weight: 600; font-size: 96px; line-height: 1;
+  font-variant-numeric: tabular-nums; margin: 4px 0 2px;
+}
+.nh-count { font-size: 15px; color: var(--dim); font-variant-numeric: tabular-nums; }
+.nh[data-phase="pull"] .nh-arc { stroke: var(--accent); }
+.nh[data-phase="pull"] .nh-phase { color: var(--accent-ink); }
+.nh[data-phase="pull"] .nh-stage::before {
+  content: ''; position: absolute; inset: 8%; border-radius: 50%;
+  background: var(--accent-wash); animation: nhbloom 0.4s var(--ease);
+}
+.nh[data-phase="done"] .nh-arc { stroke: var(--accent); }
+.nh[data-phase="done"] .nh-phase { color: var(--accent-ink); }
+.nh.paused .nh-center { opacity: 0.45; }
+@keyframes nhbloom { from { transform: scale(0.9); opacity: 0; } }
+.nh-cue { color: var(--dim); font-size: 14.5px; text-align: center; max-width: 320px; }
+.nh-ctl { width: 100%; }
+.nh-ctl .finishbtn { margin-top: 0; }
+.nh-two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.nh-sound {
+  background: none; border: 0; color: var(--dim); font: inherit; font-size: 15px; padding: 8px 14px;
+}
