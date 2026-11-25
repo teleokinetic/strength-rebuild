@@ -10,7 +10,7 @@
 
 const STORE_KEY = 'sr-state-v2';
 const V1_KEY = 'sr-state-v1';        // read-only: migration source, never written
-const APP_VERSION = '3.5.0';
+const APP_VERSION = '3.6.0';
 
 let state = null;
 
@@ -131,7 +131,7 @@ function patchProgram() {
   const p = state.program;
   if (!p) return;
   const v = parseFloat(p.specVersion) || 0;
-  if (v >= 3.5) return;
+  if (v >= 3.6) return;
 
   // 0.4: Bulgarian split squat becomes Stork squat; both days open
   // with a no-weight Prep slot (wrist prep + passive/active hangs).
@@ -548,7 +548,25 @@ function patchProgram() {
     for (const d of p.days) for (const s of d.slots) if (slug(s.name) === 'smith-hip-thrust') { delete s.start; delete s.startAt; }
   }
 
-  p.specVersion = '3.5';
+  // 3.6: Day A's finish (his 11/25 call). The single-leg curl goes solo —
+  // pairing it never works in their gym — and the day ends on a triplet:
+  // calves, hang, then the ab wheel last, all on the group's 1:00.
+  if (v < 3.6) {
+    const dayA = p.days.find((d) => d.id === 'dayA');
+    if (dayA) {
+      const is = (s, id, name) => s.id === id || slug(s.name) === name;
+      const curl = dayA.slots.find((s) => is(s, 'a11', 'single-leg-curl'));
+      if (curl) { delete curl.pair; delete curl.short; delete curl.pairRest; }
+      const i = dayA.slots.findIndex((s) => is(s, 'a12', 'ab-wheel-rollout'));
+      if (i !== -1) {
+        const [ab] = dayA.slots.splice(i, 1);
+        ab.pair = 'c'; ab.pairRest = 60;
+        dayA.slots.push(ab);
+      }
+    }
+  }
+
+  p.specVersion = '3.6';
   save();
 }
 

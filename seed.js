@@ -37,9 +37,13 @@
 // patchProgram); everything else that changed starts its own line. One-line
 // cues on the new lifts only. Off-day no-hangs and Friday sprints live
 // outside the days (state.offdays) and never count toward "of 3".
+//
+// v3.6 (his 11/25 call): Day A's single-leg curl goes solo — pairing it
+// never works in their gym — and the day ends on a triplet: calves, hang,
+// then the ab wheel last.
 
 const SEED_PROGRAM = {
-  specVersion: '3.5',
+  specVersion: '3.6',
   days: [
     {
       id: 'dayC',
@@ -103,13 +107,8 @@ const SEED_PROGRAM = {
         },
         {
           id: 'a11', name: 'Single-leg curl', target: '2×8–12 /side · RIR 2–3',
-          track: true, reps: true, rest: 'normal', pair: 'b', pairRest: 90, short: 'curls',
+          track: true, reps: true, rest: 'normal',
           cue: 'Right leg first · lb per leg',
-        },
-        {
-          id: 'a12', name: 'Ab-wheel rollout', target: '2×5–8 · kneeling, wall-stopped',
-          track: true, bw: true, reps: true, rest: 'normal', pair: 'b', short: 'rollouts',
-          cue: 'Exploring rib and pelvis control — no forced progression',
         },
         {
           id: 'a15', name: 'Single-leg calf raise, hip lock + reach', target: '2×8–15 /side',
@@ -134,6 +133,11 @@ const SEED_PROGRAM = {
             'Light hold on the working wrist',
             'Two-hand towel hang',
           ],
+        },
+        {
+          id: 'a12', name: 'Ab-wheel rollout', target: '2×5–8 · kneeling, wall-stopped',
+          track: true, bw: true, reps: true, rest: 'normal', pair: 'c', pairRest: 60, short: 'rollouts',
+          cue: 'Exploring rib and pelvis control — no forced progression',
         },
       ],
     },
