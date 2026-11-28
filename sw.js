@@ -1,7 +1,7 @@
 /* Strength Rebuild — offline shell.
    Bump CACHE when shipping changes so clients pick up the new version. */
 
-const CACHE = 'sr-v3.6.0';
+const CACHE = 'sr-v3.7.0';
 // Critical shell is all-or-nothing; fonts/icons are best-effort so one
 // flaky request on gym wifi can't silently sink the whole update.
 const CRITICAL = [
@@ -10,6 +10,8 @@ const CRITICAL = [
   'styles.css',
   'app.js',
   'seed.js',
+  'clips.js',
+  'clips.css',
   'manifest.webmanifest',
 ];
 const EXTRAS = [
@@ -18,6 +20,7 @@ const EXTRAS = [
   'icons/icon-180.png',
   'icons/icon-192.png',
   'icons/icon-512.png',
+  'clips/see-saw-press.html',
 ];
 
 // cache: 'reload' skips the browser's HTTP cache. GitHub Pages serves
@@ -57,7 +60,9 @@ self.addEventListener('fetch', (e) => {
           caches.open(CACHE).then((c) => c.put(e.request, copy));
           return res;
         })
-        .catch(() => caches.match(e.request).then((r) => r || caches.match('index.html')))
+        // Form clip frames carry ?mode=&view=; offline, any copy of the page will do.
+        .catch(() => caches.match(e.request, { ignoreSearch: e.request.destination === 'iframe' })
+          .then((r) => r || caches.match('index.html')))
     );
     return;
   }
